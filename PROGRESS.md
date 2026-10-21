@@ -1,6 +1,38 @@
 # PROGRESS.md
 
-## Phase 0 — Project Setup (done, waiting for review)
+## Phase 1 — Menus and Loadout UI (done, waiting for review)
+
+### What was done
+- Screen flow: Main Menu → Profile & Loadout → Loading → Match (placeholder) and back. Each screen is a state in `src/ui/screens/`.
+- Main Menu: slow fly-over of a placeholder city, title on the left, "Play vs Bots" and "Quit Game".
+- Quit flow: "Are you sure?" (Yes / No). Yes calls the Electron bridge when present (Phase 10), otherwise `window.close()`. If the tab stays open, the "Thanks for playing. You can close this tab." screen is shown.
+- Profile & Loadout screen:
+  - Left: player name (3–16 characters, saved when valid; Deploy is disabled while the name is invalid), "Blue Team", local stats (matches, wins, losses, kills, deaths, K/D, headshots).
+  - Center: placeholder soldier holding the selected primary, idle breathing, slow rotation, mouse drag rotates.
+  - Right: Primary and Secondary slots. Clicking a slot opens its list of weapon cards (name, 3D preview, Damage / Fire Rate / Range / Accuracy / Mobility bars, magazine size).
+  - Bottom: Back, Deploy.
+- Profile, stats and loadout are saved in localStorage (`lowfront.profile.v1`). Bad or missing data falls back to defaults.
+- Full weapon stat table in `src/data/weapons.ts`. Stat bars are calculated in `src/weapons/WeaponStats.ts`.
+- One shared offscreen renderer draws all UI 3D previews (`src/render/PreviewRenderer.ts`).
+- Pointer lock is only active in the match.
+- Unit tests added for name validation, profile save/load, stat bars and the quit flow (28 tests in total).
+
+### How to test
+1. `npm run dev` and open the printed URL.
+2. Main Menu: the city fly-over moves slowly. Click "Quit Game" → "No" closes the dialog. Click "Quit Game" → "Yes": the browser usually blocks closing a tab it did not open, so the "Thanks for playing" screen appears. Reload to continue.
+3. Click "Play vs Bots". Change the name (try 2 characters: an error shows and Deploy is disabled). Open the Primary slot, pick AK47. Drag the soldier to rotate it.
+4. Reload the page and open "Play vs Bots" again: the name and loadout are kept.
+5. "Back" returns to the Main Menu. "Deploy" shows the loading screen, then the match placeholder. "Main Menu" (top left) returns.
+6. `npm test` — 28 tests pass.
+
+### Known issues
+- The soldier and weapons are simple placeholder boxes. Real weapon models arrive in Phase 2, the real soldier in Phase 6.
+- The menu fly-over uses a placeholder city. It switches to the real map in Phase 5.
+- The match is the Phase 0 test scene. The "Main Menu" button in it is temporary until the Pause Menu in Phase 7.
+- Stats stay at 0 until matches update them in Phase 7.
+- Spread and recoil values in `src/data/weapons.ts` are first estimates for the Accuracy bar; they are tuned in Phase 4.
+
+## Phase 0 — Project Setup (done)
 
 ### What was done
 - Vite + TypeScript (strict) + Three.js + Rapier (`@dimforge/rapier3d-compat`) + Vitest.
