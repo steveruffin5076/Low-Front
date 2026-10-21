@@ -1,6 +1,43 @@
 # PROGRESS.md
 
-## Phase 3 — Player Controller and First-Person Animations (done, waiting for review)
+## Phase 4 — Shooting and Damage (done, waiting for review)
+
+### What was done
+- **Bullets** are projectiles (`src/weapons/Ballistics.ts`): they leave the eye along the aim direction with the weapon's muzzle velocity and gravity; each fixed step the segment from the old to the new position is raycast; max life 2 s; pooled.
+- **Damage** (`src/weapons/Damage.ts`): falloff table from plan section 7.1 (near damage up to the falloff start, linear to far damage at the falloff end), head ×2.0, arms and legs ×0.75, torso ×1.0. Distance is the distance the bullet flew.
+- **Spread** (`src/weapons/Spread.ts`, `src/data/ballistics.ts`): hip cone per weapon, near zero when aiming; grows when moving, in the air and during long bursts, then recovers. The crosshair gap shows the current cone.
+- **Recoil** (`src/weapons/Recoil.ts`, patterns in `src/data/weapons.ts`): camera kick per shot (vertical + per-weapon horizontal pattern + random), recovers after you stop firing; pulling the mouse down counts as recovery. Measured over a 0.8 s burst: M4A1 3.5° up / 0.2° sideways, AK47 4.8° up / 0.8° sideways, M1911 1.4° snap per shot that returns in about 0.15 s.
+- **Hitboxes** (`src/entities/Hitboxes.ts`): sensor colliders for head, torso, arms and legs that only bullets see (collision groups in `src/physics/collision.ts`).
+- **Health** (`src/entities/Health.ts`): 100 HP, regenerates 10 HP/s after 8 s without damage. **Fall damage** above 4 m: 20 HP per meter above 4 m (`HEALTH` in `src/data/player.ts`).
+- **Target dummies** at exactly 10 / 50 / 100 m (staggered sideways so they do not block each other); they fall over when killed and stand up after 3 s.
+- **Effects**: muzzle flash and shells (Phase 3), impacts per surface — sparks (metal), dust (concrete, dirt), splinters (wood), red puff (hit) — bullet-hole decals, tracers every 3rd round. All instanced (one draw call per effect type).
+- **HUD bits** (test overlay until Phase 7): hit marker (white, red on kill), damage direction indicator, health bar, spread and a "Last hit" line (weapon, target, zone, damage, distance, remaining HP).
+- **Audio** (procedural, `src/audio/AudioManager.ts`): gunshot per weapon (different pitch and body) with a filtered distant version, impacts by surface, footsteps by surface (quieter crouched, louder sprinting), landing, hit-marker tick; 3D positioning for world sounds.
+- Unit tests: falloff, zone multipliers, spread, recoil, regen, fall damage, bullet drop, fire rate, reload ammo math, and a Rapier-backed bullet test (wall distance, hitbox zones, own capsule ignored). 104 tests.
+
+### Checked results (headless browser, aimed single shots)
+| Weapon | 10 m torso / head / limb | 50 m torso / head / limb | 100 m torso / limb |
+|---|---|---|---|
+| M4A1 | 30.0 / 60.0 / 22.5 | 26.5 / 52.9 / 19.8 | 22.0 / 16.5 |
+| AK47 | 36.0 / 72.0 / 27.0 | 30.5 / 60.9 / 22.8 | 26.0 / 19.5 |
+| M1911 | 40.0 / 80.0 / 30.0 | 28.0 / 56.0 / 21.0 | (drops ~0.8 m at 100 m) |
+
+### How to test
+1. `npm run dev`, "Play vs Bots" → "Deploy". You spawn facing the lane; dummies stand at 10, 50 and 100 m.
+2. Aim (RMB) and fire single shots (B for semi) at the torso, head, legs and arms. Read "Last hit" bottom left and compare with the table above.
+3. Hold fire with each weapon to feel the recoil; stop and watch the view return.
+4. Shoot the cream wall (concrete), dark barrier and ramps (metal), crates (wood) and the ground (dirt) to see the impacts and bullet holes. Every 3rd round is a tracer.
+5. Press H to take 20 damage from a random direction (damage indicator, red flash), then wait 8 s for regeneration. Press K to die. Jump off the 3 m platform (no damage) — fall damage needs more than 4 m.
+6. `npm test` — 104 tests pass.
+
+### Known issues
+- Fixed during this phase: Rapier lets the player capsule sink through a large box collider when standing within about 1 mm of the box center (the spawn point was exactly there). The character motor now lifts the feet back onto the floor; a regression test covers it.
+- The range has no platform higher than 3 m, so fall damage can only be seen by falling from more than 4 m in a later map (or from the test checks).
+- Hits on the player come only from the H test key until bots shoot back (Phase 8).
+- Tracers at rifle speeds cross 100 m in about 7 frames, so they are brief.
+- Checked with software rendering only; sound and feel need a check on real hardware.
+
+## Phase 3 — Player Controller and First-Person Animations (done)
 
 ### What was done
 - **Test range** (`src/data/testRange.ts`, `src/scenes/TestRange.ts`): flat ground, shooting lane with target dummies at 10 / 50 / 100 m and distance posts every 10 m, stairs to a 3 m platform, ramps at 20°, 40° and 50°, crates of 0.3 / 0.5 / 1.0 / 2.0 m, walls and a corner for lean tests. Deploy now opens this range with the saved loadout.
