@@ -1,0 +1,23 @@
+/** Shared color palette (plan section 6). */
+export const PALETTE = {
+  blueTeam: 0x2f7de1,
+  redTeam: 0xe5483b,
+  terracotta: 0xd9734e,
+  teal: 0x2a9d8f,
+  mustard: 0xe9c46a,
+  coral: 0xf4a261,
+  mint: 0x8fd3b6,
+  cream: 0xf1e3c8,
+  slate: 0x5c6b7a,
+  road: 0x3b3f45,
+  roadLineYellow: 0xf2d14b,
+  roadLineWhite: 0xffffff,
+  sidewalk: 0xb8bcc2,
+  grass: 0x6dbe45,
+  gunMetal: 0x2b2e33,
+  polymerBlack: 0x1e1f22,
+  akWood: 0xa0522d,
+  m1911GripWood: 0x7b4a2a,
+  skyTop: 0x5fa8e8,
+  skyHorizon: 0xcfe6f5,
+} as const;
