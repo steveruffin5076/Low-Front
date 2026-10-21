@@ -1,4 +1,3 @@
-import { PALETTE, UI_PALETTE } from './palette';
 
 /** Menu, loading and quit screen settings. */
 export const MENU = {
@@ -10,27 +9,9 @@ export const MENU = {
   loadingMinMs: 400,
 } as const;
 
-/**
- * Placeholder city for the menu fly-over. Phase 5 replaces it with the real map.
- * Blocks sit on a grid; the center row and column are left empty as avenues.
- */
+/** Menu fly-over of the real map (plan section 5.1). */
 export const MENU_BACKDROP = {
-  gridHalfCount: 5,
-  blockSpacing: 26,
-  footprints: [10, 14, 18, 12, 16] as const,
-  floorPattern: [2, 4, 3, 6, 2, 5, 3, 4, 2] as const,
-  floorHeight: 3,
-  colors: [PALETTE.terracotta, PALETTE.teal, PALETTE.mustard, PALETTE.coral, PALETTE.mint, PALETTE.cream, PALETTE.slate] as const,
-  groundSize: 420,
-  groundColor: PALETTE.road,
-  sidewalkColor: PALETTE.sidewalk,
-  sidewalkMargin: 3,
-  sky: UI_PALETTE.menuSky,
-  fogNear: 90,
-  fogFar: 260,
-  camera: { fov: 55, near: 0.5, far: 600, orbitRadius: 95, height: 42, lookHeight: 4, orbitSpeed: 0.03 },
-  hemi: { sky: 0xdff1ff, ground: PALETTE.road, intensity: 1.2 },
-  sun: { color: 0xffffff, intensity: 2.0, position: [60, 100, 40] as const },
+  camera: { fov: 55, near: 0.5, far: 700, orbitRadius: 150, height: 62, lookHeight: 0, orbitSpeed: 0.025, startAngle: 2.4 },
 } as const;
 
 /** 3D previews on the Profile & Loadout screen. */

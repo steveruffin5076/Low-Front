@@ -1,23 +1,28 @@
 import * as THREE from 'three';
+import { VERDAN } from '../data/map';
 import { MENU_BACKDROP as CFG } from '../data/menu';
-import { disposeObject } from '../render/dispose';
+import { Lighting } from '../render/Lighting';
+import { Sky } from '../render/Sky';
+import { FlagVisual } from '../world/FlagVisual';
+import { getBuiltMap } from '../world/MapBuilder';
 
-/** Low-cost city fly-over shown behind the main menu and loadout screens. */
+/** Slow camera fly-over of the real map behind the main menu (plan section 5.1). Visual only. */
 export class MenuBackdrop {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
-  private angle = 0;
+  private readonly sky = new Sky();
+  private readonly lighting: Lighting;
+  private readonly flags: FlagVisual[];
+  private angle = CFG.camera.startAngle;
+  private readonly shadowCenter = new THREE.Vector3();
 
   constructor() {
     const c = CFG.camera;
     this.camera = new THREE.PerspectiveCamera(c.fov, 1, c.near, c.far);
-    this.scene.background = new THREE.Color(CFG.sky);
-    this.scene.fog = new THREE.Fog(CFG.sky, CFG.fogNear, CFG.fogFar);
-    this.scene.add(new THREE.HemisphereLight(CFG.hemi.sky, CFG.hemi.ground, CFG.hemi.intensity));
-    const sun = new THREE.DirectionalLight(CFG.sun.color, CFG.sun.intensity);
-    sun.position.set(...CFG.sun.position);
-    this.scene.add(sun);
-    this.buildCity();
+    this.scene.add(getBuiltMap(VERDAN).group.clone(), this.sky.mesh);
+    this.lighting = new Lighting(this.scene);
+    this.flags = VERDAN.flags.map((f) => new FlagVisual(f));
+    for (const f of this.flags) this.scene.add(f.root);
     this.update(0);
   }
 
@@ -26,54 +31,9 @@ export class MenuBackdrop {
     this.angle += c.orbitSpeed * dt;
     this.camera.position.set(Math.sin(this.angle) * c.orbitRadius, c.height, Math.cos(this.angle) * c.orbitRadius);
     this.camera.lookAt(0, c.lookHeight, 0);
-  }
-
-  dispose(): void {
-    disposeObject(this.scene);
-  }
-
-  private buildCity(): void {
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(CFG.groundSize, CFG.groundSize).rotateX(-Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: CFG.groundColor, flatShading: true }),
-    );
-    this.scene.add(ground);
-
-    const blocks: { x: number; z: number; size: number; height: number; color: number }[] = [];
-    const n = CFG.gridHalfCount;
-    let k = 0;
-    for (let i = -n; i <= n; i++) {
-      for (let j = -n; j <= n; j++) {
-        if (i === 0 || j === 0) continue; // avenues
-        const size = CFG.footprints[k % CFG.footprints.length];
-        const floors = CFG.floorPattern[(k * 5 + 3) % CFG.floorPattern.length];
-        const color = CFG.colors[(k * 3 + 1) % CFG.colors.length];
-        blocks.push({ x: i * CFG.blockSpacing, z: j * CFG.blockSpacing, size, height: floors * CFG.floorHeight, color });
-        k++;
-      }
-    }
-
-    const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-    const buildings = new THREE.InstancedMesh(
-      unitBox,
-      new THREE.MeshStandardMaterial({ flatShading: true }),
-      blocks.length,
-    );
-    const sidewalks = new THREE.InstancedMesh(
-      unitBox.clone(),
-      new THREE.MeshStandardMaterial({ color: CFG.sidewalkColor, flatShading: true }),
-      blocks.length,
-    );
-    const m = new THREE.Matrix4();
-    const color = new THREE.Color();
-    blocks.forEach((b, idx) => {
-      m.makeScale(b.size, b.height, b.size).setPosition(b.x, 0, b.z);
-      buildings.setMatrixAt(idx, m);
-      buildings.setColorAt(idx, color.setHex(b.color));
-      const walk = b.size + CFG.sidewalkMargin * 2;
-      m.makeScale(walk, 0.15, walk).setPosition(b.x, 0, b.z);
-      sidewalks.setMatrixAt(idx, m);
-    });
-    this.scene.add(buildings, sidewalks);
+    this.sky.follow(this.camera);
+    // Keep the sharp-shadow area between the camera and the map center.
+    this.lighting.follow(this.shadowCenter.set(Math.sin(this.angle) * c.orbitRadius * 0.4, 0, Math.cos(this.angle) * c.orbitRadius * 0.4));
+    for (const f of this.flags) f.update(dt);
   }
 }
