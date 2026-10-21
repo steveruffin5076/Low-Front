@@ -8,13 +8,16 @@ export class PhysicsWorld {
   /** Time spent in the last `step()` call, in milliseconds. */
   lastStepMs = 0;
 
+  private static ready: Promise<void> | null = null;
+
   private constructor(
     readonly rapier: Rapier,
     readonly world: RAPIER.World,
   ) {}
 
   static async create(): Promise<PhysicsWorld> {
-    await RAPIER.init();
+    PhysicsWorld.ready ??= RAPIER.init();
+    await PhysicsWorld.ready;
     const world = new RAPIER.World({ x: 0, y: ENGINE.gravityY, z: 0 });
     world.timestep = 1 / ENGINE.fixedHz;
     return new PhysicsWorld(RAPIER, world);
@@ -24,5 +27,9 @@ export class PhysicsWorld {
     const t0 = performance.now();
     this.world.step();
     this.lastStepMs = performance.now() - t0;
+  }
+
+  dispose(): void {
+    this.world.free();
   }
 }

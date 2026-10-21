@@ -9,6 +9,9 @@ export class Input {
   private dy = 0;
   private wheel = 0;
 
+  /** When true, clicking the canvas locks the mouse. Only the match enables this. */
+  lockOnClick = false;
+
   constructor(private readonly target: HTMLElement) {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
@@ -26,7 +29,7 @@ export class Input {
   }
 
   requestLock = (): void => {
-    if (!this.locked) void this.target.requestPointerLock()?.catch?.(() => undefined);
+    if (this.lockOnClick && !this.locked) void this.target.requestPointerLock()?.catch?.(() => undefined);
   };
 
   exitLock(): void {

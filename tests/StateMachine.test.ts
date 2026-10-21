@@ -7,6 +7,7 @@ function recorder(name: string, log: string[]): State {
     exit: () => log.push(`${name}:exit`),
     fixedUpdate: (dt) => log.push(`${name}:fixed:${dt}`),
     update: (dt, alpha) => log.push(`${name}:update:${dt}:${alpha}`),
+    render: () => log.push(`${name}:render`),
   };
 }
 
@@ -34,7 +35,8 @@ describe('StateMachine', () => {
     sm.change('b');
     sm.fixedUpdate(0.5);
     sm.update(0.1, 0.25);
-    expect(log).toEqual(['b:enter', 'b:fixed:0.5', 'b:update:0.1:0.25']);
+    sm.render();
+    expect(log).toEqual(['b:enter', 'b:fixed:0.5', 'b:update:0.1:0.25', 'b:render']);
   });
 
   it('throws on an unknown state', () => {

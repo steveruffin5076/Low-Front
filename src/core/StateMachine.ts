@@ -6,6 +6,8 @@ export interface State {
   fixedUpdate?(dt: number): void;
   /** Called once per rendered frame. `alpha` is the interpolation factor between fixed steps. */
   update?(dt: number, alpha: number): void;
+  /** Called once per rendered frame after `update`. */
+  render?(): void;
 }
 
 /** Holds named states and switches between them, calling exit/enter in order. */
@@ -36,6 +38,10 @@ export class StateMachine<Name extends string = string> {
 
   update(dt: number, alpha: number): void {
     this.active()?.update?.(dt, alpha);
+  }
+
+  render(): void {
+    this.active()?.render?.();
   }
 
   private active(): State | undefined {

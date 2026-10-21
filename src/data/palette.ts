@@ -21,3 +21,12 @@ export const PALETTE = {
   skyTop: 0x5fa8e8,
   skyHorizon: 0xcfe6f5,
 } as const;
+
+/** UI and placeholder colors. */
+export const UI_PALETTE = {
+  skin: 0xe0b48a,
+  vest: 0x3a4652,
+  boots: 0x2a2a2e,
+  helmet: 0x2b5ea8,
+  menuSky: 0x7cc4f0,
+} as const;

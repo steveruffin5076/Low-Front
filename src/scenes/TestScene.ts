@@ -4,6 +4,7 @@ import type { State } from '../core/StateMachine';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import { TEST_SCENE as CFG } from '../data/testScene';
 import { PALETTE } from '../data/palette';
+import { disposeObject } from '../render/dispose';
 
 /** Phase 0 test scene: ground, static boxes and a falling physics box. */
 export class TestScene implements State {
@@ -53,6 +54,10 @@ export class TestScene implements State {
       Math.cos(this.orbitAngle) * this.orbitRadius,
     );
     this.camera.lookAt(c.lookAt[0], c.lookAt[1], c.lookAt[2]);
+  }
+
+  dispose(): void {
+    disposeObject(this.scene);
   }
 
   private build(): void {

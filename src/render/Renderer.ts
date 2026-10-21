@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { ENGINE } from '../data/engine';
 
-/** Owns the WebGLRenderer and keeps it sized to the window. */
+/** Owns the main WebGLRenderer and keeps it sized to the window. */
 export class Renderer {
   readonly gl: THREE.WebGLRenderer;
-  private camera: THREE.PerspectiveCamera | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -18,13 +17,20 @@ export class Renderer {
     this.resize();
   }
 
-  setCamera(camera: THREE.PerspectiveCamera): void {
-    this.camera = camera;
-    this.resize();
+  get aspect(): number {
+    return window.innerWidth / window.innerHeight;
   }
 
-  render(scene: THREE.Scene): void {
-    if (this.camera) this.gl.render(scene, this.camera);
+  render(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
+    if (camera.aspect !== this.aspect) {
+      camera.aspect = this.aspect;
+      camera.updateProjectionMatrix();
+    }
+    this.gl.render(scene, camera);
+  }
+
+  clear(): void {
+    this.gl.clear();
   }
 
   /** Returns this frame's render stats and resets the counters. */
@@ -35,12 +41,6 @@ export class Renderer {
   }
 
   private resize = (): void => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.gl.setSize(w, h, false);
-    if (this.camera) {
-      this.camera.aspect = w / h;
-      this.camera.updateProjectionMatrix();
-    }
+    this.gl.setSize(window.innerWidth, window.innerHeight, false);
   };
 }
