@@ -1,10 +1,13 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { ENGINE } from '../data/engine';
+import type { ColliderTag } from './collision';
 
 export type Rapier = typeof RAPIER;
 
 /** Wrapper around the Rapier world. Call `PhysicsWorld.create()` (async, loads WASM). */
 export class PhysicsWorld {
+  /** Collider handle → what it is (surface or hitbox). */
+  readonly tags = new Map<number, ColliderTag>();
   /** Time spent in the last `step()` call, in milliseconds. */
   lastStepMs = 0;
 

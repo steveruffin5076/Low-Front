@@ -1,6 +1,7 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { MOVEMENT } from '../data/player';
+import { COLLISION } from './collision';
 import type { PhysicsWorld } from './PhysicsWorld';
 
 /**
@@ -24,7 +25,10 @@ export class CharacterMotor {
     this.body = world.createRigidBody(
       rapier.RigidBodyDesc.kinematicPositionBased().setTranslation(feet.x, feet.y + this.height / 2, feet.z),
     );
-    this.collider = world.createCollider(rapier.ColliderDesc.capsule(this.halfSegment(this.height), MOVEMENT.radius), this.body);
+    this.collider = world.createCollider(
+      rapier.ColliderDesc.capsule(this.halfSegment(this.height), MOVEMENT.radius).setCollisionGroups(COLLISION.player),
+      this.body,
+    );
     this.controller = world.createCharacterController(MOVEMENT.controllerOffset);
     this.controller.setUp({ x: 0, y: 1, z: 0 });
     this.controller.setMaxSlopeClimbAngle((MOVEMENT.maxSlopeDeg * Math.PI) / 180);
@@ -36,7 +40,7 @@ export class CharacterMotor {
 
   /** Moves by `delta` with collisions. Returns the movement actually made. */
   move(delta: THREE.Vector3): THREE.Vector3 {
-    this.controller.computeColliderMovement(this.collider, delta);
+    this.controller.computeColliderMovement(this.collider, delta, this.physics.rapier.QueryFilterFlags.EXCLUDE_SENSORS, COLLISION.player);
     const m = this.controller.computedMovement();
     this.grounded = this.controller.computedGrounded();
     this.feet.x += m.x;
@@ -69,7 +73,7 @@ export class CharacterMotor {
   /** Distance to the first hit along a ray, ignoring this character, or null. */
   raycast(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): number | null {
     const { rapier, world } = this.physics;
-    const hit = world.castRay(new rapier.Ray(origin, dir), maxDist, true, undefined, undefined, this.collider);
+    const hit = world.castRay(new rapier.Ray(origin, dir), maxDist, true, undefined, COLLISION.view, this.collider);
     return hit ? hit.timeOfImpact : null;
   }
 
@@ -77,7 +81,8 @@ export class CharacterMotor {
     const { rapier, world } = this.physics;
     const shape = new rapier.Capsule(this.halfSegment(height), MOVEMENT.radius - MOVEMENT.controllerOffset);
     const pos = { x: this.feet.x, y: this.feet.y + height / 2 + MOVEMENT.controllerOffset, z: this.feet.z };
-    return world.intersectionWithShape(pos, { x: 0, y: 0, z: 0, w: 1 }, shape, undefined, undefined, this.collider) === null;
+    const flags = rapier.QueryFilterFlags.EXCLUDE_SENSORS;
+    return world.intersectionWithShape(pos, { x: 0, y: 0, z: 0, w: 1 }, shape, flags, COLLISION.player, this.collider) === null;
   }
 
   private halfSegment(height: number): number {

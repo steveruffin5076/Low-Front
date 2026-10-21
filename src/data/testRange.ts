@@ -1,4 +1,6 @@
-import { PALETTE } from './palette';
+import type { HitZone } from './ballistics';
+import { PALETTE, UI_PALETTE } from './palette';
+import type { Surface } from '../physics/collision';
 
 /**
  * Phase 3 test range: flat ground, walls, stairs, ramps, crates and target dummies.
@@ -11,6 +13,8 @@ export interface RangeBox {
   color: number;
   /** Rotation around X in degrees (ramps). */
   tiltDeg?: number;
+  /** Impact effect and footstep sound. Default concrete. */
+  surface?: Surface;
 }
 
 const STEP_RISE = 0.25;
@@ -42,12 +46,13 @@ function ramp(x: number, z: number, deg: number, length: number, color: number):
   // Center so the low edge sits on the ground at z.
   const cy = (Math.sin(a) * length) / 2 - (Math.cos(a) * thickness) / 2 + 0.01;
   const cz = z - (Math.cos(a) * length) / 2 - (Math.sin(a) * thickness) / 2;
-  return { size: [3, thickness, length], pos: [x, cy, cz], color, tiltDeg: deg };
+  return { size: [3, thickness, length], pos: [x, cy, cz], color, tiltDeg: deg, surface: 'metal' };
 }
 
 export const TEST_RANGE = {
   groundSize: 260,
   groundColor: PALETTE.grass,
+  groundSurface: 'dirt' as Surface,
   laneColor: PALETTE.sidewalk,
   spawn: [0, 0, 8] as const,
   sky: 0x8ccbf0,
@@ -65,14 +70,38 @@ export const TEST_RANGE = {
     ramp(18, 2, 40, 5, PALETTE.coral),
     ramp(22, 2, 50, 4, PALETTE.terracotta),
     // Crates: 0.3 m steps up, 0.5 m needs a jump, 1.0 m blocks.
-    { size: [1, 0.3, 1], pos: [6, 0.15, 2], color: PALETTE.mustard },
-    { size: [1, 0.5, 1], pos: [6, 0.25, -1], color: PALETTE.coral },
-    { size: [1, 1, 1], pos: [6, 0.5, -4], color: PALETTE.terracotta },
-    { size: [2, 2, 2], pos: [8.5, 1, -4], color: PALETTE.akWood },
+    { size: [1, 0.3, 1], pos: [6, 0.15, 2], color: PALETTE.mustard, surface: 'wood' },
+    { size: [1, 0.5, 1], pos: [6, 0.25, -1], color: PALETTE.coral, surface: 'wood' },
+    { size: [1, 1, 1], pos: [6, 0.5, -4], color: PALETTE.terracotta, surface: 'wood' },
+    { size: [2, 2, 2], pos: [8.5, 1, -4], color: PALETTE.akWood, surface: 'wood' },
     // Walls and a corner for lean tests.
     { size: [6, 3, 0.4], pos: [-5, 1.5, -6], color: PALETTE.cream },
     { size: [0.4, 3, 6], pos: [-7.8, 1.5, -3.2], color: PALETTE.cream },
-    { size: [8, 1.1, 0.4], pos: [4, 0.55, -14], color: PALETTE.slate },
+    { size: [8, 1.1, 0.4], pos: [4, 0.55, -14], color: PALETTE.slate, surface: 'metal' },
     { size: [10, 4, 0.5], pos: [-14, 2, 18], color: PALETTE.teal },
   ] as RangeBox[],
+} as const;
+
+/** Target dummy parts (meters, relative to the dummy's base; the front faces +Z). Each part is a hitbox. */
+export interface DummyPart {
+  zone: HitZone;
+  size: readonly [number, number, number];
+  pos: readonly [number, number, number];
+  color: number;
+}
+
+export const DUMMY = {
+  parts: [
+    { zone: 'leg', size: [0.18, 0.85, 0.2], pos: [-0.11, 0.425, 0], color: PALETTE.redTeam },
+    { zone: 'leg', size: [0.18, 0.85, 0.2], pos: [0.11, 0.425, 0], color: PALETTE.redTeam },
+    { zone: 'torso', size: [0.46, 0.6, 0.26], pos: [0, 1.15, 0], color: PALETTE.redTeam },
+    { zone: 'arm', size: [0.12, 0.55, 0.12], pos: [-0.3, 1.15, 0], color: PALETTE.redTeam },
+    { zone: 'arm', size: [0.12, 0.55, 0.12], pos: [0.3, 1.15, 0], color: PALETTE.redTeam },
+    { zone: 'head', size: [0.22, 0.24, 0.22], pos: [0, 1.6, 0], color: UI_PALETTE.skin },
+    { zone: 'head', size: [0.26, 0.1, 0.26], pos: [0, 1.74, 0], color: UI_PALETTE.vest },
+  ] as DummyPart[],
+  standColor: PALETTE.slate,
+  /** Seconds to fall over, and to stay down before resetting. */
+  fallTime: 0.5,
+  resetTime: 3,
 } as const;
