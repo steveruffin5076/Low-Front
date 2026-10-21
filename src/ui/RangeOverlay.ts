@@ -88,7 +88,7 @@ export class RangeOverlay {
   /** Out-of-bounds countdown in seconds, or null to hide it. */
   setBoundsWarning(seconds: number | null): void {
     this.boundsBanner.hidden = seconds === null;
-    if (seconds !== null) this.boundsBanner.textContent = `Return to the battlefield  ${Math.ceil(seconds)}`;
+    if (seconds !== null) this.boundsBanner.textContent = `Return to the battlefield: ${Math.ceil(seconds)}`;
   }
 
   hitFlash(): void {
