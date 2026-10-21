@@ -41,6 +41,7 @@ export class TargetDummy implements Hittable {
   applyHit(hit: ZoneHit): void {
     if (this.health.dead) return;
     hit.killed = this.health.damage(hit.damage);
+    hit.remainingHp = this.health.hp;
     this.lastHit = hit;
     if (hit.killed) {
       this.downTime = 0;
@@ -54,11 +55,14 @@ export class TargetDummy implements Hittable {
     const fall = EASE.in(Math.min(1, this.downTime / DUMMY.fallTime));
     // Falls backward, away from the shooter.
     this.root.rotation.x = -fall * (Math.PI / 2);
-    if (this.downTime >= DUMMY.fallTime + DUMMY.resetTime) {
-      this.downTime = -1;
-      this.root.rotation.x = 0;
-      this.health.reset();
-      this.hitboxes.setEnabled(true);
-    }
+    if (this.downTime >= DUMMY.fallTime + DUMMY.resetTime) this.reset();
+  }
+
+  /** Stands up with full health. */
+  reset(): void {
+    this.downTime = -1;
+    this.root.rotation.x = 0;
+    this.health.reset();
+    this.hitboxes.setEnabled(true);
   }
 }

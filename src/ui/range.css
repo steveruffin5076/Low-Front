@@ -5,6 +5,7 @@
   pointer-events: none;
 }
 .crosshair {
+  --gap: 6px;
   position: absolute;
   left: 50%;
   top: 50%;
@@ -27,16 +28,16 @@
   top: -1px;
 }
 .ch-t {
-  top: -14px;
+  top: calc(-8px - var(--gap));
 }
 .ch-b {
-  top: 6px;
+  top: var(--gap);
 }
 .ch-l {
-  left: -14px;
+  left: calc(-8px - var(--gap));
 }
 .ch-r {
-  left: 6px;
+  left: var(--gap);
 }
 .range-readout,
 .range-help {
@@ -77,4 +78,81 @@
   color: #fff;
   background: rgba(0, 0, 0, 0.55);
   border-radius: 6px;
+}
+
+/* Hit marker: four short diagonal strokes around the center. */
+.hit-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+}
+.hit-marker span {
+  position: absolute;
+  width: 9px;
+  height: 2px;
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.hit-marker.kill span {
+  background: #ff3b30;
+}
+.hm-a {
+  transform: translate(-14px, -10px) rotate(45deg);
+}
+.hm-b {
+  transform: translate(5px, -10px) rotate(-45deg);
+}
+.hm-c {
+  transform: translate(-14px, 8px) rotate(-45deg);
+}
+.hm-d {
+  transform: translate(5px, 8px) rotate(45deg);
+}
+
+/* Damage direction: red wedges on a ring around the center, rotated toward the source. */
+.damage-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.damage-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+}
+.damage-indicator span {
+  position: absolute;
+  left: -40px;
+  top: -150px;
+  width: 80px;
+  height: 18px;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: rgba(229, 72, 59, 0.85);
+}
+
+.health-bar {
+  position: absolute;
+  left: 12px;
+  bottom: 160px;
+  width: 220px;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.health-fill {
+  height: 100%;
+  background: #e8eef3;
+}
+.health-fill.low {
+  background: #e5483b;
+}
+.health-text {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  font: 700 11px/14px ui-monospace, monospace;
+  color: #111;
 }

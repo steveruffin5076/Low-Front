@@ -43,6 +43,8 @@ export const MOVEMENT = {
   controllerOffset: 0.02,
   /** Sprint needs mostly forward input (dot with forward). */
   sprintMinForward: 0.5,
+  /** Meters between footstep sounds. */
+  stepDistance: 1.2,
   /** Ground speed under this counts as standing still for animation. */
   idleSpeed: 0.2,
   /** Radians of camera rotation per pixel of mouse movement. */

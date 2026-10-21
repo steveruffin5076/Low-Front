@@ -4,6 +4,12 @@ import { MOVEMENT } from '../data/player';
 import { COLLISION } from './collision';
 import type { PhysicsWorld } from './PhysicsWorld';
 
+const DOWN = new THREE.Vector3(0, -1, 0);
+const tmpOrigin = new THREE.Vector3();
+/** How far below the feet the floor probe looks, and how deep the feet may sink before correction (m). */
+const FLOOR_PROBE = 0.05;
+const FLOOR_TOLERANCE = 0.005;
+
 /**
  * Capsule character on a kinematic body, moved by Rapier's character controller
  * (step climbing, slope limit, snap to ground). Positions are measured at the feet.
@@ -46,6 +52,7 @@ export class CharacterMotor {
     this.feet.x += m.x;
     this.feet.y += m.y;
     this.feet.z += m.z;
+    this.liftOutOfFloor(m);
     this.body.setNextKinematicTranslation({ x: this.feet.x, y: this.feet.y + this.height / 2, z: this.feet.z });
     return new THREE.Vector3(m.x, m.y, m.z);
   }
@@ -75,6 +82,24 @@ export class CharacterMotor {
     const { rapier, world } = this.physics;
     const hit = world.castRay(new rapier.Ray(origin, dir), maxDist, true, undefined, COLLISION.view, this.collider);
     return hit ? hit.timeOfImpact : null;
+  }
+
+  /**
+   * Workaround for a Rapier character controller issue: standing within about 1 mm of the
+   * center of a large box collider makes the capsule sink through it. A short ray down the
+   * capsule axis finds the floor; if the feet are below it, they are lifted back on top.
+   */
+  private liftOutOfFloor(m: { y: number }): void {
+    if (m.y > 0) return;
+    const reach = MOVEMENT.radius;
+    tmpOrigin.set(this.feet.x, this.feet.y + reach, this.feet.z);
+    const hit = this.raycast(tmpOrigin, DOWN, reach + FLOOR_PROBE);
+    if (hit === null) return;
+    const floorY = tmpOrigin.y - hit;
+    if (floorY > this.feet.y + FLOOR_TOLERANCE) {
+      this.feet.y = floorY;
+      this.grounded = true;
+    }
   }
 
   private hasRoom(height: number): boolean {

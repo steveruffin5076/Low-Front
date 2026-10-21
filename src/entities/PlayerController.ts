@@ -24,6 +24,7 @@ export interface PlayerIntent {
 
 export interface PlayerEvents {
   jumped: Record<string, never>;
+  footstep: { crouched: boolean; sprinting: boolean };
   landed: { fallHeight: number; impactSpeed: number };
 }
 
@@ -49,6 +50,7 @@ export class PlayerController {
   /** How far the lean may go before a wall (0–1) for each side. */
   private leanRoom = { left: 1, right: 1 };
   private prevFeet = new THREE.Vector3();
+  private stepDistance = 0;
   private airPeakY = 0;
   private wasGrounded = true;
 
@@ -65,11 +67,13 @@ export class PlayerController {
     return Math.hypot(this.velocity.x, this.velocity.z);
   }
 
-  /** Mouse look in pixels. */
-  look(dx: number, dy: number, sensitivity: number = MOVEMENT.mouseSensitivity): void {
+  /** Mouse look in pixels. Returns the pitch change in radians. */
+  look(dx: number, dy: number, sensitivity: number = MOVEMENT.mouseSensitivity): number {
     const maxPitch = MOVEMENT.maxPitchDeg * DEG;
+    const before = this.pitch;
     this.yaw -= dx * sensitivity;
     this.pitch = THREE.MathUtils.clamp(this.pitch - dy * sensitivity, -maxPitch, maxPitch);
+    return this.pitch - before;
   }
 
   respawn(at: THREE.Vector3, yaw = 0): void {
@@ -130,6 +134,7 @@ export class PlayerController {
     // Head hit a ceiling.
     if (this.velocity.y > 0 && moved.y < tmpDelta.y * 0.5) this.velocity.y = 0;
 
+    this.trackSteps(moved);
     this.trackFall();
     this.updateLean(dt, intent);
   }
@@ -147,6 +152,21 @@ export class PlayerController {
   private setCrouched(crouched: boolean): void {
     if (crouched === this.crouched) return;
     if (this.motor.setHeight(crouched ? MOVEMENT.crouchHeight : MOVEMENT.standHeight)) this.crouched = crouched;
+  }
+
+  /** Clamps pitch after recoil pushed it past the limit. */
+  clampPitch(): void {
+    const maxPitch = MOVEMENT.maxPitchDeg * DEG;
+    this.pitch = THREE.MathUtils.clamp(this.pitch, -maxPitch, maxPitch);
+  }
+
+  private trackSteps(moved: THREE.Vector3): void {
+    if (!this.motor.grounded) return;
+    this.stepDistance += Math.hypot(moved.x, moved.z);
+    if (this.stepDistance >= MOVEMENT.stepDistance) {
+      this.stepDistance -= MOVEMENT.stepDistance;
+      this.events.emit('footstep', { crouched: this.crouched, sprinting: this.sprinting });
+    }
   }
 
   private trackFall(): void {

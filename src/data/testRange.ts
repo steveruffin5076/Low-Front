@@ -54,7 +54,8 @@ export const TEST_RANGE = {
   groundColor: PALETTE.grass,
   groundSurface: 'dirt' as Surface,
   laneColor: PALETTE.sidewalk,
-  spawn: [0, 0, 8] as const,
+  // Dummies stand at exactly 10, 50 and 100 m from the spawn.
+  spawn: [0, 0, 0] as const,
   sky: 0x8ccbf0,
   fogNear: 80,
   fogFar: 240,
@@ -62,7 +63,12 @@ export const TEST_RANGE = {
   hemi: { sky: 0xdff1ff, ground: PALETTE.grass, intensity: 1.1 },
   /** Shooting lane down −Z with dummies at 10, 50 and 100 m. */
   lane: { width: 4, length: 110 },
-  dummyDistances: [10, 50, 100] as const,
+  /** Target dummies: distance down the lane and a sideways offset so near ones do not block far ones. */
+  dummies: [
+    { distance: 10, x: -1.5 },
+    { distance: 50, x: 0 },
+    { distance: 100, x: 1.5 },
+  ] as const,
   dummyColor: PALETTE.redTeam,
   boxes: [
     ...stairs(),

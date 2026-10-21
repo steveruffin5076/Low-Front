@@ -56,14 +56,14 @@ export class TestRange {
       [0, 0.01, CFG.spawn[2] - lane.length / 2],
     ).castShadow = false;
     for (let d = 10; d <= lane.length - 10; d += 10) {
-      const color = (CFG.dummyDistances as readonly number[]).includes(d) ? PALETTE.mustard : PALETTE.cream;
+      const color = CFG.dummies.some((t) => t.distance === d) ? PALETTE.mustard : PALETTE.cream;
       this.addMesh(new THREE.BoxGeometry(0.15, 0.6, 0.15), color, [lane.width / 2 + 0.3, 0.3, -d]);
     }
 
     for (const b of CFG.boxes) this.addBox(b);
-    for (const d of CFG.dummyDistances) {
-      const at = new THREE.Vector3(0, 0, -d);
-      const dummy = new TargetDummy(this.physics, at, d);
+    for (const t of CFG.dummies) {
+      const at = new THREE.Vector3(t.x, 0, CFG.spawn[2] - t.distance);
+      const dummy = new TargetDummy(this.physics, at, t.distance);
       this.dummies.push(dummy);
       this.scene.add(dummy.root);
       this.addMesh(new THREE.BoxGeometry(0.8, 0.05, 0.5), DUMMY.standColor, [at.x, 0.025, at.z]);

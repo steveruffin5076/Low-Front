@@ -13,6 +13,7 @@ import type { Renderer } from '../render/Renderer';
 import { ViewmodelLayer } from '../render/ViewmodelLayer';
 import { RangeOverlay } from '../ui/RangeOverlay';
 import { PlayerWeapons, type WeaponInput } from '../weapons/PlayerWeapons';
+import { RangeCombat } from './RangeCombat';
 import { TestRange } from './TestRange';
 
 /** Pressed keys latched each frame until a fixed step consumes them. */
@@ -41,6 +42,7 @@ export class RangeSession {
   private readonly overlay = new RangeOverlay();
   private readonly spawn = new THREE.Vector3(...TEST_RANGE.spawn);
   private latched: Latched = { ...NONE };
+  private readonly combat: RangeCombat;
 
   constructor(
     physics: PhysicsWorld,
@@ -53,6 +55,24 @@ export class RangeSession {
     this.animator = new FPAnimator(this.layer, this.weapons, this.audio);
     this.player.events.on('jumped', () => this.animator.onJump());
     this.player.events.on('landed', ({ impactSpeed }) => this.animator.onLand(impactSpeed));
+    this.combat = new RangeCombat(
+      physics,
+      this.range.scene,
+      this.player,
+      this.weapons,
+      this.audio,
+      this.camera,
+      (out) => this.animator.muzzleWorld(this.camera, out),
+      {
+        onHitTarget: (kill) => this.overlay.showHitMarker(kill),
+        onPlayerDamaged: (angle) => {
+          this.fx.hit();
+          this.overlay.hitFlash();
+          this.overlay.showDamageFrom(angle);
+        },
+        onPlayerDied: () => this.fx.die(),
+      },
+    );
     this.weapons.start();
   }
 
@@ -90,6 +110,7 @@ export class RangeSession {
       ads,
     };
     this.weapons.update(dt, weaponInput);
+    this.combat.fixedUpdate(dt);
     this.latched = { ...NONE };
   }
 
@@ -101,8 +122,13 @@ export class RangeSession {
     this.player.updateCamera(this.camera, alpha);
     const eye = this.camera.position.y - this.player.motor.feet.y;
     this.fx.apply(this.camera, dt, eye);
+    this.camera.updateMatrixWorld();
+    this.audio.setListener(this.camera);
     this.range.follow(this.player.motor.feet);
+    this.range.update(dt);
+    this.combat.update(dt, alpha);
 
+    this.combat.shooting.ads = this.animator.adsBlend;
     const fov = this.animator.update({
       dt,
       ads: !this.fx.dead && this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads),
@@ -132,6 +158,11 @@ export class RangeSession {
         speed: this.player.horizontalSpeed,
         stamina: this.player.stamina.value,
         ads: this.animator.adsBlend,
+        hp: this.combat.health.hp,
+        maxHp: this.combat.health.max,
+        spreadDeg: this.combat.shooting.cone,
+        fov: this.camera.fov,
+        lastHit: this.combat.lastHit,
       },
       this.fx.dead,
       i.locked,
@@ -146,6 +177,7 @@ export class RangeSession {
   dispose(): void {
     this.range.dispose();
     this.animator.dispose();
+    this.combat.dispose();
     this.audio.dispose();
   }
 
@@ -157,7 +189,7 @@ export class RangeSession {
 
   private readInput(): void {
     const i = this.input;
-    if (i.locked) this.player.look(i.mouseDelta.x, i.mouseDelta.y);
+    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y));
     const l = this.latched;
     if (i.wasPressed(CONTROLS.crouch)) l.crouch = true;
     if (i.wasPressed(CONTROLS.jump)) l.jump = true;
@@ -168,17 +200,15 @@ export class RangeSession {
     if (i.wasPressed(CONTROLS.primary)) l.switchTo = 'primary';
     if (i.wasPressed(CONTROLS.secondary)) l.switchTo = 'secondary';
     if (i.wheelDelta !== 0) l.switchTo = this.weapons.activeSlot === 'primary' ? 'secondary' : 'primary';
-    if (i.wasPressed(CONTROLS.debugHit)) {
-      this.fx.hit();
-      this.overlay.hitFlash();
-    }
-    if (i.wasPressed(CONTROLS.debugDeath)) this.fx.die();
+    if (i.wasPressed(CONTROLS.debugHit)) this.combat.debugHit();
+    if (i.wasPressed(CONTROLS.debugDeath)) this.combat.damagePlayer(this.combat.health.max, null);
   }
 
   private respawn(): void {
     this.fx.reset();
     this.player.respawn(this.spawn);
     this.animator.reset();
+    this.combat.reset();
     this.weapons.start();
   }
 

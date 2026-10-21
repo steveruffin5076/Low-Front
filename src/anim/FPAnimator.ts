@@ -87,6 +87,12 @@ export class FPAnimator {
     return this.sprintBlend;
   }
 
+  /** Muzzle of the shown weapon in world space (`camera` is the world camera this layer follows). */
+  muzzleWorld(camera: THREE.Camera, out: THREE.Vector3): THREE.Vector3 {
+    this.current.model.points.muzzle.getWorldPosition(out);
+    return out.applyMatrix4(camera.matrixWorld);
+  }
+
   /** New life: bolts and slides forward, dust cover closed, no clips. */
   reset(): void {
     for (const v of this.visuals.values()) {

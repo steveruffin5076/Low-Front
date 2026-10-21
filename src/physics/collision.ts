@@ -42,8 +42,9 @@ export interface ZoneHit {
   distance: number;
   point: THREE.Vector3;
   direction: THREE.Vector3;
-  /** True when this hit killed the target. Set by the target. */
+  /** Set by the target: true when this hit killed it, and its HP after the hit. */
   killed?: boolean;
+  remainingHp?: number;
 }
 
 /** What a collider is, for impact effects and damage. */
