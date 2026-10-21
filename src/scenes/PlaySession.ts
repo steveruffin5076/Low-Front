@@ -206,6 +206,7 @@ export class PlaySession {
     if (i.wasPressed(CONTROLS.secondary)) l.switchTo = 'secondary';
     if (i.wheelDelta !== 0) l.switchTo = this.weapons.activeSlot === 'primary' ? 'secondary' : 'primary';
     if (i.wasPressed(CONTROLS.debugHit)) this.combat.debugHit();
+    if (i.wasPressed(CONTROLS.navDebug)) this.world.toggleNavDebug?.();
     if (i.wasPressed(CONTROLS.debugDeath)) this.combat.damagePlayer(this.combat.health.max, null);
   }
 

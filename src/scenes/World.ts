@@ -10,5 +10,7 @@ export interface World {
   /** Keeps the sun's shadow camera around the player. */
   follow(pos: THREE.Vector3): void;
   update(dt: number, camera: THREE.Camera): void;
+  /** F4: show or hide the navigation and cover debug view, if the world has one. */
+  toggleNavDebug?(): void;
   dispose(): void;
 }

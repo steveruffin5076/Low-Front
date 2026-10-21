@@ -1,5 +1,8 @@
 import * as THREE from 'three';
+import { generateCoverPoints, type CoverPoint } from '../ai/CoverPoints';
 import { VERDAN } from '../data/map';
+import { NavDebug } from '../debug/NavDebug';
+import { NavGrid } from '../world/NavGrid';
 import { MAP } from '../data/map/config';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import { Lighting } from '../render/Lighting';
@@ -17,6 +20,10 @@ export class CityMap implements World {
   readonly limit = MAP.half;
   readonly built: BuiltMap;
   readonly flags: FlagVisual[];
+  /** Precomputed at load for the bots (Phase 8). */
+  readonly nav: NavGrid;
+  readonly cover: CoverPoint[];
+  private navDebug: NavDebug | null = null;
   private readonly lighting: Lighting;
   private readonly sky = new Sky();
 
@@ -24,6 +31,8 @@ export class CityMap implements World {
     this.built = getBuiltMap(VERDAN);
     this.scene.add(this.built.group.clone());
     addVolumeColliders(physics, this.built.volumes);
+    this.nav = new NavGrid(this.built.volumes, this.built.links, VERDAN.half);
+    this.cover = generateCoverPoints(this.built.volumes, this.nav);
     this.lighting = new Lighting(this.scene);
     this.scene.add(this.sky.mesh);
     this.flags = VERDAN.flags.map((f) => new FlagVisual(f));
@@ -39,6 +48,14 @@ export class CityMap implements World {
   update(dt: number, camera: THREE.Camera): void {
     this.sky.follow(camera);
     for (const f of this.flags) f.update(dt);
+  }
+
+  toggleNavDebug(): void {
+    if (!this.navDebug) {
+      this.navDebug = new NavDebug(this.nav, this.cover);
+      this.scene.add(this.navDebug.root);
+    }
+    this.navDebug.toggle();
   }
 
   dispose(): void {

@@ -17,6 +17,7 @@ export const CONTROLS = {
   /** Debug keys for the test range until damage exists (Phase 4). */
   debugHit: 'KeyH',
   debugDeath: 'KeyK',
+  navDebug: 'F4',
 } as const;
 
 export const MOUSE = { fire: 0, ads: 2 } as const;
