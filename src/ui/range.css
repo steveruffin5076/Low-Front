@@ -1,0 +1,80 @@
+/* ---------- Test range overlay ---------- */
+.range-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.crosshair span {
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.ch-t,
+.ch-b {
+  width: 2px;
+  height: 8px;
+  left: -1px;
+}
+.ch-l,
+.ch-r {
+  width: 8px;
+  height: 2px;
+  top: -1px;
+}
+.ch-t {
+  top: -14px;
+}
+.ch-b {
+  top: 6px;
+}
+.ch-l {
+  left: -14px;
+}
+.ch-r {
+  left: 6px;
+}
+.range-readout,
+.range-help {
+  position: absolute;
+  margin: 0;
+  padding: 8px 10px;
+  font: 12px/1.5 ui-monospace, monospace;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+}
+.range-readout {
+  left: 12px;
+  bottom: 12px;
+}
+.range-help {
+  right: 12px;
+  bottom: 12px;
+  text-align: right;
+  color: #dfe6ec;
+}
+.hit-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(229, 72, 59, 0.6) 100%);
+}
+.death-banner,
+.lock-hint {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+}

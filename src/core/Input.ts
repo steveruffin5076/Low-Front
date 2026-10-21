@@ -24,8 +24,14 @@ export class Input {
     target.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
+  /**
+   * Dev only (`?debug=freemouse`): treat the mouse as locked without Pointer Lock,
+   * for automated browser checks where Pointer Lock is not available.
+   */
+  private readonly freeMouse = new URLSearchParams(window.location.search).get('debug') === 'freemouse';
+
   get locked(): boolean {
-    return document.pointerLockElement === this.target;
+    return document.pointerLockElement === this.target || (this.freeMouse && this.lockOnClick);
   }
 
   requestLock = (): void => {

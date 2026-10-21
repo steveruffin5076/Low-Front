@@ -152,7 +152,8 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.match-placeholder {
+/* Mouse input goes to the canvas; only the corner button takes clicks. */
+.match-screen {
   pointer-events: none;
 }
 .btn-corner {
@@ -419,3 +420,4 @@ body {
   border-radius: 4px;
   pointer-events: none;
 }
+

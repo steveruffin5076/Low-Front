@@ -1,17 +1,17 @@
 import type { State } from '../../core/StateMachine';
 import type { GameContext } from '../../core/GameContext';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
-import { TestScene } from '../../scenes/TestScene';
+import { RangeSession } from '../../scenes/RangeSession';
 import { button, el } from '../dom';
 
 /**
- * Placeholder match: the Phase 0 test scene. The real Conquest match arrives in Phase 7.
+ * Match screen. Until the Conquest match arrives (Phase 7) it hosts the test range.
  * `load()` must finish before the screen is entered.
  */
 export class MatchScreen implements State {
   private root: HTMLElement | null = null;
   private physics: PhysicsWorld | null = null;
-  private scene: TestScene | null = null;
+  private session: RangeSession | null = null;
 
   constructor(private readonly ctx: GameContext) {}
 
@@ -22,17 +22,16 @@ export class MatchScreen implements State {
   async load(): Promise<void> {
     this.unload();
     this.physics = await PhysicsWorld.create();
-    this.scene = new TestScene(this.physics);
+    this.session = new RangeSession(this.physics, this.ctx.input, this.ctx.profiles.load().loadout);
   }
 
   enter(): void {
     this.ctx.input.lockOnClick = true;
-    this.scene?.enter();
-    this.root = el('div', { class: 'screen match-placeholder' }, [
-      el('p', { class: 'hint', text: 'Match placeholder (the real match comes in Phase 7). Press F3 for the debug overlay.' }),
+    this.root = el('div', { class: 'screen match-screen' }, [
       button('Main Menu', () => this.ctx.changeScreen('mainMenu'), 'btn btn-corner'),
     ]);
     this.ctx.ui.append(this.root);
+    this.session?.mount(this.root);
   }
 
   exit(): void {
@@ -44,21 +43,23 @@ export class MatchScreen implements State {
   }
 
   fixedUpdate(dt: number): void {
-    this.scene?.fixedUpdate(dt);
+    if (!this.session || !this.physics) return;
+    this.session.fixedUpdate(dt);
+    this.physics.step();
   }
 
   update(dt: number, alpha: number): void {
-    this.scene?.update(dt, alpha);
+    this.session?.update(dt, alpha);
   }
 
   render(): void {
-    if (this.scene) this.ctx.renderer.render(this.scene.scene, this.scene.camera);
+    this.session?.render(this.ctx.renderer);
   }
 
   private unload(): void {
-    this.scene?.dispose();
+    this.session?.dispose();
     this.physics?.dispose();
-    this.scene = null;
+    this.session = null;
     this.physics = null;
   }
 }

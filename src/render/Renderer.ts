@@ -29,6 +29,21 @@ export class Renderer {
     this.gl.render(scene, camera);
   }
 
+  /**
+   * Draws `scene` on top of the current frame with a cleared depth buffer,
+   * so the first-person weapon never clips into walls.
+   */
+  renderLayer(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
+    if (camera.aspect !== this.aspect) {
+      camera.aspect = this.aspect;
+      camera.updateProjectionMatrix();
+    }
+    this.gl.autoClear = false;
+    this.gl.clearDepth();
+    this.gl.render(scene, camera);
+    this.gl.autoClear = true;
+  }
+
   clear(): void {
     this.gl.clear();
   }

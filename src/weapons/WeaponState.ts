@@ -70,6 +70,13 @@ export class WeaponState {
     this.reserve -= take;
   }
 
+  /** Full magazine and starting reserve, e.g. on respawn. */
+  refill(): void {
+    this.mag = this.def.magazine + this.def.chamber;
+    this.reserve = this.def.startingReserve;
+    this.cooldown = 0;
+  }
+
   /** Cycles to the next fire mode. Returns false for single-mode weapons. */
   toggleFireMode(): boolean {
     const modes = this.def.fireModes;

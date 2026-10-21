@@ -36,3 +36,13 @@ export const WEAPON_PALETTE = {
   boltSteel: 0x8b9097,
   interior: 0x141518,
 } as const;
+
+/** First-person arms and effects. */
+export const FP_PALETTE = {
+  glove: 0x1b1c1f,
+  sleeve: PALETTE.blueTeam,
+  cuff: 0x24548f,
+  brass: 0xd4a640,
+  flashCore: 0xfff1b0,
+  flashOuter: 0xffa733,
+} as const;

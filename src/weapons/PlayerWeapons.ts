@@ -66,8 +66,10 @@ export class PlayerWeapons {
     return this.action.kind;
   }
 
-  /** Starts the match with the primary drawn. */
+  /** Starts with the primary drawn. Also used on respawn, with full ammo. */
   start(): void {
+    for (const w of Object.values(this.weapons)) w.refill();
+    this.slot = 'primary';
     this.begin({ kind: 'draw', time: 0, duration: WEAPON_TIMING.draw[this.slot] });
     this.events.emit('drawStart', { weapon: this.active, duration: WEAPON_TIMING.draw[this.slot] });
   }

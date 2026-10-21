@@ -158,6 +158,13 @@ export class Assembly {
     return this;
   }
 
+  /** Merges geometry for a model without attachment points (hands, props). */
+  finishStatic(): THREE.Group {
+    addMerged(this.root, this.staticParts);
+    for (const { node, buckets } of this.nodeParts) addMerged(node.object, buckets);
+    return this.root;
+  }
+
   /** Merges geometry and moves everything so the `rightHandGrip` point is the origin. */
   finish(lod: WeaponLod): WeaponModel {
     addMerged(this.root, this.staticParts);
