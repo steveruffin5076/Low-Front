@@ -8,7 +8,7 @@ const T = MAP.wallThickness;
 const INNER_T = 0.15;
 const CURB = MAP.curbHeight;
 const SLAB = MAP.slabThickness;
-const DOOR_W = 1.1;
+const DOOR_W = 1.6;
 const STAIR_HOUSE_DEPTH = 1.6;
 const STAIR_HOUSE_HEIGHT = 2.7;
 
@@ -228,10 +228,15 @@ export class BuildingBuilder {
         // Landing and the divider between the flights.
         box(0, y0 + rise - 0.15, L / 2 - landing / 2, [W, 0.3, landing], MAP_COLORS.stairs, { kind: 'floor' });
         box(0, y0 + rise / 2 + 0.6, -L / 2 + run / 2, [0.1, rise + 1.2, run], this.p.trimColor, { kind: 'solid', noCover: true });
+        // Waypoints: up flight 1 to the landing, across it, then up flight 2 (never across the divider).
         const a = at(-W / 4, -L / 2 - 0.8);
         const b = at(W / 4, -L / 2 - 0.8);
-        const mid = at(0, L / 2 - landing / 2);
-        this.f.link(this.f.point(a[0], y0, a[1]), this.f.point(b[0], this.fs(st + 1), b[1]), [this.f.point(mid[0], y0 + rise, mid[1])]);
+        const landA = at(-W / 4, L / 2 - landing / 2);
+        const landB = at(W / 4, L / 2 - landing / 2);
+        this.f.link(this.f.point(a[0], y0, a[1]), this.f.point(b[0], this.fs(st + 1), b[1]), [
+          this.f.point(landA[0], y0 + rise, landA[1]),
+          this.f.point(landB[0], y0 + rise, landB[1]),
+        ]);
       } else {
         // Top storey: rail across half A, where the hole drops to the flight below.
         box(-W / 4, y0 + 0.5, -L / 2 + 0.05, [W / 2, 1.0, 0.08], MAP_COLORS.railing, { kind: 'solid', noCover: true });

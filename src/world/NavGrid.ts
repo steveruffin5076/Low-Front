@@ -14,6 +14,8 @@ export interface NavLevel {
   h: number;
   walk: Uint8Array;
   floorY: Float32Array;
+  /** Per cell, one bit per neighbor direction ((dj + 1) * 3 + di + 1) that a thin wall blocks. */
+  blockedDirs: Uint16Array;
   /** First node id of this level. */
   base: number;
 }
@@ -27,6 +29,8 @@ interface Indexed {
 interface Edge {
   to: number;
   cost: number;
+  /** Points along a stair or ramp link, in travel order. */
+  via?: THREE.Vector3[];
 }
 
 /**
@@ -97,7 +101,7 @@ export class NavGrid {
     const w = Math.ceil(ax1) - x0;
     const h = Math.ceil(az1) - z0;
     const prev = this.levels[this.levels.length - 1];
-    const level: NavLevel = { y, x0, z0, w, h, walk: new Uint8Array(w * h), floorY: new Float32Array(w * h), base: prev ? prev.base + prev.w * prev.h : 0 };
+    const level: NavLevel = { y, x0, z0, w, h, walk: new Uint8Array(w * h), floorY: new Float32Array(w * h), blockedDirs: new Uint16Array(w * h), base: prev ? prev.base + prev.w * prev.h : 0 };
     const ground = y === 0;
     for (let j = 0; j < h; j++) {
       for (let i = 0; i < w; i++) {
@@ -131,7 +135,52 @@ export class NavGrid {
         }
       }
     }
+    this.blockThinWalls(level);
     this.levels.push(level);
+  }
+
+  /**
+   * Two neighboring cells can both have clearance while a thin wall (0.3 m) runs between them.
+   * Marks such moves as blocked by sampling the segment between the cell centers.
+   */
+  private blockThinWalls(level: NavLevel): void {
+    const { w, h, x0, z0 } = level;
+    for (let j = 0; j < h; j++) {
+      for (let i = 0; i < w; i++) {
+        const k = j * w + i;
+        if (!level.walk[k]) continue;
+        const cx = x0 + i + 0.5;
+        const cz = z0 + j + 0.5;
+        const y = level.floorY[k];
+        // Only half of the directions; the reverse move is marked on the neighbor.
+        for (const [di, dj] of HALF_DIRS) {
+          const ii = i + di;
+          const jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= w || jj >= h) continue;
+          const kk = jj * w + ii;
+          if (!level.walk[kk]) continue;
+          const lo = Math.max(y, level.floorY[kk]) + NAV.step;
+          const hi = Math.min(y, level.floorY[kk]) + NAV.height;
+          let blocked = false;
+          for (const t of SAMPLES) {
+            const px = cx + di * t;
+            const pz = cz + dj * t;
+            for (const e of this.near(px, pz)) {
+              if (e.max.y <= lo || e.min.y >= hi) continue;
+              if (footprintOverlaps(e.v, px, pz, WALL_SAMPLE_RADIUS)) {
+                blocked = true;
+                break;
+              }
+            }
+            if (blocked) break;
+          }
+          if (blocked) {
+            level.blockedDirs[k] |= 1 << dirBit(di, dj);
+            level.blockedDirs[kk] |= 1 << dirBit(-di, -dj);
+          }
+        }
+      }
+    }
   }
 
   private addLink(l: NavLink): void {
@@ -144,9 +193,11 @@ export class NavGrid {
     let cost = 0;
     const pts = [l.a, ...l.via, l.b];
     for (let i = 1; i < pts.length; i++) cost += pts[i].distanceTo(pts[i - 1]);
-    for (const [from, to] of [[a, b], [b, a]]) {
+    // The exact link ends are waypoints too: cell centers can sit beside the flight.
+    const forward = [l.a, ...l.via, l.b];
+    for (const [from, to, via] of [[a, b, forward], [b, a, [...forward].reverse()]] as const) {
       const list = this.linkEdges.get(from) ?? [];
-      list.push({ to, cost });
+      list.push({ to, cost, via });
       this.linkEdges.set(from, list);
     }
   }
@@ -219,8 +270,10 @@ export class NavGrid {
     out.length = 0;
     const { level, k, i, j } = this.decode(n);
     const y = level.floorY[k];
+    const blockedDirs = level.blockedDirs[k];
     const ok = (ii: number, jj: number): boolean => {
       if (ii < 0 || jj < 0 || ii >= level.w || jj >= level.h) return false;
+      if (blockedDirs & (1 << dirBit(ii - i, jj - j))) return false;
       const kk = jj * level.w + ii;
       return level.walk[kk] === 1 && Math.abs(level.floorY[kk] - y) <= NAV.step;
     };
@@ -234,6 +287,19 @@ export class NavGrid {
     }
     const links = this.linkEdges.get(n);
     if (links) out.push(...links);
+    return out;
+  }
+
+  /** World points for a node path, with the stair waypoints of any links inserted. */
+  pathPoints(path: readonly number[]): THREE.Vector3[] {
+    const out: THREE.Vector3[] = [];
+    for (let i = 0; i < path.length; i++) {
+      if (i > 0) {
+        const link = this.linkEdges.get(path[i - 1])?.find((e) => e.to === path[i]);
+        if (link?.via) out.push(...link.via.map((v) => v.clone()));
+      }
+      out.push(this.position(path[i]));
+    }
     return out;
   }
 
@@ -285,6 +351,16 @@ export class NavGrid {
     }
     return null;
   }
+}
+
+/** East, south and the two southern diagonals; the other four are their reverses. */
+const HALF_DIRS = [[1, 0], [0, 1], [1, 1], [-1, 1]] as const;
+/** Points along a move (fraction of the cell step) checked against thin walls. */
+const SAMPLES = [0.25, 0.5, 0.75];
+const WALL_SAMPLE_RADIUS = 0.05;
+
+function dirBit(di: number, dj: number): number {
+  return (dj + 1) * 3 + di + 1;
 }
 
 /** Binary min-heap of node ids keyed by priority. */
