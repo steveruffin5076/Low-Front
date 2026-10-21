@@ -1,6 +1,43 @@
 # PROGRESS.md
 
-## Phase 2 — Weapon Models (done, waiting for review)
+## Phase 3 — Player Controller and First-Person Animations (done, waiting for review)
+
+### What was done
+- **Test range** (`src/data/testRange.ts`, `src/scenes/TestRange.ts`): flat ground, shooting lane with target dummies at 10 / 50 / 100 m and distance posts every 10 m, stairs to a 3 m platform, ramps at 20°, 40° and 50°, crates of 0.3 / 0.5 / 1.0 / 2.0 m, walls and a corner for lean tests. Deploy now opens this range with the saved loadout.
+- **Player movement** (section 9): walk 4.5, sprint 6.5 with 6 s stamina (4 s refill), crouch 2.5 (C toggle), ADS 2.8 m/s, weapon speed modifiers, 0.6 m jump, 0.35 m steps, 45° slope limit, lean Q/E (15°, 0.35 m, stops at walls). Rapier kinematic character controller.
+- **First-person view**: weapon and arms drawn in their own layer on top of the world (no clipping into walls). Low-poly arms with team-color sleeves and black gloves, solved with two-bone IK to the weapon's grip points.
+- **Animations** (all of section 8.1, for all three weapons):
+  - Idle breathing, mouse sway, figure-8 walk bob (smaller when aiming or crouched), sprint pose (rifle and pistol differ) with a 0.2 s blend; firing is blocked during sprint and pressing fire ends the sprint.
+  - ADS: the sight anchor moves to the screen center; FOV 75 → 55 (rifles) / 65 (pistol).
+  - Fire: kick and recovery, muzzle flash, shell ejection with arc and spin, trigger pull. M4A1 bolt carrier cycles in the port and the dust cover opens on the first shot and stays open; AK47 charging handle cycles; M1911 slide cycles and the hammer re-cocks. On the last round the M1911 slide and the M4A1 bolt lock back.
+  - Dry fire click on an empty trigger.
+  - Tactical reload: magazine out, new magazine from the pouch, seated with a tap; ammo updates at the "magazine seated" moment.
+  - Empty reloads: M4A1 left hand presses the bolt release; AK47 right hand reaches over and racks the charging handle; M1911 slide stop is pressed and the slide closes.
+  - Reload cancel by sprinting or switching before the magazine is seated.
+  - Weapon switch (1 / 2 / mouse wheel): holster 0.35 s (pistol 0.25 s), draw 0.45 s (pistol 0.3 s).
+  - Fire mode toggle (B): selector moves with a click. Inspect (I): left side, then right side.
+  - Crouch camera over 0.2 s, jump (weapon up) and landing dip, lean roll and shift.
+  - Hit reaction (camera shake + red edge flash) and death (camera drops and tilts, then respawn) — on test keys H and K until damage exists.
+- Logic kept separate from rendering and unit tested: movement rules and stamina, weapon ammo / fire rate / fire modes / reload math, the weapon action controller (reload seat and cancel, switching, inspect), keyframe timeline, spring and two-bone IK (85 tests in total).
+- Small test overlay: crosshair (hidden while aiming), ammo / fire mode / action / stance / speed / stamina readout, key help.
+
+### How to test
+1. `npm run dev`, open the URL, "Play vs Bots" → pick a loadout → "Deploy". Click the game to lock the mouse (Esc releases it; "Main Menu" is top left).
+2. Movement: walk, sprint until stamina runs out, crouch (C), jump (Space) onto the 0.5 m crate, climb the stairs and the 20° / 40° ramps; the 50° ramp should block you. Lean (Q / E) next to the cream walls.
+3. Weapons: fire (hold LMB, B for semi), aim (hold RMB), reload with rounds left and on an empty magazine, switch (1 / 2 / wheel), inspect (I). Try sprinting or switching during a reload.
+4. Press H for the hit reaction and K for the death camera.
+5. `npm test` — 85 tests pass.
+
+### Known issues
+- Damage, hit markers, camera recoil, tracers, impacts and gunshot sounds come in Phase 4 (fire is visual only; the dummies do not react). Only mechanical clicks are played now.
+- Hit reaction and death are triggered by test keys (H, K). Death respawns in the range; the Deploy Screen comes in Phase 7.
+- Fall height is measured on landing, but fall damage is applied in Phase 4.
+- Esc only releases the mouse; the Pause Menu comes in Phase 7.
+- Arms and hands are blocky. In a few poses (AK47 rack, inspect) a forearm passes in front of the weapon by design of the motion; please report any pose where an arm cuts through the weapon.
+- Checked in a headless browser with software rendering; animation feel, sensitivity and FPS need a check on real hardware.
+- Dev-only URL flag `?debug=freemouse` treats the mouse as locked (for automated checks), and any `?debug=` exposes `window.__game`.
+
+## Phase 2 — Weapon Models (done)
 
 ### What was done
 - `src/weapons/models/ModelKit.ts`: box, cylinder, side-profile and cross-section extrusion, arc helper, and an `Assembly` that merges static parts by material and keeps moving parts as separate named nodes.
