@@ -3,7 +3,7 @@ import { PREVIEW } from '../../data/menu';
 import type { WeaponDef } from '../../data/weapons';
 import { disposeObject } from '../../render/dispose';
 import { addPreviewLights, type PreviewRenderer } from '../../render/PreviewRenderer';
-import { buildPlaceholderWeapon } from '../../weapons/models/PlaceholderWeapon';
+import { buildWeaponModel } from '../../weapons/models/weaponModels';
 import { STAT_BAR_LABELS, magazineLabel, statBars, type StatBarName } from '../../weapons/WeaponStats';
 import { el } from '../dom';
 
@@ -23,7 +23,7 @@ export class WeaponCard {
 
   constructor(weapon: WeaponDef, selected: boolean, onSelect: () => void) {
     addPreviewLights(this.scene);
-    this.model = buildPlaceholderWeapon(weapon.id);
+    this.model = buildWeaponModel(weapon.id, 'fp').root;
     // Center the model on a pivot so it sways around its middle.
     const bounds = new THREE.Box3().setFromObject(this.model);
     this.model.position.sub(bounds.getCenter(new THREE.Vector3()));
@@ -59,9 +59,9 @@ export class WeaponCard {
 
   update(dt: number): void {
     this.time += dt;
-    // Barrel points along +Z; rotating by +90° shows the right side with the muzzle to the right.
+    // The muzzle points along −Z; rotating by −90° shows the right side with the muzzle to the right.
     const pivot = this.model.parent;
-    if (pivot) pivot.rotation.y = Math.PI / 2 + Math.sin(this.time * CFG.swaySpeed) * CFG.swayAngle;
+    if (pivot) pivot.rotation.y = -Math.PI / 2 + Math.sin(this.time * CFG.swaySpeed) * CFG.swayAngle;
   }
 
   draw(preview: PreviewRenderer): void {

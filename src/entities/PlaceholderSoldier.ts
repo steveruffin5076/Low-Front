@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE, UI_PALETTE } from '../data/palette';
 import type { WeaponId } from '../data/weapons';
-import { buildPlaceholderWeapon } from '../weapons/models/PlaceholderWeapon';
+import { buildWeaponModel } from '../weapons/models/weaponModels';
 import { disposeObject } from '../render/dispose';
 
 /** Blocky stand-in soldier (~1.8 m) used until the real soldier arrives in Phase 6. Faces +Z. */
@@ -26,7 +26,8 @@ const UPPER: Record<string, Part> = {
 };
 
 const CHEST_HEIGHT = 0.86;
-const WEAPON_POS: [number, number, number] = [0.08, 0.3, 0.32];
+/** Where the weapon's right hand grip sits on the chest. The weapon muzzle points along −Z, so it is turned 180°. */
+const WEAPON_POS: [number, number, number] = [0.12, 0.25, 0.27];
 
 export class PlaceholderSoldier {
   readonly root = new THREE.Group();
@@ -57,8 +58,9 @@ export class PlaceholderSoldier {
       this.chest.remove(this.weapon);
       disposeObject(this.weapon);
     }
-    this.weapon = buildPlaceholderWeapon(id);
+    this.weapon = buildWeaponModel(id, 'tp').root;
     this.weapon.position.set(...WEAPON_POS);
+    this.weapon.rotation.y = Math.PI;
     this.chest.add(this.weapon);
   }
 
