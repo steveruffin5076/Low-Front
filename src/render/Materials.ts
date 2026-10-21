@@ -15,6 +15,7 @@ export function paletteMaterial(color: number, opts: MaterialOptions = {}): THRE
   let mat = cache.get(key);
   if (!mat) {
     mat = new THREE.MeshStandardMaterial({ color, roughness, metalness, flatShading: true });
+    mat.userData.shared = true;
     cache.set(key, mat);
   }
   return mat;

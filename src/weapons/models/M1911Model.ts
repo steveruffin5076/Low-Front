@@ -33,7 +33,9 @@ const GRIP_PANEL: V2[] = [[0.006, -0.016], [0.03, -0.016], [0.04, -0.092], [0.02
 const TRIGGER_GUARD: V2[] = [[0.0, -0.004], [-0.058, -0.004], [-0.062, -0.012], [-0.054, -0.032], [-0.004, -0.034], [0.006, -0.026]];
 const TRIGGER_GUARD_HOLE: V2[] = [[-0.004, -0.009], [-0.052, -0.009], [-0.05, -0.028], [-0.006, -0.029]];
 const GRIP_SAFETY: V2[] = [[0.026, 0.012], [0.042, 0.018], [0.043, 0.012], [0.036, -0.004], [0.034, -0.026], [0.029, -0.02]];
-const HAMMER: V2[] = [[-0.004, 0.0], [0.005, 0.0], [0.015, 0.02], [0.012, 0.025], [0.002, 0.016]];
+/** Hammer at rest (uncocked), standing against the slide; relative to its pivot. Cocking rotates it back. */
+const HAMMER: V2[] = [[-0.004, 0.0], [0.004, 0.0], [0.007, 0.02], [0.002, 0.026], [-0.004, 0.018]];
+const HAMMER_PIVOT: V3 = [0, 0.016, 0.034];
 
 export function buildM1911(lod: WeaponLod): WeaponModel {
   const asm = new Assembly(`m1911-${lod}`);
@@ -89,10 +91,10 @@ function buildDetailed(asm: Assembly): void {
     boxFromTo([0.0015, s.yTop, 0.014], [0.008, SIGHT_Y + 0.001, 0.02]),
   );
 
-  asm.node('hammer', [0, 0.016, 0.026]).add(
+  asm.node('hammer', HAMMER_PIVOT).add(
     metal,
-    profile(HAMMER.map(([z, y]) => [z + 0.026, y + 0.016] as V2), 0.007),
-    cyl(0.005, 0.008, { axis: 'x', pos: [0, 0.016, 0.026], segments: 8 }),
+    profile(HAMMER.map(([z, y]) => [z + HAMMER_PIVOT[2], y + HAMMER_PIVOT[1]] as V2), 0.007),
+    cyl(0.005, 0.008, { axis: 'x', pos: HAMMER_PIVOT, segments: 8 }),
   );
   asm.node('trigger', [0, -0.006, -0.022]).add(metal, boxFromTo([-0.004, -0.02, -0.026], [0.004, -0.004, -0.02]));
   asm.node('slideStop', [-0.0125, 0.008, -0.052]).add(
