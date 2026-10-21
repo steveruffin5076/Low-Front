@@ -5,12 +5,15 @@ import { DUMMY } from '../data/testRange';
 import { TargetDummy } from '../entities/TargetDummy';
 import { COLLISION, type Surface } from '../physics/collision';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
+import type { World } from './World';
 import { paletteMaterial } from '../render/Materials';
 import { disposeObject } from '../render/dispose';
 
-/** Builds the Phase 3 test range (meshes and static colliders) from `data/testRange.ts`. */
-export class TestRange {
+/** Builds the test range (meshes and static colliders) from `data/testRange.ts`. */
+export class TestRange implements World {
   readonly scene = new THREE.Scene();
+  readonly spawn = { position: new THREE.Vector3(...CFG.spawn), yaw: 0 };
+  readonly limit = null;
   readonly dummies: TargetDummy[] = [];
   private readonly sun: THREE.DirectionalLight;
 
@@ -34,7 +37,7 @@ export class TestRange {
     this.sun.position.set(pos.x + CFG.sun.offset[0], pos.y + CFG.sun.offset[1], pos.z + CFG.sun.offset[2]);
   }
 
-  update(dt: number): void {
+  update(dt: number, _camera?: THREE.Camera): void {
     for (const d of this.dummies) d.update(dt);
   }
 

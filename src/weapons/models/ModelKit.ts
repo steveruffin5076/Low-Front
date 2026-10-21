@@ -217,6 +217,37 @@ function addMerged(target: THREE.Object3D, buckets: GeoBuckets): void {
   }
 }
 
+/**
+ * Bakes a flat vertex color into a geometry (non-indexed, no UVs) so many parts can share
+ * one material and be merged into a single mesh.
+ */
+export function paint(geo: THREE.BufferGeometry, color: number): THREE.BufferGeometry {
+  const flat = geo.index ? geo.toNonIndexed() : geo;
+  if (flat !== geo) geo.dispose();
+  if (flat.hasAttribute('uv')) flat.deleteAttribute('uv');
+  if (flat.hasAttribute('uv1')) flat.deleteAttribute('uv1');
+  flat.clearGroups();
+  const c = new THREE.Color(color);
+  const n = flat.getAttribute('position').count;
+  const data = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    data[i * 3] = c.r;
+    data[i * 3 + 1] = c.g;
+    data[i * 3 + 2] = c.b;
+  }
+  flat.setAttribute('color', new THREE.BufferAttribute(data, 3));
+  return flat;
+}
+
+/** Merges painted geometries (see `paint`) into one. */
+export function mergePainted(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const merged = mergeGeometries(geos);
+  if (!merged) throw new Error('Could not merge painted geometry');
+  for (const g of geos) g.dispose();
+  merged.computeBoundingSphere();
+  return merged;
+}
+
 /** Number of triangles under `root`. */
 export function countTriangles(root: THREE.Object3D): number {
   let tris = 0;

@@ -1,17 +1,19 @@
 import type { State } from '../../core/StateMachine';
 import type { GameContext } from '../../core/GameContext';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
-import { RangeSession } from '../../scenes/RangeSession';
+import { CityMap } from '../../scenes/CityMap';
+import { PlaySession } from '../../scenes/PlaySession';
+import { TestRange } from '../../scenes/TestRange';
 import { button, el } from '../dom';
 
 /**
- * Match screen. Until the Conquest match arrives (Phase 7) it hosts the test range.
- * `load()` must finish before the screen is entered.
+ * Match screen. Until the Conquest match arrives (Phase 7) the player roams the city map
+ * alone; `/?debug=range` loads the test range instead. `load()` must finish before entering.
  */
 export class MatchScreen implements State {
   private root: HTMLElement | null = null;
   private physics: PhysicsWorld | null = null;
-  private session: RangeSession | null = null;
+  private session: PlaySession | null = null;
 
   constructor(private readonly ctx: GameContext) {}
 
@@ -22,7 +24,9 @@ export class MatchScreen implements State {
   async load(): Promise<void> {
     this.unload();
     this.physics = await PhysicsWorld.create();
-    this.session = new RangeSession(this.physics, this.ctx.input, this.ctx.profiles.load().loadout);
+    const range = new URLSearchParams(window.location.search).get('debug') === 'range';
+    const world = range ? new TestRange(this.physics) : new CityMap(this.physics);
+    this.session = new PlaySession(this.physics, this.ctx.input, this.ctx.profiles.load().loadout, world);
   }
 
   enter(): void {

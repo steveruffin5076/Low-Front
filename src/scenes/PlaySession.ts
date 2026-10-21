@@ -5,7 +5,6 @@ import { AudioManager } from '../audio/AudioManager';
 import type { Input } from '../core/Input';
 import { CONTROLS, MOUSE } from '../data/controls';
 import { MOVEMENT } from '../data/player';
-import { TEST_RANGE } from '../data/testRange';
 import type { Loadout, WeaponSlot } from '../data/weapons';
 import { PlayerController, type PlayerIntent } from '../entities/PlayerController';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
@@ -14,7 +13,8 @@ import { ViewmodelLayer } from '../render/ViewmodelLayer';
 import { RangeOverlay } from '../ui/RangeOverlay';
 import { PlayerWeapons, type WeaponInput } from '../weapons/PlayerWeapons';
 import { RangeCombat } from './RangeCombat';
-import { TestRange } from './TestRange';
+import { OutOfBounds } from '../game/OutOfBounds';
+import type { World } from './World';
 
 /** Pressed keys latched each frame until a fixed step consumes them. */
 interface Latched {
@@ -29,9 +29,8 @@ interface Latched {
 
 const NONE: Latched = { crouch: false, jump: false, fire: false, reload: false, fireMode: false, inspect: false, switchTo: null };
 
-/** Phase 3 test range: world, player movement, first-person weapons and animations. */
-export class RangeSession {
-  readonly range: TestRange;
+/** A play session in a world: player movement, weapons, animations, combat and bounds. */
+export class PlaySession {
   readonly player: PlayerController;
   readonly weapons: PlayerWeapons;
   readonly camera = new THREE.PerspectiveCamera(MOVEMENT.baseFov, 1, 0.05, 400);
@@ -40,7 +39,7 @@ export class RangeSession {
   private readonly audio = new AudioManager();
   private readonly fx = new CameraFx();
   private readonly overlay = new RangeOverlay();
-  private readonly spawn = new THREE.Vector3(...TEST_RANGE.spawn);
+  private readonly bounds = new OutOfBounds();
   private latched: Latched = { ...NONE };
   private readonly combat: RangeCombat;
 
@@ -48,16 +47,17 @@ export class RangeSession {
     physics: PhysicsWorld,
     private readonly input: Input,
     loadout: Loadout,
+    readonly world: World,
   ) {
-    this.range = new TestRange(physics);
-    this.player = new PlayerController(physics, this.spawn);
+    this.player = new PlayerController(physics, world.spawn.position.clone());
+    this.player.yaw = world.spawn.yaw;
     this.weapons = new PlayerWeapons(loadout);
     this.animator = new FPAnimator(this.layer, this.weapons, this.audio);
     this.player.events.on('jumped', () => this.animator.onJump());
     this.player.events.on('landed', ({ impactSpeed }) => this.animator.onLand(impactSpeed));
     this.combat = new RangeCombat(
       physics,
-      this.range.scene,
+      world.scene,
       this.player,
       this.weapons,
       this.audio,
@@ -111,6 +111,10 @@ export class RangeSession {
     };
     this.weapons.update(dt, weaponInput);
     this.combat.fixedUpdate(dt);
+    if (this.world.limit !== null) {
+      const feet = this.player.motor.feet;
+      if (this.bounds.update(dt, feet.x, feet.z) === 'expired') this.combat.damagePlayer(this.combat.health.max, null);
+    }
     this.latched = { ...NONE };
   }
 
@@ -124,8 +128,8 @@ export class RangeSession {
     this.fx.apply(this.camera, dt, eye);
     this.camera.updateMatrixWorld();
     this.audio.setListener(this.camera);
-    this.range.follow(this.player.motor.feet);
-    this.range.update(dt);
+    this.world.follow(this.player.motor.feet);
+    this.world.update(dt, this.camera);
     this.combat.update(dt, alpha);
 
     this.combat.shooting.ads = this.animator.adsBlend;
@@ -167,15 +171,16 @@ export class RangeSession {
       this.fx.dead,
       i.locked,
     );
+    this.overlay.setBoundsWarning(this.fx.dead ? null : this.bounds.remaining);
   }
 
   render(renderer: Renderer): void {
-    renderer.render(this.range.scene, this.camera);
+    renderer.render(this.world.scene, this.camera);
     if (!this.fx.dead) renderer.renderLayer(this.layer.scene, this.layer.camera);
   }
 
   dispose(): void {
-    this.range.dispose();
+    this.world.dispose();
     this.animator.dispose();
     this.combat.dispose();
     this.audio.dispose();
@@ -206,7 +211,8 @@ export class RangeSession {
 
   private respawn(): void {
     this.fx.reset();
-    this.player.respawn(this.spawn);
+    this.player.respawn(this.world.spawn.position.clone(), this.world.spawn.yaw);
+    this.bounds.reset();
     this.animator.reset();
     this.combat.reset();
     this.weapons.start();

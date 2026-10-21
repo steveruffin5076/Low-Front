@@ -1,0 +1,337 @@
+import * as THREE from 'three';
+import { NAV } from '../data/nav';
+import type { NavLink } from './LocalFrame';
+import { footprintOverlaps, volumeBounds, type Volume } from './Volume';
+
+/** One floor level of the grid (ground, first floor, rooftops, …). */
+export interface NavLevel {
+  /** Nominal floor height of the level. */
+  y: number;
+  /** Cell (0, 0) covers x0…x0+1, z0…z0+1. */
+  x0: number;
+  z0: number;
+  w: number;
+  h: number;
+  walk: Uint8Array;
+  floorY: Float32Array;
+  /** First node id of this level. */
+  base: number;
+}
+
+interface Indexed {
+  v: Volume;
+  min: THREE.Vector3;
+  max: THREE.Vector3;
+}
+
+interface Edge {
+  to: number;
+  cost: number;
+}
+
+/**
+ * 1 m navigation grid per floor level, rasterized from the collision volumes (plan section 10.6):
+ * a cell is walkable when a floor supports it and a soldier-sized capsule fits above it.
+ * Stair and ramp links connect levels. A* finds paths (smoothing comes with the bots, Phase 8).
+ */
+export class NavGrid {
+  readonly levels: NavLevel[] = [];
+  readonly linkEdges = new Map<number, Edge[]>();
+  /** Links that could not be connected (both ends must land on walkable cells). */
+  readonly brokenLinks: NavLink[] = [];
+  private readonly buckets = new Map<string, Indexed[]>();
+
+  constructor(volumes: readonly Volume[], links: readonly NavLink[], half: number) {
+    for (const v of volumes) this.index(v);
+    this.addLevel(0, -half, -half, half, half, volumes);
+    // Upper levels: one per distinct floor top above ground, covering those floors.
+    const groups = new Map<number, Indexed[]>();
+    for (const list of this.buckets.values()) {
+      for (const e of list) {
+        if (e.v.kind !== 'floor' || e.max.y <= NAV.step + 0.1) continue;
+        const key = Math.round(e.max.y * 10) / 10;
+        const g = groups.get(key) ?? [];
+        if (!g.includes(e)) g.push(e);
+        groups.set(key, g);
+      }
+    }
+    for (const [y, g] of [...groups].sort((a, b) => a[0] - b[0])) {
+      const x0 = Math.max(-half, Math.min(...g.map((e) => e.min.x)) - 1);
+      const z0 = Math.max(-half, Math.min(...g.map((e) => e.min.z)) - 1);
+      const x1 = Math.min(half, Math.max(...g.map((e) => e.max.x)) + 1);
+      const z1 = Math.min(half, Math.max(...g.map((e) => e.max.z)) + 1);
+      if (x1 > x0 && z1 > z0) this.addLevel(y, x0, z0, x1, z1, volumes);
+    }
+    for (const l of links) this.addLink(l);
+  }
+
+  get nodeCount(): number {
+    const last = this.levels[this.levels.length - 1];
+    return last.base + last.w * last.h;
+  }
+
+  // --- Building ---
+
+  private index(v: Volume): void {
+    const b = volumeBounds(v);
+    const e: Indexed = { v, min: b.min.clone(), max: b.max.clone() };
+    const s = NAV.bucket;
+    const r = NAV.radius;
+    for (let bx = Math.floor((b.min.x - r) / s); bx <= Math.floor((b.max.x + r) / s); bx++) {
+      for (let bz = Math.floor((b.min.z - r) / s); bz <= Math.floor((b.max.z + r) / s); bz++) {
+        const key = `${bx},${bz}`;
+        const list = this.buckets.get(key) ?? [];
+        list.push(e);
+        this.buckets.set(key, list);
+      }
+    }
+  }
+
+  private near(x: number, z: number): readonly Indexed[] {
+    return this.buckets.get(`${Math.floor(x / NAV.bucket)},${Math.floor(z / NAV.bucket)}`) ?? [];
+  }
+
+  private addLevel(y: number, ax0: number, az0: number, ax1: number, az1: number, _volumes: readonly Volume[]): void {
+    const x0 = Math.floor(ax0);
+    const z0 = Math.floor(az0);
+    const w = Math.ceil(ax1) - x0;
+    const h = Math.ceil(az1) - z0;
+    const prev = this.levels[this.levels.length - 1];
+    const level: NavLevel = { y, x0, z0, w, h, walk: new Uint8Array(w * h), floorY: new Float32Array(w * h), base: prev ? prev.base + prev.w * prev.h : 0 };
+    const ground = y === 0;
+    for (let j = 0; j < h; j++) {
+      for (let i = 0; i < w; i++) {
+        const cx = x0 + i + 0.5;
+        const cz = z0 + j + 0.5;
+        const vols = this.near(cx, cz);
+        // Support: the highest floor near this level's height under the cell center.
+        let floor = ground ? 0 : -Infinity;
+        for (const e of vols) {
+          const top = e.max.y;
+          if (ground ? top > NAV.step + 0.05 : Math.abs(top - y) > NAV.levelTolerance) continue;
+          if (!ground && e.v.kind !== 'floor') continue;
+          if (e.v.kind === 'ramp') continue;
+          if (top > floor && footprintOverlaps(e.v, cx, cz, 0.01)) floor = top;
+        }
+        if (floor === -Infinity) continue;
+        // Clearance: nothing in the body band above the floor within the soldier radius.
+        const lo = floor + NAV.step;
+        const hi = floor + NAV.height;
+        let blocked = false;
+        for (const e of vols) {
+          if (e.max.y <= lo || e.min.y >= hi) continue;
+          if (footprintOverlaps(e.v, cx, cz, NAV.radius)) {
+            blocked = true;
+            break;
+          }
+        }
+        if (!blocked) {
+          level.walk[j * w + i] = 1;
+          level.floorY[j * w + i] = floor;
+        }
+      }
+    }
+    this.levels.push(level);
+  }
+
+  private addLink(l: NavLink): void {
+    const a = this.nearestWalkable(l.a);
+    const b = this.nearestWalkable(l.b);
+    if (a === null || b === null) {
+      this.brokenLinks.push(l);
+      return;
+    }
+    let cost = 0;
+    const pts = [l.a, ...l.via, l.b];
+    for (let i = 1; i < pts.length; i++) cost += pts[i].distanceTo(pts[i - 1]);
+    for (const [from, to] of [[a, b], [b, a]]) {
+      const list = this.linkEdges.get(from) ?? [];
+      list.push({ to, cost });
+      this.linkEdges.set(from, list);
+    }
+  }
+
+  // --- Queries ---
+
+  /** Level whose floor at (x, z) is closest to y, and the node there (walkable or not). */
+  node(x: number, y: number, z: number): number | null {
+    let best: number | null = null;
+    let bestDy = Infinity;
+    for (const l of this.levels) {
+      const i = Math.floor(x - l.x0);
+      const j = Math.floor(z - l.z0);
+      if (i < 0 || j < 0 || i >= l.w || j >= l.h) continue;
+      const k = j * l.w + i;
+      const fy = l.walk[k] ? l.floorY[k] : l.y;
+      const dy = Math.abs(fy - y);
+      if (dy < bestDy && dy < 1.5) {
+        bestDy = dy;
+        best = l.base + k;
+      }
+    }
+    return best;
+  }
+
+  nearestWalkable(p: THREE.Vector3, maxDist: number = NAV.linkSnap): number | null {
+    const n = this.node(p.x, p.y, p.z);
+    if (n === null) return null;
+    if (this.walkable(n)) return n;
+    const { level, i, j } = this.decode(n);
+    const r = Math.ceil(maxDist);
+    let best: number | null = null;
+    let bestD = Infinity;
+    for (let dj = -r; dj <= r; dj++) {
+      for (let di = -r; di <= r; di++) {
+        const ii = i + di;
+        const jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= level.w || jj >= level.h) continue;
+        const k = jj * level.w + ii;
+        const d = Math.hypot(di, dj);
+        if (level.walk[k] && d < bestD && d <= maxDist && Math.abs(level.floorY[k] - p.y) < 1) {
+          bestD = d;
+          best = level.base + k;
+        }
+      }
+    }
+    return best;
+  }
+
+  walkable(n: number): boolean {
+    const { level, k } = this.decode(n);
+    return level.walk[k] === 1;
+  }
+
+  decode(n: number): { level: NavLevel; levelIndex: number; k: number; i: number; j: number } {
+    let li = this.levels.length - 1;
+    while (li > 0 && this.levels[li].base > n) li--;
+    const level = this.levels[li];
+    const k = n - level.base;
+    return { level, levelIndex: li, k, i: k % level.w, j: Math.floor(k / level.w) };
+  }
+
+  position(n: number, out = new THREE.Vector3()): THREE.Vector3 {
+    const { level, k, i, j } = this.decode(n);
+    return out.set(level.x0 + i + 0.5, level.floorY[k], level.z0 + j + 0.5);
+  }
+
+  /** Walkable neighbors with move costs (8 directions, no corner cutting, step limit) plus links. */
+  neighbors(n: number, out: Edge[] = []): Edge[] {
+    out.length = 0;
+    const { level, k, i, j } = this.decode(n);
+    const y = level.floorY[k];
+    const ok = (ii: number, jj: number): boolean => {
+      if (ii < 0 || jj < 0 || ii >= level.w || jj >= level.h) return false;
+      const kk = jj * level.w + ii;
+      return level.walk[kk] === 1 && Math.abs(level.floorY[kk] - y) <= NAV.step;
+    };
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue;
+        if (!ok(i + di, j + dj)) continue;
+        if (di && dj && !(ok(i + di, j) && ok(i, j + dj))) continue;
+        out.push({ to: level.base + (j + dj) * level.w + (i + di), cost: di && dj ? Math.SQRT2 : 1 });
+      }
+    }
+    const links = this.linkEdges.get(n);
+    if (links) out.push(...links);
+    return out;
+  }
+
+  /**
+   * A* from `from` to `to` (world positions). `blocked` marks extra impassable nodes
+   * (used by tests to find alternative routes). Returns node ids, or null.
+   */
+  findPath(from: THREE.Vector3, to: THREE.Vector3, blocked?: Set<number>): number[] | null {
+    const start = this.nearestWalkable(from);
+    const goal = this.nearestWalkable(to);
+    if (start === null || goal === null) return null;
+    const goalPos = this.position(goal);
+    const g = new Map<number, number>([[start, 0]]);
+    const came = new Map<number, number>();
+    const heap = new MinHeap();
+    const tmp = new THREE.Vector3();
+    const h = (n: number): number => {
+      this.position(n, tmp);
+      const dx = Math.abs(tmp.x - goalPos.x);
+      const dz = Math.abs(tmp.z - goalPos.z);
+      return Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz) + Math.abs(tmp.y - goalPos.y);
+    };
+    heap.push(start, h(start));
+    const closed = new Set<number>();
+    const edges: Edge[] = [];
+    while (heap.size) {
+      const n = heap.pop();
+      if (n === goal) {
+        const path = [n];
+        let c = n;
+        while (came.has(c)) {
+          c = came.get(c)!;
+          path.push(c);
+        }
+        return path.reverse();
+      }
+      if (closed.has(n)) continue;
+      closed.add(n);
+      const gn = g.get(n)!;
+      for (const e of this.neighbors(n, edges)) {
+        if (blocked?.has(e.to) || closed.has(e.to)) continue;
+        const ng = gn + e.cost;
+        if (ng < (g.get(e.to) ?? Infinity)) {
+          g.set(e.to, ng);
+          came.set(e.to, n);
+          heap.push(e.to, ng + h(e.to));
+        }
+      }
+    }
+    return null;
+  }
+}
+
+/** Binary min-heap of node ids keyed by priority. */
+class MinHeap {
+  private ids: number[] = [];
+  private keys: number[] = [];
+
+  get size(): number {
+    return this.ids.length;
+  }
+
+  push(id: number, key: number): void {
+    this.ids.push(id);
+    this.keys.push(key);
+    let i = this.ids.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this.keys[p] <= this.keys[i]) break;
+      this.swap(i, p);
+      i = p;
+    }
+  }
+
+  pop(): number {
+    const top = this.ids[0];
+    const lastId = this.ids.pop()!;
+    const lastKey = this.keys.pop()!;
+    if (this.ids.length) {
+      this.ids[0] = lastId;
+      this.keys[0] = lastKey;
+      let i = 0;
+      for (;;) {
+        const l = i * 2 + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < this.ids.length && this.keys[l] < this.keys[m]) m = l;
+        if (r < this.ids.length && this.keys[r] < this.keys[m]) m = r;
+        if (m === i) break;
+        this.swap(i, m);
+        i = m;
+      }
+    }
+    return top;
+  }
+
+  private swap(a: number, b: number): void {
+    [this.ids[a], this.ids[b]] = [this.ids[b], this.ids[a]];
+    [this.keys[a], this.keys[b]] = [this.keys[b], this.keys[a]];
+  }
+}

@@ -46,6 +46,7 @@ export class RangeOverlay {
   private readonly flash: HTMLElement;
   private readonly banner: HTMLElement;
   private readonly lockHint: HTMLElement;
+  private readonly boundsBanner: HTMLElement;
   private readonly healthFill: HTMLElement;
   private readonly healthText: HTMLElement;
   private readonly indicators: { el: HTMLElement; time: number }[] = [];
@@ -60,6 +61,8 @@ export class RangeOverlay {
     this.banner = el('div', { class: 'death-banner', text: 'You died — respawning' });
     this.banner.hidden = true;
     this.lockHint = el('div', { class: 'lock-hint', text: 'Click to play' });
+    this.boundsBanner = el('div', { class: 'bounds-banner' });
+    this.boundsBanner.hidden = true;
     this.healthFill = el('div', { class: 'health-fill' });
     this.healthText = el('span', { class: 'health-text' });
     const ring = el('div', { class: 'damage-ring' });
@@ -77,8 +80,15 @@ export class RangeOverlay {
       this.readout,
       el('pre', { class: 'range-help', text: HELP }),
       this.banner,
+      this.boundsBanner,
       this.lockHint,
     ]);
+  }
+
+  /** Out-of-bounds countdown in seconds, or null to hide it. */
+  setBoundsWarning(seconds: number | null): void {
+    this.boundsBanner.hidden = seconds === null;
+    if (seconds !== null) this.boundsBanner.textContent = `Return to the battlefield  ${Math.ceil(seconds)}`;
   }
 
   hitFlash(): void {

@@ -156,3 +156,18 @@
   font: 700 11px/14px ui-monospace, monospace;
   color: #111;
 }
+
+.bounds-banner {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 12px 22px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(229, 72, 59, 0.85);
+  border-radius: 6px;
+}
