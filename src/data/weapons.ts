@@ -1,4 +1,4 @@
-/** Weapon stats (plan section 7.1). Spread and recoil values are first estimates, tuned in Phase 4. */
+/** Weapon stats (plan section 7.1). Spread and recoil are tuned to the plan's descriptions. */
 
 export type WeaponId = 'm4a1' | 'ak47' | 'm1911';
 export type WeaponSlot = 'primary' | 'secondary';
@@ -29,8 +29,19 @@ export interface WeaponDef {
   moveSpeedModifier: number;
   /** Cone half-angle in degrees. */
   spread: { hipDeg: number; adsDeg: number };
-  /** Camera kick per shot in degrees. */
-  recoil: { verticalDeg: number; horizontalDeg: number };
+  /**
+   * Camera kick per shot in degrees. `pattern` is the horizontal direction per shot (cycles),
+   * `random` adds ± that fraction of `horizontalDeg`. After `recoveryDelay` seconds without
+   * firing, the camera returns at `recoveryDegPerSec`.
+   */
+  recoil: {
+    verticalDeg: number;
+    horizontalDeg: number;
+    pattern: readonly number[];
+    random: number;
+    recoveryDelay: number;
+    recoveryDegPerSec: number;
+  };
 }
 
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
@@ -52,7 +63,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     adsTime: 0.25,
     moveSpeedModifier: 0.95,
     spread: { hipDeg: 2.0, adsDeg: 0.1 },
-    recoil: { verticalDeg: 0.35, horizontalDeg: 0.12 },
+    // Low vertical, low horizontal.
+    recoil: { verticalDeg: 0.35, horizontalDeg: 0.12, pattern: [0.2, 0.5, -0.3, 0.6, -0.4, 0.3], random: 0.5, recoveryDelay: 0.12, recoveryDegPerSec: 10 },
   },
   ak47: {
     id: 'ak47',
@@ -72,7 +84,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     adsTime: 0.28,
     moveSpeedModifier: 0.93,
     spread: { hipDeg: 2.4, adsDeg: 0.15 },
-    recoil: { verticalDeg: 0.55, horizontalDeg: 0.25 },
+    // High vertical, medium horizontal, drifting right.
+    recoil: { verticalDeg: 0.6, horizontalDeg: 0.3, pattern: [0.5, 0.8, 1.0, -0.6, 0.9, -0.8, 0.7], random: 0.6, recoveryDelay: 0.12, recoveryDegPerSec: 9 },
   },
   m1911: {
     id: 'm1911',
@@ -92,7 +105,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     adsTime: 0.18,
     moveSpeedModifier: 1.0,
     spread: { hipDeg: 2.2, adsDeg: 0.2 },
-    recoil: { verticalDeg: 0.9, horizontalDeg: 0.2 },
+    // Medium vertical with a sharp snap that recovers fast.
+    recoil: { verticalDeg: 1.4, horizontalDeg: 0.2, pattern: [0.3, -0.3], random: 0.5, recoveryDelay: 0.05, recoveryDegPerSec: 18 },
   },
 };
 
@@ -111,6 +125,6 @@ export const STAT_BARS = {
   fireRateMax: 900,
   rangeMax: 100,
   /** Accuracy penalty = hip spread * w + vertical recoil * w + horizontal recoil * w. */
-  accuracy: { hipSpreadWeight: 0.2, verticalRecoilWeight: 0.6, horizontalRecoilWeight: 1.0, worstPenalty: 1.6 },
+  accuracy: { hipSpreadWeight: 0.2, verticalRecoilWeight: 0.6, horizontalRecoilWeight: 1.0, worstPenalty: 1.8 },
   mobility: { speedMin: 0.85, speedMax: 1.0, adsTimeMin: 0.1, adsTimeMax: 0.4 },
 } as const;

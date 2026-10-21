@@ -27,8 +27,6 @@ export const MOVEMENT = {
   stepMinWidth: 0.2,
   maxSlopeDeg: 45,
   snapToGround: 0.3,
-  /** Falls higher than this deal damage (applied in Phase 4). */
-  fallDamageHeight: 4,
   /** Capsule size. Total standing height 1.8 m. */
   radius: 0.3,
   standHeight: 1.8,
@@ -51,4 +49,18 @@ export const MOVEMENT = {
   mouseSensitivity: 0.0022,
   maxPitchDeg: 85,
   baseFov: 75,
+} as const;
+
+/** Health, regeneration and fall damage (plan section 9). */
+export const HEALTH = {
+  max: 100,
+  /** Seconds without damage before regeneration starts. */
+  regenDelay: 8,
+  /** HP per second. */
+  regenRate: 10,
+  /** Falls higher than this (m) hurt; damage per meter above it. */
+  fallThreshold: 4,
+  fallDamagePerMeter: 20,
+  /** Test key H: damage taken. */
+  debugHitDamage: 20,
 } as const;
