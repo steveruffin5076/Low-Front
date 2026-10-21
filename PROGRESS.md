@@ -1,6 +1,40 @@
 # PROGRESS.md
 
-## Phase 4 — Shooting and Damage (done, waiting for review)
+## Phase 5 — Urban Map "Verdan District" (done, waiting for review)
+
+### What was done
+- **Map data** (`src/data/map/`): 360 × 360 m city, center (0, 0), north = −Z. Point-symmetric: one half is authored and mirrored with (x, z) → (−x, −z) (`mirror.ts`), so both teams get the same streets, blocks, cover and spawns.
+  - Streets: Main Avenue (with median planters), Cross Street, side streets at ±70, alleys between blocks, sidewalks raised 0.15 m with curbs.
+  - Flags: A Bus Depot (−120, 120), B Apartment Block (120, 120), C City Hall Plaza (0, 0), D Construction Site (−120, −120), E Rail Yard (120, −120). Each has a 12 m capture ring and a pole (capture logic in Phase 7).
+  - HQs: Blue at the south end of Main Avenue, Red at the north end, 14 spawn points each. 6 spawn points per flag, 15–30 m from it.
+- **8 enterable buildings** built from floor plans (`src/data/map/plans.ts`, `src/world/BuildingBuilder.ts`): depot hall and office (A), apartment with balconies (B), City Hall and a 6-floor office tower with roof access (C), unfinished concrete frame (D), station (E), and a mirrored pair of corner shops. Floors are 3 m; doors, windows, interior walls, switchback stairs (smooth ramp colliders under visual steps), roof stair houses.
+- **Solid buildings** with facades (windows, floor ledges, roof edges), **props** for every flag area and the streets (cars, buses, barriers, sandbags, crates, containers, train cars, crane, scaffolding, fountain, trees, …), a **footbridge** over the rails.
+- **Collision volumes**: every solid thing is first an oriented box (`src/world/Volume.ts`); the same list makes the Rapier colliders, the nav grid and the cover points, so they always agree. Colliders are tagged by surface for impacts and footsteps.
+- **Performance**: static geometry is vertex-colored with one shared material and merged per 60 × 60 m chunk; props are one InstancedMesh per type. Measured with F3: 113–131 draw calls and 198k–232k triangles at all test viewpoints (budget 300 / 500k). Load in the browser: map ~0.6 s, nav grid ~0.16 s, cover points ~0.03 s.
+- **Lighting and sky** (`src/render/Lighting.ts`, `src/render/Sky.ts`): sun with a shadow area that follows the player, hemisphere light, gradient sky dome, light fog. Shared by the map and the range.
+- **Map edge**: a ring of tall buildings and walls outside ±180, invisible walls at ±191. Leaving ±180 shows "Return to the battlefield: 10" and kills the player when it reaches 0 (`src/game/OutOfBounds.ts`).
+- **Navigation** (`src/world/NavGrid.ts`): 1 m grid per floor level, rasterized from the volumes (floor below, room for a 0.3 m radius, 1.75 m soldier; steps up to 0.4 m). Moves through thin walls are blocked. Stair links connect the levels. A* is included for the tests (path smoothing comes with the bots in Phase 8).
+- **Cover points** (`src/ai/CoverPoints.ts`): next to props and wall corners, tagged low or high with a facing direction.
+- **Game**: Deploy now loads the city and spawns you in Blue HQ. `PlaySession` runs on a `World` interface; the test range is still at `/?debug=range`. The main menu fly-over uses the real map.
+- **Map viewer** at `/?debug=map` (whole map, or one building with `&plan=<id>`, X-ray view).
+- Tests (123 in total): map data rules (symmetry, bounds, flag positions, spawn distances, spawns not inside volumes), floor-plan geometry, nav grid (stair links, Blue HQ reaches every flag and Red HQ, 3 separate routes between neighboring flags), out-of-bounds timer, and a walk test that drives the real player controller and Rapier along nav paths from Blue HQ through every flag to Red HQ, and up and down every staircase, failing on any stuck spot or hole.
+
+### How to test
+1. `npm run dev`, "Play vs Bots" → "Deploy". You start in Blue HQ at the south end of Main Avenue.
+2. Walk to each flag (A west-south, B east-south, C center, D west-north, E east-north). Enter the buildings, climb every staircase, go onto the office tower and depot office roofs.
+3. Press F4 to show the nav grid (cells per floor level) and cover points (orange low, red high) and stair links (magenta). Press F3 for FPS, draw calls and triangles. Please check FPS (target ≥ 60) on your machine.
+4. Walk past the map edge (beyond the last street): the countdown starts; go back to cancel it, or wait 10 s to die and respawn.
+5. `/?debug=map` shows the whole map from above (drag to orbit, scroll to zoom); pick a building and use X-ray to see inside. `/?debug=range` opens the old test range.
+6. `npm test` — 123 tests pass.
+
+### Known issues
+- Flags are visual only; capture, tickets and the Deploy Screen come in Phase 7. Death respawns you in Blue HQ.
+- Nav paths go cell to cell and pass wall corners closely; bots will smooth them in Phase 8.
+- Checked with software rendering only (2–4 FPS here), so FPS, shadows and the feel of the city need a check on real hardware. With low FPS the game slows down (the fixed step is capped per frame), so the 10 s countdown takes longer in real time.
+- Interiors are plain (no furniture yet); the plan does not require it.
+- The build still prints the chunk size warning from Phase 0.
+
+## Phase 4 — Shooting and Damage (done)
 
 ### What was done
 - **Bullets** are projectiles (`src/weapons/Ballistics.ts`): they leave the eye along the aim direction with the weapon's muzzle velocity and gravity; each fixed step the segment from the old to the new position is raycast; max life 2 s; pooled.
