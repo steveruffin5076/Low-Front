@@ -47,7 +47,7 @@ export class DebugOverlay {
         `Draw calls ${stats.drawCalls}`,
         `Triangles  ${stats.triangles.toLocaleString()}`,
         `Bots       ${stats.bots}`,
-        `Physics    ${stats.physicsMs.toFixed(2)} ms`,
+        `Physics    ${stats.physicsMs.toFixed(3)} ms`,
       ].join('\n');
     }
     this.frames = 0;
