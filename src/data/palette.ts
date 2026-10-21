@@ -30,3 +30,9 @@ export const UI_PALETTE = {
   helmet: 0x2b5ea8,
   menuSky: 0x7cc4f0,
 } as const;
+
+/** Extra weapon colors. */
+export const WEAPON_PALETTE = {
+  boltSteel: 0x8b9097,
+  interior: 0x141518,
+} as const;
