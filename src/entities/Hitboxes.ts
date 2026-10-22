@@ -34,6 +34,13 @@ export class Hitboxes {
     }
   }
 
+  /** Moves hitbox `index` (in definition order), e.g. to follow an animated bone. */
+  place(index: number, pos: THREE.Vector3, rot: THREE.Quaternion): void {
+    const c = this.colliders[index];
+    c.setTranslation(pos);
+    c.setRotation(rot);
+  }
+
   setEnabled(enabled: boolean): void {
     for (const c of this.colliders) c.setEnabled(enabled);
   }

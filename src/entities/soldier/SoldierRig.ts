@@ -102,6 +102,8 @@ export class SoldierRig {
       b[slot].updateMatrixWorld(true);
       if (slot === active) this.solveArms(pose, weaponW);
     }
+    // Arms and magazines moved after the first update; hitboxes read these matrices.
+    for (const bone of [b.upperArmL, b.upperArmR, b.primary, b.secondary]) bone.updateMatrixWorld(true);
   }
 
   private heldMatrix(hold: HoldPose, kick: number, out: THREE.Matrix4): void {

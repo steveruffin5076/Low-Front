@@ -282,3 +282,6 @@ export const SOLDIER_LOD = {
 
 /** Triangle budgets checked by the tests. */
 export const SOLDIER_BUDGET = { full: 1100, lod: 300 } as const;
+
+/** Blocking body (a capsule): stops the player walking through soldiers. Bullets use the hitboxes. */
+export const SOLDIER_BODY = { radius: 0.3, halfHeight: 0.6, centerY: 0.9 } as const;
