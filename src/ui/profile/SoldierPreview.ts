@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { PREVIEW } from '../../data/menu';
 import type { WeaponId } from '../../data/weapons';
-import { PlaceholderSoldier } from '../../entities/PlaceholderSoldier';
+import { IDLE_INPUT, SoldierAnimator } from '../../anim/SoldierAnimator';
+import { SoldierModel } from '../../entities/soldier/SoldierModel';
+import { SoldierRig } from '../../entities/soldier/SoldierRig';
 import { disposeObject } from '../../render/dispose';
 import { addPreviewLights, type PreviewRenderer } from '../../render/PreviewRenderer';
 import { el } from '../dom';
@@ -14,15 +16,16 @@ export class SoldierPreview {
   private readonly canvas: HTMLCanvasElement;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(CFG.fov, 1, 0.1, 50);
-  private readonly soldier = new PlaceholderSoldier();
-  private time = 0;
-  private yaw = 0;
+  private soldier!: SoldierModel;
+  private rig!: SoldierRig;
+  private readonly anim = new SoldierAnimator();
+  /** The soldier faces −Z; start turned toward the camera. */
+  private yaw = Math.PI;
   private dragX: number | null = null;
 
   constructor(weapon: WeaponId) {
     addPreviewLights(this.scene);
-    this.scene.add(this.soldier.root);
-    this.soldier.setWeapon(weapon);
+    this.setWeapon(weapon);
     this.camera.position.set(0, CFG.cameraHeight, CFG.cameraDistance);
     this.camera.lookAt(0, CFG.lookHeight, 0);
 
@@ -37,15 +40,19 @@ export class SoldierPreview {
     ]);
   }
 
+  /** The player's soldier (Blue team) holding the selected primary. */
   setWeapon(id: WeaponId): void {
-    this.soldier.setWeapon(id);
+    if (this.soldier) this.soldier.dispose();
+    this.soldier = new SoldierModel('blue', { primary: id, secondary: 'm1911' });
+    this.rig = new SoldierRig(this.soldier);
+    this.scene.add(this.soldier.root);
   }
 
   update(dt: number): void {
-    this.time += dt;
     if (this.dragX === null) this.yaw += CFG.autoRotateSpeed * dt;
     this.soldier.root.rotation.y = this.yaw;
-    this.soldier.idle(this.time, CFG.breathRate, CFG.breathAmount, CFG.swayAmount);
+    this.soldier.root.updateWorldMatrix(true, false);
+    this.rig.apply(this.anim.update(dt, IDLE_INPUT));
   }
 
   draw(preview: PreviewRenderer): void {
