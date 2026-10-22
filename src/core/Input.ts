@@ -1,3 +1,4 @@
+import { debugFlag } from './debugFlags';
 /** Keyboard and mouse state with Pointer Lock. Read state each frame, then call `endFrame()`. */
 export class Input {
   private down = new Set<string>();
@@ -28,7 +29,7 @@ export class Input {
    * Dev only (`?debug=freemouse`): treat the mouse as locked without Pointer Lock,
    * for automated browser checks where Pointer Lock is not available.
    */
-  private readonly freeMouse = new URLSearchParams(window.location.search).get('debug') === 'freemouse';
+  private readonly freeMouse = debugFlag('freemouse');
 
   get locked(): boolean {
     return document.pointerLockElement === this.target || (this.freeMouse && this.lockOnClick);

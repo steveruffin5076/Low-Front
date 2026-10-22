@@ -32,8 +32,8 @@ export interface DeathReport {
 }
 
 export interface KillFeedEntry {
-  killer: { name: string; team: TeamId } | null;
-  victim: { name: string; team: TeamId };
+  killer: { id: string; name: string; team: TeamId } | null;
+  victim: { id: string; name: string; team: TeamId };
   weapon: string;
   headshot: boolean;
   distance: number;
@@ -133,8 +133,8 @@ export class ConquestMatch {
       ks.score += killScore(r.headshot ?? false, defending);
     }
     this.events.emit('kill', {
-      killer: killer && killer.id !== victim.id ? { name: killer.name, team: killer.team } : null,
-      victim: { name: victim.name, team: victim.team },
+      killer: killer && killer.id !== victim.id ? { id: killer.id, name: killer.name, team: killer.team } : null,
+      victim: { id: victim.id, name: victim.name, team: victim.team },
       weapon: r.weapon ?? '',
       headshot: r.headshot ?? false,
       distance: r.distance ?? 0,

@@ -1,19 +1,23 @@
+import { debugFlag } from '../../core/debugFlags';
 import type { State } from '../../core/StateMachine';
 import type { GameContext } from '../../core/GameContext';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import { CityMap } from '../../scenes/CityMap';
+import { ConquestSession } from '../../scenes/ConquestSession';
 import { PlaySession } from '../../scenes/PlaySession';
 import { TestRange } from '../../scenes/TestRange';
 import { button, el } from '../dom';
 
 /**
- * Match screen. Until the Conquest match arrives (Phase 7) the player roams the city map
- * alone; `/?debug=range` loads the test range instead. `load()` must finish before entering.
+ * Match screen: a Conquest match on the city map (plan section 11). `/?debug=range` loads the
+ * test range instead. `load()` must finish before entering.
  */
 export class MatchScreen implements State {
   private root: HTMLElement | null = null;
   private physics: PhysicsWorld | null = null;
-  private session: PlaySession | null = null;
+  /** Exactly one of these is set while loaded. */
+  private range: PlaySession | null = null;
+  private conquest: ConquestSession | null = null;
 
   constructor(private readonly ctx: GameContext) {}
 
@@ -21,12 +25,20 @@ export class MatchScreen implements State {
     return this.physics?.lastStepMs ?? 0;
   }
 
+  /** The play session (the player, weapons, camera), for tests and tools. */
+  get session(): PlaySession | null {
+    return this.range ?? this.conquest?.session ?? null;
+  }
+
   async load(): Promise<void> {
     this.unload();
     this.physics = await PhysicsWorld.create();
-    const range = new URLSearchParams(window.location.search).get('debug') === 'range';
-    const world = range ? new TestRange(this.physics) : new CityMap(this.physics);
-    this.session = new PlaySession(this.physics, this.ctx.input, this.ctx.profiles.load().loadout, world);
+    const profile = this.ctx.profiles.load();
+    if (debugFlag('range')) {
+      this.range = new PlaySession(this.physics, this.ctx.input, profile.loadout, new TestRange(this.physics));
+    } else {
+      this.conquest = new ConquestSession(this.physics, this.ctx.input, profile.name, profile.loadout, new CityMap(this.physics));
+    }
   }
 
   enter(): void {
@@ -35,7 +47,7 @@ export class MatchScreen implements State {
       button('Main Menu', () => this.ctx.changeScreen('mainMenu'), 'btn btn-corner'),
     ]);
     this.ctx.ui.append(this.root);
-    this.session?.mount(this.root);
+    (this.range ?? this.conquest)?.mount(this.root);
   }
 
   exit(): void {
@@ -47,23 +59,33 @@ export class MatchScreen implements State {
   }
 
   fixedUpdate(dt: number): void {
-    if (!this.session || !this.physics) return;
-    this.session.fixedUpdate(dt);
+    if (!this.physics) return;
+    if (this.conquest?.paused) return;
+    this.range?.fixedUpdate(dt);
+    this.conquest?.fixedUpdate(dt);
     this.physics.step();
   }
 
   update(dt: number, alpha: number): void {
-    this.session?.update(dt, alpha);
+    this.range?.update(dt, alpha);
+    const c = this.conquest;
+    if (c) {
+      c.update(dt, alpha);
+      // Until the Deploy Screen: back to HQ when the respawn delay is over.
+      if (c.state === 'dead' && c.respawnWait === 0 && c.session.deathFinished) c.deploy({ kind: 'hq' });
+    }
   }
 
   render(): void {
-    this.session?.render(this.ctx.renderer);
+    (this.range ?? this.conquest)?.render(this.ctx.renderer);
   }
 
   private unload(): void {
-    this.session?.dispose();
+    this.range?.dispose();
+    this.conquest?.dispose();
     this.physics?.dispose();
-    this.session = null;
+    this.range = null;
+    this.conquest = null;
     this.physics = null;
   }
 }

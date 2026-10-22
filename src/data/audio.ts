@@ -13,6 +13,15 @@ export interface ShotSound {
 }
 
 export const AUDIO = {
+  /** Flag cues: notes (Hz) played one after another. */
+  flagCues: {
+    captured: [523, 659, 784],
+    lost: [659, 523, 392],
+    neutralized: [587, 440],
+    noteLength: 0.14,
+    noteGap: 0.11,
+    gain: 0.18,
+  },
   masterVolume: 0.8,
   /** Positional sounds: full volume within `refDistance`, then fades. */
   refDistance: 3,

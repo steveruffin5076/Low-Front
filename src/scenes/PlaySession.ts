@@ -2,18 +2,21 @@ import * as THREE from 'three';
 import { FPAnimator } from '../anim/FPAnimator';
 import { CameraFx } from '../anim/CameraFx';
 import { AudioManager } from '../audio/AudioManager';
+import { EventBus } from '../core/EventBus';
 import type { Input } from '../core/Input';
 import { CONTROLS, MOUSE } from '../data/controls';
 import { MOVEMENT } from '../data/player';
 import type { Loadout, WeaponSlot } from '../data/weapons';
 import { PlayerController, type PlayerIntent } from '../entities/PlayerController';
+import type { DeathCause } from '../game/ConquestMatch';
+import { OutOfBounds } from '../game/OutOfBounds';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { Renderer } from '../render/Renderer';
 import { ViewmodelLayer } from '../render/ViewmodelLayer';
+import type { PlayerHud } from '../ui/PlayerHud';
 import { RangeOverlay } from '../ui/RangeOverlay';
 import { PlayerWeapons, type WeaponInput } from '../weapons/PlayerWeapons';
-import { RangeCombat } from './RangeCombat';
-import { OutOfBounds } from '../game/OutOfBounds';
+import { RangeCombat, type TargetHit } from './RangeCombat';
 import type { World } from './World';
 
 /** Pressed keys latched each frame until a fixed step consumes them. */
@@ -29,59 +32,113 @@ interface Latched {
 
 const NONE: Latched = { crouch: false, jump: false, fire: false, reload: false, fireMode: false, inspect: false, switchTo: null };
 
+export interface SessionEvents {
+  /** The player died; `cause` is null when an enemy killed them. */
+  died: { cause: DeathCause | null };
+  /** The player's bullet hit a target. */
+  targetHit: TargetHit;
+}
+
+export interface SessionOptions {
+  /** Respawn at the world spawn after the death camera (test range). The match deploys instead. */
+  autoRespawn: boolean;
+  hud?: PlayerHud;
+}
+
 /** A play session in a world: player movement, weapons, animations, combat and bounds. */
 export class PlaySession {
+  readonly events = new EventBus<SessionEvents>();
   readonly player: PlayerController;
-  readonly weapons: PlayerWeapons;
   readonly camera = new THREE.PerspectiveCamera(MOVEMENT.baseFov, 1, 0.05, 400);
+  readonly audio = new AudioManager();
+  readonly hud: PlayerHud;
+  weapons!: PlayerWeapons;
+  /** While paused the simulation and input stop; the frame still renders. */
+  paused = false;
+  /** Radians per pixel of mouse movement (the player's setting). */
+  sensitivity: number = MOVEMENT.mouseSensitivity;
   private readonly layer = new ViewmodelLayer();
-  private readonly animator: FPAnimator;
-  private readonly audio = new AudioManager();
   private readonly fx = new CameraFx();
-  private readonly overlay = new RangeOverlay();
   private readonly bounds = new OutOfBounds();
+  private animator!: FPAnimator;
+  private combat!: RangeCombat;
+  private loadout!: Loadout;
+  private baseFov: number = MOVEMENT.baseFov;
   private latched: Latched = { ...NONE };
-  private readonly combat: RangeCombat;
 
   constructor(
-    physics: PhysicsWorld,
+    private readonly physics: PhysicsWorld,
     private readonly input: Input,
     loadout: Loadout,
     readonly world: World,
+    private readonly options: SessionOptions = { autoRespawn: true },
   ) {
+    this.hud = options.hud ?? new RangeOverlay();
     this.player = new PlayerController(physics, world.spawn.position.clone());
     this.player.yaw = world.spawn.yaw;
-    this.weapons = new PlayerWeapons(loadout);
-    this.animator = new FPAnimator(this.layer, this.weapons, this.audio);
     this.player.events.on('jumped', () => this.animator.onJump());
     this.player.events.on('landed', ({ impactSpeed }) => this.animator.onLand(impactSpeed));
-    this.combat = new RangeCombat(
-      physics,
-      world.scene,
-      this.player,
-      this.weapons,
-      this.audio,
-      this.camera,
-      (out) => this.animator.muzzleWorld(this.camera, out),
-      {
-        onHitTarget: (kill) => this.overlay.showHitMarker(kill),
-        onPlayerDamaged: (angle) => {
-          this.fx.hit();
-          this.overlay.hitFlash();
-          this.overlay.showDamageFrom(angle);
-        },
-        onPlayerDied: () => this.fx.die(),
-      },
-    );
+    this.arm(loadout);
     this.weapons.start();
   }
 
+  get dead(): boolean {
+    return this.fx.dead;
+  }
+
+  /** The death camera has finished. */
+  get deathFinished(): boolean {
+    return this.fx.deathFinished;
+  }
+
+  get health(): RangeCombat['health'] {
+    return this.combat.health;
+  }
+
+  get currentLoadout(): Loadout {
+    return { ...this.loadout };
+  }
+
+  get adsBlend(): number {
+    return this.animator.adsBlend;
+  }
+
+  /** Seconds left of the out-of-bounds countdown, or null. */
+  get boundsRemaining(): number | null {
+    return this.bounds.remaining;
+  }
+
+  setBaseFov(fov: number): void {
+    this.baseFov = fov;
+    this.animator.baseFov = fov;
+  }
+
   mount(parent: HTMLElement): void {
-    parent.append(this.overlay.element);
+    parent.append(this.hud.element);
+  }
+
+  /** Kills the player at once (out of bounds, enemy HQ, test key). */
+  kill(cause: DeathCause): void {
+    this.combat.damagePlayer(this.combat.health.max, null, cause);
+  }
+
+  /** Back to life at `at` facing `yaw`; a different loadout rebuilds the weapons. */
+  respawn(at: THREE.Vector3, yaw: number, loadout?: Loadout): void {
+    if (loadout && (loadout.primary !== this.loadout.primary || loadout.secondary !== this.loadout.secondary)) {
+      this.disarm();
+      this.arm(loadout);
+    }
+    this.fx.reset();
+    this.player.respawn(at, yaw);
+    this.bounds.reset();
+    this.animator.reset();
+    this.combat.reset();
+    this.weapons.start();
+    this.latched = { ...NONE };
   }
 
   fixedUpdate(dt: number): void {
-    if (this.fx.dead) return;
+    if (this.paused || this.fx.dead) return;
     const i = this.input;
     const fireHeld = i.locked && i.isMouseDown(MOUSE.fire);
     const ads = this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads);
@@ -114,15 +171,17 @@ export class PlaySession {
     this.combat.fixedUpdate(dt);
     if (this.world.limit !== null) {
       const feet = this.player.motor.feet;
-      if (this.bounds.update(dt, feet.x, feet.z) === 'expired') this.combat.damagePlayer(this.combat.health.max, null);
+      if (this.bounds.update(dt, feet.x, feet.z) === 'expired') this.kill('bounds');
     }
     this.latched = { ...NONE };
   }
 
   update(dt: number, alpha: number): void {
     const i = this.input;
-    if (!this.fx.dead) this.readInput();
-    else if (this.fx.deathFinished) this.respawn();
+    const live = !this.paused && !this.fx.dead;
+    if (live) this.readInput();
+    else if (!this.paused && this.options.autoRespawn && this.fx.deathFinished) this.respawn(this.world.spawn.position.clone(), this.world.spawn.yaw);
+    if (this.paused) dt = 0;
 
     this.player.updateCamera(this.camera, alpha);
     const eye = this.camera.position.y - this.player.motor.feet.y;
@@ -134,15 +193,16 @@ export class PlaySession {
     this.combat.update(dt, alpha);
 
     this.combat.shooting.ads = this.animator.adsBlend;
+    const aiming = live && this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads);
     const fov = this.animator.update({
       dt,
-      ads: !this.fx.dead && this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads),
+      ads: aiming,
       sprinting: this.player.sprinting,
       crouchBlend: this.player.crouchBlend,
       speed: this.player.horizontalSpeed,
       grounded: this.player.grounded,
-      mouseDx: i.locked ? i.mouseDelta.x : 0,
-      mouseDy: i.locked ? i.mouseDelta.y : 0,
+      mouseDx: live && i.locked ? i.mouseDelta.x : 0,
+      mouseDy: live && i.locked ? i.mouseDelta.y : 0,
     });
     if (this.camera.fov !== fov) {
       this.camera.fov = fov;
@@ -151,7 +211,7 @@ export class PlaySession {
     this.layer.setFov(fov);
 
     const w = this.weapons.active;
-    this.overlay.update(
+    this.hud.update(
       dt,
       {
         weapon: w.def.name,
@@ -170,9 +230,9 @@ export class PlaySession {
         lastHit: this.combat.lastHit,
       },
       this.fx.dead,
-      i.locked,
+      i.locked || this.paused,
     );
-    this.overlay.setBoundsWarning(this.fx.dead ? null : this.bounds.remaining);
+    this.hud.setBoundsWarning(this.fx.dead ? null : this.bounds.remaining);
   }
 
   render(renderer: Renderer): void {
@@ -182,9 +242,45 @@ export class PlaySession {
 
   dispose(): void {
     this.world.dispose();
+    this.disarm();
+    this.audio.dispose();
+  }
+
+  /** Builds the weapons, their first-person visuals and the combat systems for a loadout. */
+  private arm(loadout: Loadout): void {
+    this.loadout = { ...loadout };
+    this.weapons = new PlayerWeapons(loadout);
+    this.animator = new FPAnimator(this.layer, this.weapons, this.audio);
+    this.animator.baseFov = this.baseFov;
+    this.combat = new RangeCombat(
+      this.physics,
+      this.world.scene,
+      this.player,
+      this.weapons,
+      this.audio,
+      this.camera,
+      (out) => this.animator.muzzleWorld(this.camera, out),
+      {
+        onHitTarget: (hit) => {
+          this.hud.showHitMarker(hit.kill);
+          this.events.emit('targetHit', hit);
+        },
+        onPlayerDamaged: (angle) => {
+          this.fx.hit();
+          this.hud.hitFlash();
+          this.hud.showDamageFrom(angle);
+        },
+        onPlayerDied: (cause) => {
+          this.fx.die();
+          this.events.emit('died', { cause });
+        },
+      },
+    );
+  }
+
+  private disarm(): void {
     this.animator.dispose();
     this.combat.dispose();
-    this.audio.dispose();
   }
 
   /** ADS is blocked while sprinting, switching weapons and reloading. */
@@ -195,7 +291,7 @@ export class PlaySession {
 
   private readInput(): void {
     const i = this.input;
-    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y));
+    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y, this.sensitivity));
     const l = this.latched;
     if (i.wasPressed(CONTROLS.crouch)) l.crouch = true;
     if (i.wasPressed(CONTROLS.jump)) l.jump = true;
@@ -208,16 +304,7 @@ export class PlaySession {
     if (i.wheelDelta !== 0) l.switchTo = this.weapons.activeSlot === 'primary' ? 'secondary' : 'primary';
     if (i.wasPressed(CONTROLS.debugHit)) this.combat.debugHit();
     if (i.wasPressed(CONTROLS.navDebug)) this.world.toggleNavDebug?.();
-    if (i.wasPressed(CONTROLS.debugDeath)) this.combat.damagePlayer(this.combat.health.max, null);
-  }
-
-  private respawn(): void {
-    this.fx.reset();
-    this.player.respawn(this.world.spawn.position.clone(), this.world.spawn.yaw);
-    this.bounds.reset();
-    this.animator.reset();
-    this.combat.reset();
-    this.weapons.start();
+    if (i.wasPressed(CONTROLS.debugDeath)) this.kill('suicide');
   }
 
   private axis(pos: string, neg: string): number {

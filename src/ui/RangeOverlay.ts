@@ -1,24 +1,9 @@
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
 import { el } from './dom';
+import type { PlayerHud, PlayerReadout } from './PlayerHud';
 import './range.css';
 
-export interface RangeReadout {
-  weapon: string;
-  mag: number;
-  reserve: number;
-  fireMode: string;
-  action: string;
-  stance: string;
-  speed: number;
-  stamina: number;
-  ads: number;
-  hp: number;
-  maxHp: number;
-  /** Spread cone in degrees and the camera FOV, to size the crosshair. */
-  spreadDeg: number;
-  fov: number;
-  lastHit: string;
-}
+export type RangeReadout = PlayerReadout;
 
 const HELP = [
   'WASD move · Mouse look · Shift sprint · C crouch · Space jump',
@@ -38,7 +23,7 @@ const MIN_GAP = 4;
  * direction indicators, health bar, red hit flash, debug readout and key help.
  * The real HUD arrives in Phase 7.
  */
-export class RangeOverlay {
+export class RangeOverlay implements PlayerHud {
   readonly element: HTMLElement;
   private readonly crosshair: HTMLElement;
   private readonly hitMarker: HTMLElement;
