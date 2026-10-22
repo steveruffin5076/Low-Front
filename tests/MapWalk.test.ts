@@ -6,6 +6,7 @@ import { PhysicsWorld } from '../src/physics/PhysicsWorld';
 import { addVolumeColliders } from '../src/world/colliders';
 import { buildMap, type BuiltMap } from '../src/world/MapBuilder';
 import { NavGrid } from '../src/world/NavGrid';
+import { smoothPath } from '../src/world/NavPaths';
 
 /**
  * Walks the real player controller (Rapier character controller, same code as the game)
@@ -33,10 +34,10 @@ interface WalkResult {
   seconds: number;
 }
 
-function walk(from: THREE.Vector3, to: THREE.Vector3): WalkResult {
+function walk(from: THREE.Vector3, to: THREE.Vector3, smooth = false): WalkResult {
   const path = nav.findPath(from, to);
   if (!path) return { ok: false, reason: 'no nav path', at: from, seconds: 0 };
-  const points = nav.pathPoints(path);
+  const points = smooth ? smoothPath(nav, path) : nav.pathPoints(path);
   const player = new PlayerController(physics, points[0].clone());
   const idle: PlayerIntent = { strafe: 0, forward: 1, sprint: false, ads: false, firing: false, leanLeft: false, leanRight: false, crouchPressed: false, jumpPressed: false };
   let target = 1;
@@ -44,7 +45,9 @@ function walk(from: THREE.Vector3, to: THREE.Vector3): WalkResult {
   let bestD = Infinity;
   let sinceProgress = 0;
   const feet = player.motor.feet;
-  const limit = (points.length * 0.6 + 30) / 4.5 + 20;
+  let length = 0;
+  for (let i = 1; i < points.length; i++) length += points[i].distanceTo(points[i - 1]);
+  const limit = (length * 1.3 + 30) / 4.5 + 20;
   try {
     for (let t = 0; t < limit; t += DT) {
       // Advance the target along the path once it is reached (no look-ahead: cutting a corner
@@ -81,6 +84,14 @@ describe('walking the map with the real player controller', () => {
     for (let i = 1; i < stops.length; i++) {
       const r = walk(stops[i - 1], stops[i]);
       expect(r.ok, `leg ${i}: ${describeRoute(r)}`).toBe(true);
+    }
+  }, 120_000);
+
+  it('walks the smoothed paths the bots use', () => {
+    const stops = [V(0, 164), V(-120, 96), V(0, 8), V(120, 141), V(120, -96), V(-120, -141), V(0, -164)];
+    for (let i = 1; i < stops.length; i++) {
+      const r = walk(stops[i - 1], stops[i], true);
+      expect(r.ok, `smoothed leg ${i}: ${describeRoute(r)}`).toBe(true);
     }
   }, 120_000);
 

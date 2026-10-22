@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { NAV } from '../data/nav';
 import type { NavLink } from './LocalFrame';
+import { MinHeap } from './MinHeap';
 import { footprintOverlaps, volumeBounds, type Volume } from './Volume';
 
 /** One floor level of the grid (ground, first floor, rooftops, …). */
@@ -26,7 +27,7 @@ interface Indexed {
   max: THREE.Vector3;
 }
 
-interface Edge {
+export interface Edge {
   to: number;
   cost: number;
   /** Points along a stair or ramp link, in travel order. */
@@ -290,6 +291,18 @@ export class NavGrid {
     return out;
   }
 
+  /** One grid move from cell (i, j) by (di, dj) on `level`: walkable, within step height, no thin wall. */
+  canStep(level: NavLevel, i: number, j: number, di: number, dj: number): boolean {
+    const ii = i + di;
+    const jj = j + dj;
+    if (i < 0 || j < 0 || i >= level.w || j >= level.h || ii < 0 || jj < 0 || ii >= level.w || jj >= level.h) return false;
+    const k = j * level.w + i;
+    const kk = jj * level.w + ii;
+    if (!level.walk[k] || !level.walk[kk]) return false;
+    if (level.blockedDirs[k] & (1 << dirBit(di, dj))) return false;
+    return Math.abs(level.floorY[kk] - level.floorY[k]) <= NAV.step;
+  }
+
   /** World points for a node path, with the stair waypoints of any links inserted. */
   pathPoints(path: readonly number[]): THREE.Vector3[] {
     const out: THREE.Vector3[] = [];
@@ -361,53 +374,4 @@ const WALL_SAMPLE_RADIUS = 0.05;
 
 function dirBit(di: number, dj: number): number {
   return (dj + 1) * 3 + di + 1;
-}
-
-/** Binary min-heap of node ids keyed by priority. */
-class MinHeap {
-  private ids: number[] = [];
-  private keys: number[] = [];
-
-  get size(): number {
-    return this.ids.length;
-  }
-
-  push(id: number, key: number): void {
-    this.ids.push(id);
-    this.keys.push(key);
-    let i = this.ids.length - 1;
-    while (i > 0) {
-      const p = (i - 1) >> 1;
-      if (this.keys[p] <= this.keys[i]) break;
-      this.swap(i, p);
-      i = p;
-    }
-  }
-
-  pop(): number {
-    const top = this.ids[0];
-    const lastId = this.ids.pop()!;
-    const lastKey = this.keys.pop()!;
-    if (this.ids.length) {
-      this.ids[0] = lastId;
-      this.keys[0] = lastKey;
-      let i = 0;
-      for (;;) {
-        const l = i * 2 + 1;
-        const r = l + 1;
-        let m = i;
-        if (l < this.ids.length && this.keys[l] < this.keys[m]) m = l;
-        if (r < this.ids.length && this.keys[r] < this.keys[m]) m = r;
-        if (m === i) break;
-        this.swap(i, m);
-        i = m;
-      }
-    }
-    return top;
-  }
-
-  private swap(a: number, b: number): void {
-    [this.ids[a], this.ids[b]] = [this.ids[b], this.ids[a]];
-    [this.keys[a], this.keys[b]] = [this.keys[b], this.keys[a]];
-  }
 }
