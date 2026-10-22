@@ -1,6 +1,65 @@
 # PROGRESS.md
 
-## Phase 5 — Urban Map "Verdan District" (done, waiting for review)
+## Phase 6 — Soldiers (done, waiting for review)
+
+### What was done
+- **Soldier model** (`src/entities/soldier/SoldierModel.ts`, parts and sizes in `src/data/soldier.ts`): blocky low-poly figure, about 1.83 m tall with the helmet.
+  - Parts: head, helmet with brim, eye band, torso, vest with pouches and radio, backpack, belt with a pistol holster, upper and lower arms, gloves, upper and lower legs with thigh pockets and knee pads, boots.
+  - Uniform, trousers and helmet in team colors (Blue / Red).
+  - Both weapons (third-person models) are part of the soldier: the active one in the hands, the rifle slung across the back or the pistol in the hip holster.
+- **One draw call per soldier**: every part and both weapons are rigidly skinned to one skeleton and merged into one mesh with one shared vertex-color material. Geometry is shared between soldiers with the same team and loadout.
+- **LOD**: a simplified model (240 triangles, against 744 for the full one) beyond 40 m, bound to the same skeleton; far soldiers animate at 20 updates per second.
+- **Procedural rig** (`src/entities/soldier/SoldierRig.ts`): the bones are the pivots. The arms use two-bone IK onto the weapon's grip points, so every weapon is held correctly, and the hands follow the weapon during reloads and switches.
+- **Animations** (`src/anim/SoldierAnimator.ts`, pure logic and unit tested), all of plan section 8.2:
+  - Locomotion: idle (breathing), walk, run, sprint (rifle lowered across the chest), crouch idle (kneeling), crouch walk, strafe left/right, backpedal. Leg swing follows the move direction, and the gait cycle advances with distance so feet don't slide.
+  - Upper body aims: pitch is shared over the spine, chest and neck. Rifles use a bladed stance (left shoulder forward).
+  - Fire kick; reload (left hand takes the magazine to a vest pouch and back; the magazine moves with the hand); weapon switch (rifle to the back sling, pistol from the holster, and back).
+  - Jump (legs tuck) and fall (legs reach down).
+  - Death: falls the way the bullet travelled (backward when shot from the front, sideways from the side), knees buckle, the weapon swings down along the body. The body stays 10 s, then fades out over 1 s.
+- **Soldier entity** (`src/entities/soldier/Soldier.ts`): health with regeneration, a body that blocks the player, and 12 hitboxes (head, 3 torso, 4 arm, 4 leg) that follow the bones every fixed step. Crouched soldiers have lower head hitboxes, and dead ones have none. Your bullets use the same damage table and "Last hit" readout as the test range.
+- **32-soldier test on the map** (`src/scenes/SoldierCrowd.ts`, settings in `src/data/crowd.ts`), until the Conquest match in Phase 7:
+  - 16 Blue soldiers around flags A, B and C, and 16 Red soldiers around D, E and C.
+  - Half walk, run, sprint or crouch-walk along nav-grid paths between flags.
+  - Half stand at flag spawn points and cycle through idle, fire, crouch, reload, strafe, backpedal, weapon switch, jump and crouched fire.
+  - Shot soldiers fall, fade and respawn.
+- **Soldier viewer** at `/?debug=soldier`:
+  - one soldier on a moving grid (shows foot sliding);
+  - a button for every motion and action, and the aim pitch slider;
+  - team, rifle and near/far model;
+  - front, side and back cameras, and slow motion.
+- The Profile & Loadout screen shows the real soldier (idle, holding the chosen rifle). The placeholder soldier is removed.
+- Tests (164 in total):
+  - model: bones, height, triangle budgets, team colors, skinning;
+  - animator: gait, strafe and backpedal, crouch, pitch split, jump, fire, reload, switch, death direction and timing;
+  - rig: both hands reach the grips for each rifle in 6 stances, pistol after a switch, muzzle follows pitch, magazine travels;
+  - hitboxes with Rapier: head, torso, arm and leg zones, crouched head, dead soldier, hit direction;
+  - crowd: 20 s on the real map with every soldier on walkable ground, all walkers moving, and a CPU cost of 0.4 ms per frame on average.
+
+### Checked results (headless browser, software rendering)
+| View | Draw calls | Triangles |
+|---|---|---|
+| Plaza (C) | 139 | 206k |
+| Bus Depot (A) | 157 | 222k |
+| Apartment Block (B) | 159 | 242k |
+| Rail Yard (E) | 146 | 213k |
+| All 32 soldiers grouped 12–30 m in front of the camera | 177 | 248k |
+
+Shooting a Red soldier 10 m away with the M4A1: 30.0 damage to the torso and 22.5 to the arm, matching the damage table; it fell backward and faded. No console errors.
+
+### How to test
+1. `npm run dev`, then open `http://localhost:5173/?debug=soldier`. Try every motion and action from the Front, Side and Back cameras, both teams, both rifles, and the far model. Use "Slow motion" to check the steps, the reload and the switch.
+2. "Play vs Bots" shows the new soldier on the loadout screen.
+3. "Deploy": soldiers walk and stand around every flag. Walk around and between them (they block you). Shoot one to see the hit readout, the fall in the hit direction, the 10 s on the ground and the fade.
+4. Press F3 and check FPS with soldiers in view; please check FPS ≥ 60 on your machine.
+5. `npm test`: 164 tests pass.
+
+### Known issues
+- The soldiers are a test crowd: they don't react, shoot back or collide with each other, and walkers glide along their nav paths without physics. Bots come in Phase 8. Friendly soldiers can be shot (team rules come with the match in Phase 7).
+- Soldier firing is visual only (weapon kick): no muzzle flash, tracers or sound yet.
+- The F3 overlay's "Bots" count stays 0 until bots exist.
+- Checked with software rendering only (2–4 FPS here), so the animation feel and the FPS target need a check on real hardware.
+
+## Phase 5 — Urban Map "Verdan District" (done)
 
 ### What was done
 - **Map data** (`src/data/map/`): 360 × 360 m city, center (0, 0), north = −Z. Point-symmetric: one half is authored and mirrored with (x, z) → (−x, −z) (`mirror.ts`), so both teams get the same streets, blocks, cover and spawns.
