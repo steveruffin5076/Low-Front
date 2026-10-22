@@ -12,6 +12,8 @@ import { SpawnSystem, type SpawnChoice } from '../game/SpawnSystem';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { Renderer } from '../render/Renderer';
 import { CONTROLS } from '../data/controls';
+import { MOVEMENT } from '../data/player';
+import type { Settings } from '../save/SettingsStore';
 import { HUD } from '../data/hud';
 import { COLLISION, raycastSegment } from '../physics/collision';
 import { MapImage } from '../ui/hud/MapImage';
@@ -122,6 +124,13 @@ export class ConquestSession {
     });
 
     this.deploy({ kind: 'hq' });
+  }
+
+  /** Applies the player's settings (sensitivity multiplier, FOV, volume). */
+  applySettings(s: Settings): void {
+    this.session.sensitivity = MOVEMENT.mouseSensitivity * s.sensitivity;
+    this.session.setBaseFov(s.fov);
+    this.session.audio.setVolume(s.volume);
   }
 
   get paused(): boolean {

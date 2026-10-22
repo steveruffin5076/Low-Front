@@ -221,3 +221,25 @@ describe('a full match with the player alone', () => {
     expect(m.result).toEqual({ winner: null, reason: 'time' });
   });
 });
+
+describe('match summary and profile stats', () => {
+  it('summarizes the top players and adds the match to the profile', async () => {
+    const { summarize } = await import('../src/game/MatchSummary');
+    const { applyMatch, EMPTY_STATS } = await import('../src/save/ProfileStore');
+    const player = new Dummy('p', 'blue', true, 'Tester');
+    const reds = ['r1', 'r2', 'r3', 'r4'].map((id) => new Dummy(id, 'red'));
+    const m = new ConquestMatch(VERDAN, [player, ...reds]);
+    for (const r of reds.slice(0, 3)) m.reportDeath({ victimId: r.id, killerId: 'p', weapon: 'AK47', headshot: r.id === 'r1', distance: 10 });
+    m.reportDeath({ victimId: 'p', killerId: 'r4', weapon: 'AK47', distance: 10 });
+    const s = summarize(m, { winner: 'blue', reason: 'tickets' }, 'p');
+    expect(s.top.blue.map((r) => r.id)).toEqual(['p']);
+    expect(s.top.red[0].id).toBe('r4');
+    expect(s.top.red).toHaveLength(3);
+    expect(s.player).toMatchObject({ kills: 3, deaths: 1, headshots: 1 });
+    const won = applyMatch(EMPTY_STATS, { won: true, kills: 3, deaths: 1, headshots: 1 });
+    expect(won).toEqual({ matchesPlayed: 1, wins: 1, losses: 0, kills: 3, deaths: 1, headshots: 1 });
+    const draw = applyMatch(won, { won: null, kills: 0, deaths: 0, headshots: 0 });
+    expect(draw).toMatchObject({ matchesPlayed: 2, wins: 1, losses: 0 });
+    expect(applyMatch(draw, { won: false, kills: 0, deaths: 2, headshots: 0 })).toMatchObject({ losses: 1, deaths: 3 });
+  });
+});

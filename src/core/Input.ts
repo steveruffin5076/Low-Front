@@ -12,6 +12,9 @@ export class Input {
 
   /** When true, clicking the canvas locks the mouse. Only the match enables this. */
   lockOnClick = false;
+  /** Called when Pointer Lock ends (Esc, Alt+Tab): the match opens the Pause Menu. */
+  onLockLost: (() => void) | null = null;
+  private wasLocked = false;
 
   constructor(private readonly target: HTMLElement) {
     window.addEventListener('keydown', this.onKeyDown);
@@ -23,6 +26,7 @@ export class Input {
     window.addEventListener('wheel', this.onWheel, { passive: true });
     target.addEventListener('click', this.requestLock);
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('pointerlockchange', this.onLockChange);
   }
 
   /**
@@ -81,6 +85,12 @@ export class Input {
     this.dy = 0;
     this.wheel = 0;
   }
+
+  private onLockChange = (): void => {
+    const locked = document.pointerLockElement === this.target;
+    if (this.wasLocked && !locked) this.onLockLost?.();
+    this.wasLocked = locked;
+  };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.code === 'F3' || e.code === 'F4' || e.code === 'Tab') e.preventDefault();

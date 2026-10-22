@@ -23,6 +23,10 @@ export const CONQUEST = {
     enemyWarning: 5,
   },
   respawnDelay: 10,
+  /** The Deploy Screen opens this long after death (the death camera plays first). */
+  deployScreenDelay: 1.6,
+  /** Seconds between the match result and the End Screen. */
+  endScreenDelay: 3,
   /** A spawn point is taken if a soldier stands this close (m). */
   spawnClearance: 1.5,
   score: {

@@ -1,0 +1,212 @@
+/* ---------- Pause Menu (plan section 11.4) ---------- */
+.pause-menu {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 11, 15, 0.6);
+  pointer-events: auto;
+}
+.pause-panel {
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+}
+.pm-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.pm-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 52px;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.pm-row input {
+  width: 100%;
+  accent-color: var(--blue);
+}
+.pm-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.pm-quit {
+  margin-top: 6px;
+}
+
+/* ---------- Deploy Screen (plan section 11.3) ---------- */
+.deploy-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Below the ticket bar, which stays visible. */
+  padding: 92px 20px 18px;
+  background: rgba(8, 11, 15, 0.72);
+  pointer-events: auto;
+}
+.ds-head {
+  text-align: center;
+}
+.ds-title {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+}
+.ds-detail {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+}
+.ds-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto minmax(300px, 380px);
+  justify-content: center;
+  gap: 16px;
+}
+.ds-spawn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ds-map-canvas {
+  display: block;
+  width: min(460px, 58vh);
+  height: min(460px, 58vh);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ds-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ds-choice.active {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+.ds-bottom {
+  display: flex;
+  justify-content: center;
+}
+.ds-deploy {
+  min-width: 220px;
+  font-size: 17px;
+}
+
+/* ---------- End Screen (plan section 11.5) ---------- */
+.end-screen {
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 20, 0.55);
+}
+.end-panel {
+  width: min(720px, 94vw);
+  padding: 28px;
+  text-align: center;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+}
+.es-result {
+  margin: 0;
+  font-size: 52px;
+  letter-spacing: 0.08em;
+}
+.es-result-blue {
+  color: var(--blue);
+}
+.es-result-red {
+  color: var(--red);
+}
+.es-reason {
+  margin: 4px 0 20px;
+  color: var(--text-dim);
+}
+.es-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  text-align: left;
+}
+.es-team-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-weight: 800;
+  border-radius: 6px;
+}
+.es-blue .es-team-head {
+  background: var(--blue);
+}
+.es-red .es-team-head {
+  background: var(--red);
+}
+.es-tickets {
+  font-weight: 600;
+}
+.es-top {
+  margin: 8px 0 0;
+  padding-left: 24px;
+}
+.es-top li {
+  padding: 3px 0;
+}
+.es-top li span:last-child {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+.es-me {
+  font-weight: 800;
+  color: var(--mustard);
+}
+.es-none {
+  color: var(--text-dim);
+  font-style: italic;
+}
+.es-subtitle {
+  margin: 24px 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.es-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.es-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 4px;
+  background: var(--track);
+  border-radius: 8px;
+}
+.es-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.es-stat-label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.es-menu {
+  margin-top: 24px;
+  min-width: 200px;
+}

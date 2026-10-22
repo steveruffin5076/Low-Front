@@ -98,6 +98,7 @@ export class MatchHud implements PlayerHud {
     this.ammo.textContent = `${r.mag} / ${r.reserve}`;
     this.fireMode.textContent = r.fireMode.toUpperCase();
     this.weaponPanel.hidden = dead;
+    this.minimap.element.hidden = dead;
     this.feedback.healthBar.hidden = dead;
     this.lockHint.hidden = locked || dead;
     this.killFeed.update(dt);
