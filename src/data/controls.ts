@@ -14,6 +14,9 @@ export const CONTROLS = {
   secondary: 'Digit2',
   fireMode: 'KeyB',
   inspect: 'KeyI',
+  /** Hold to show. */
+  scoreboard: 'Tab',
+  largeMap: 'KeyM',
   /** Debug keys for the test range until damage exists (Phase 4). */
   debugHit: 'KeyH',
   debugDeath: 'KeyK',

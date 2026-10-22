@@ -33,6 +33,4 @@ export const CONQUEST = {
     /** Killing an enemy inside a zone your team owns. */
     defendBonus: 50,
   },
-  /** Kill feed entries stay this long, and at most this many show. */
-  killFeed: { time: 6, max: 5 },
 } as const;

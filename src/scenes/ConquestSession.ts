@@ -11,7 +11,12 @@ import type { MatchResult } from '../game/MatchClock';
 import { SpawnSystem, type SpawnChoice } from '../game/SpawnSystem';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { Renderer } from '../render/Renderer';
-import type { PlayerHud } from '../ui/PlayerHud';
+import { CONTROLS } from '../data/controls';
+import { HUD } from '../data/hud';
+import { COLLISION, raycastSegment } from '../physics/collision';
+import { MapImage } from '../ui/hud/MapImage';
+import type { MapMarker } from '../ui/hud/mapMarkers';
+import { MatchHud } from '../ui/hud/MatchHud';
 import type { CityMap } from './CityMap';
 import { PlaySession } from './PlaySession';
 
@@ -42,18 +47,24 @@ export class ConquestSession {
   /** Seconds since the player died. */
   deadTime = 0;
   callbacks: ConquestCallbacks = {};
+  readonly hud: MatchHud;
+  /** Top-down map image, shared with the Deploy Screen. */
+  readonly mapImage = new MapImage(VERDAN);
   private readonly playerCombatant: Combatant;
   private readonly targets = new Map<object, Combatant>();
+  private markers: MapMarker[] = [];
+  private markerClock = 0;
 
   constructor(
-    physics: PhysicsWorld,
-    input: Input,
+    private readonly physics: PhysicsWorld,
+    private readonly input: Input,
     readonly name: string,
     loadout: Loadout,
     readonly world: CityMap,
-    hud?: PlayerHud,
   ) {
-    this.session = new PlaySession(physics, input, loadout, world, { autoRespawn: false, hud });
+    this.match = new ConquestMatch(VERDAN);
+    this.hud = new MatchHud(this.match, this.mapImage);
+    this.session = new PlaySession(physics, input, loadout, world, { autoRespawn: false, hud: this.hud });
     const feet = this.session.player.motor.feet;
     const self = this;
     this.playerCombatant = {
@@ -66,7 +77,7 @@ export class ConquestSession {
         return self.state === 'alive';
       },
     };
-    this.match = new ConquestMatch(VERDAN, [this.playerCombatant]);
+    this.match.add(this.playerCombatant);
     // `?debug=crowd` targets: they can be shot and cost tickets, but never take flags.
     for (const s of world.crowd?.soldiers ?? []) {
       const c: Combatant = {
@@ -96,6 +107,7 @@ export class ConquestSession {
       }
     });
     this.match.events.on('kill', (k) => {
+      this.hud.addKill(k);
       if (k.victim.id === PLAYER_ID) {
         this.lastDeath = k;
         this.callbacks.onPlayerDied?.(k);
@@ -162,6 +174,46 @@ export class ConquestSession {
       const z = this.match.zones[i];
       f.setState(z.owner, z.control);
     }
+    if ((this.markerClock -= dt) <= 0) {
+      this.markerClock = HUD.minimap.enemyCheck;
+      this.markers = this.mapMarkers();
+    }
+    const feet = this.session.player.motor.feet;
+    const alive = this.state === 'alive';
+    this.hud.updateMatch(dt, {
+      match: this.match,
+      team: PLAYER_TEAM,
+      zone: alive ? this.match.zoneOf(feet) : null,
+      player: { x: feet.x, z: feet.z, yaw: this.session.player.yaw },
+      markers: this.markers,
+      hqWarning: alive ? this.hq.remaining : null,
+      showScoreboard: this.input.isDown(CONTROLS.scoreboard) || this.state === 'ended',
+      showLargeMap: alive && this.input.isDown(CONTROLS.largeMap),
+    });
+  }
+
+  /** Teammates always; enemies only when the player can see them (in front, in range, line of sight). */
+  private mapMarkers(): MapMarker[] {
+    const out: MapMarker[] = [];
+    const cam = this.session.camera;
+    const forward = cam.getWorldDirection(new THREE.Vector3());
+    const to = new THREE.Vector3();
+    const halfFov = THREE.MathUtils.degToRad(cam.fov * Math.max(1, cam.aspect)) / 2;
+    for (const c of this.targets.values()) {
+      if (!c.alive) continue;
+      if (c.team === PLAYER_TEAM) {
+        out.push({ x: c.position.x, z: c.position.z, kind: 'ally' });
+        continue;
+      }
+      if (this.state !== 'alive') continue;
+      to.set(c.position.x, c.position.y + 1.4, c.position.z).sub(cam.position);
+      const dist = to.length();
+      if (dist > HUD.minimap.enemyRange || to.angleTo(forward) > halfFov) continue;
+      const end = cam.position.clone().addScaledVector(to, (dist - 0.6) / dist);
+      if (raycastSegment(this.physics, cam.position, end, COLLISION.view)) continue;
+      out.push({ x: c.position.x, z: c.position.z, kind: 'enemy' });
+    }
+    return out;
   }
 
   render(renderer: Renderer): void {
