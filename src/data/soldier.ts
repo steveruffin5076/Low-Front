@@ -232,17 +232,21 @@ export interface HoldPose {
   chestYaw: number;
 }
 
-export const HOLDS: Record<'rifle' | 'rifleSprint' | 'pistol' | 'pistolSprint', HoldPose> = {
+export const HOLDS: Record<'rifle' | 'rifleSprint' | 'pistol' | 'pistolSprint' | 'dead', HoldPose> = {
   rifle: { pos: [0.12, 0.08, -0.26], rot: [0, 0.4, 0], chestYaw: -0.4 },
   rifleSprint: { pos: [0.1, -0.02, -0.24], rot: [-0.55, 0.75, 0.3], chestYaw: -0.3 },
   pistol: { pos: [0.02, 0.1, -0.42], rot: [0, -0.05, 0], chestYaw: 0.05 },
   pistolSprint: { pos: [0.12, -0.12, -0.24], rot: [-0.9, 0, 0], chestYaw: 0 },
+  /** While dying the weapon swings down along the body, so it lies flat beside the soldier. */
+  dead: { pos: [0.24, -0.3, -0.12], rot: [-1.45, 0.15, 0], chestYaw: 0 },
 };
 
 /** Stowed weapons: the rifle slung on the back (chest frame), the pistol in the hip holster (hips frame). */
 export const STOWED = {
-  rifle: { pos: [-0.05, 0.05, 0.31], rot: [0, Math.PI, -2.2] },
-  pistol: { pos: [0.22, 0.04, 0.0], rot: [Math.PI / 2, 0, Math.PI] },
+  // Diagonal across the backpack, muzzle down to the left, top of the rifle facing out.
+  rifle: { pos: [0.1, 0.29, 0.31], rot: [-1.571, 0.532, -3.142] },
+  // Muzzle down, grip toward the back.
+  pistol: { pos: [0.22, 0.06, 0.03], rot: [-Math.PI / 2, 0, 0] },
 } as const;
 
 /** Elbow pole targets in the chest frame (elbows bend down and out). */

@@ -324,6 +324,8 @@ export class SoldierAnimator {
     r.root[2] = -Math.sin(h) * tip;
     r.root[1] = Math.sin(h) * DEATH.twist * fall;
     p.hipsY = lerp(p.hipsY, SOLDIER_DIMENSIONS.hipHeight, fall);
+    p.hold = mixHold(p.hold, HOLDS.dead, Math.min(1, t / DEATH.fallTime));
+    r.neck[1] = r.chest[1] = r.spine[1] = 0;
     const fadeStart = DEATH.fallTime + DEATH.stayTime;
     p.opacity = t <= fadeStart ? 1 : Math.max(0, 1 - (t - fadeStart) / DEATH.fadeTime);
   }
