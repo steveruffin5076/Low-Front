@@ -1,0 +1,173 @@
+/* ---------- Test range overlay ---------- */
+.range-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.crosshair {
+  --gap: 6px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.crosshair span {
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.ch-t,
+.ch-b {
+  width: 2px;
+  height: 8px;
+  left: -1px;
+}
+.ch-l,
+.ch-r {
+  width: 8px;
+  height: 2px;
+  top: -1px;
+}
+.ch-t {
+  top: calc(-8px - var(--gap));
+}
+.ch-b {
+  top: var(--gap);
+}
+.ch-l {
+  left: calc(-8px - var(--gap));
+}
+.ch-r {
+  left: var(--gap);
+}
+.range-readout,
+.range-help {
+  position: absolute;
+  margin: 0;
+  padding: 8px 10px;
+  font: 12px/1.5 ui-monospace, monospace;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+}
+.range-readout {
+  left: 12px;
+  bottom: 12px;
+}
+.range-help {
+  right: 12px;
+  bottom: 12px;
+  text-align: right;
+  color: #dfe6ec;
+}
+.hit-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(229, 72, 59, 0.6) 100%);
+}
+.death-banner,
+.lock-hint {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+}
+
+/* Hit marker: four short diagonal strokes around the center. */
+.hit-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+}
+.hit-marker span {
+  position: absolute;
+  width: 9px;
+  height: 2px;
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.hit-marker.kill span {
+  background: #ff3b30;
+}
+.hm-a {
+  transform: translate(-14px, -10px) rotate(45deg);
+}
+.hm-b {
+  transform: translate(5px, -10px) rotate(-45deg);
+}
+.hm-c {
+  transform: translate(-14px, 8px) rotate(-45deg);
+}
+.hm-d {
+  transform: translate(5px, 8px) rotate(45deg);
+}
+
+/* Damage direction: red wedges on a ring around the center, rotated toward the source. */
+.damage-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.damage-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+}
+.damage-indicator span {
+  position: absolute;
+  left: -40px;
+  top: -150px;
+  width: 80px;
+  height: 18px;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: rgba(229, 72, 59, 0.85);
+}
+
+.health-bar {
+  position: absolute;
+  left: 12px;
+  bottom: 160px;
+  width: 220px;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.health-fill {
+  height: 100%;
+  background: #e8eef3;
+}
+.health-fill.low {
+  background: #e5483b;
+}
+.health-text {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  font: 700 11px/14px ui-monospace, monospace;
+  color: #111;
+}
+
+.bounds-banner {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 12px 22px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(229, 72, 59, 0.85);
+  border-radius: 6px;
+}
