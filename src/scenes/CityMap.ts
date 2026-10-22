@@ -11,6 +11,7 @@ import { disposeObject } from '../render/dispose';
 import { addVolumeColliders } from '../world/colliders';
 import { FlagVisual } from '../world/FlagVisual';
 import { getBuiltMap, type BuiltMap } from '../world/MapBuilder';
+import { SoldierCrowd } from './SoldierCrowd';
 import type { World } from './World';
 
 /** The "Verdan District" urban map (plan section 10) as a playable world. */
@@ -23,6 +24,8 @@ export class CityMap implements World {
   /** Precomputed at load for the bots (Phase 8). */
   readonly nav: NavGrid;
   readonly cover: CoverPoint[];
+  /** Phase 6 performance test: 32 soldiers (replaced by the match in Phase 7). */
+  readonly crowd: SoldierCrowd;
   private navDebug: NavDebug | null = null;
   private readonly lighting: Lighting;
   private readonly sky = new Sky();
@@ -37,6 +40,7 @@ export class CityMap implements World {
     this.scene.add(this.sky.mesh);
     this.flags = VERDAN.flags.map((f) => new FlagVisual(f));
     for (const f of this.flags) this.scene.add(f.root);
+    this.crowd = new SoldierCrowd(physics, this.scene, this.nav, VERDAN);
     const s = VERDAN.hqs[0].spawns[3];
     this.spawn = { position: new THREE.Vector3(s.x, 0, s.z), yaw: s.yaw };
   }
@@ -45,8 +49,13 @@ export class CityMap implements World {
     this.lighting.follow(pos);
   }
 
+  fixedUpdate(dt: number): void {
+    this.crowd.fixedUpdate(dt);
+  }
+
   update(dt: number, camera: THREE.Camera): void {
     this.sky.follow(camera);
+    this.crowd.update(dt, camera);
     for (const f of this.flags) f.update(dt);
   }
 
@@ -59,6 +68,7 @@ export class CityMap implements World {
   }
 
   dispose(): void {
+    this.crowd.dispose();
     disposeObject(this.scene);
     this.sky.dispose();
   }
