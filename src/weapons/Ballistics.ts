@@ -2,12 +2,22 @@ import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
 import { BALLISTICS } from '../data/ballistics';
 import type { WeaponDef } from '../data/weapons';
-import { COLLISION, raycastSegment, type ColliderTag } from '../physics/collision';
+import { COLLISION, raycastSegment, type ColliderTag, type Hittable } from '../physics/collision';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import { stepProjectile } from './Projectile';
 
+/** Who fired a bullet: its id and team, and its own hitboxes, which the bullet passes through. */
+export interface BulletShooter {
+  id: string;
+  team: 'blue' | 'red' | null;
+  owner: Hittable | null;
+}
+
 export interface Bullet {
   active: boolean;
+  shooter: BulletShooter | null;
+  /** Where the shot came from. */
+  origin: THREE.Vector3;
   pos: THREE.Vector3;
   prev: THREE.Vector3;
   vel: THREE.Vector3;
@@ -27,6 +37,8 @@ export interface BulletHit {
   direction: THREE.Vector3;
   distance: number;
   tag: ColliderTag | undefined;
+  shooter: BulletShooter | null;
+  origin: THREE.Vector3;
 }
 
 export interface BallisticsEvents {
@@ -49,6 +61,8 @@ export class Ballistics {
     for (let i = 0; i < BALLISTICS.maxBullets; i++) {
       this.bullets.push({
         active: false,
+        shooter: null,
+        origin: new THREE.Vector3(),
         pos: new THREE.Vector3(),
         prev: new THREE.Vector3(),
         vel: new THREE.Vector3(),
@@ -61,10 +75,19 @@ export class Ballistics {
     }
   }
 
-  fire(origin: THREE.Vector3, direction: THREE.Vector3, def: WeaponDef, tracer: boolean, muzzleOffset: THREE.Vector3): void {
+  fire(
+    origin: THREE.Vector3,
+    direction: THREE.Vector3,
+    def: WeaponDef,
+    tracer: boolean,
+    muzzleOffset: THREE.Vector3,
+    shooter: BulletShooter | null = null,
+  ): void {
     const b = this.bullets[this.next];
     this.next = (this.next + 1) % this.bullets.length;
     b.active = true;
+    b.shooter = shooter;
+    b.origin.copy(origin);
     b.pos.copy(origin);
     b.prev.copy(origin);
     b.vel.copy(direction).normalize().multiplyScalar(def.muzzleVelocity);
@@ -86,7 +109,8 @@ export class Ballistics {
       b.vel.fromArray(v);
       b.age += dt;
 
-      const hit = raycastSegment(this.physics, b.prev, b.pos, COLLISION.bullet);
+      const owner = b.shooter?.owner;
+      const hit = raycastSegment(this.physics, b.prev, b.pos, COLLISION.bullet, owner ? (tag) => tag?.kind !== 'hitbox' || tag.owner !== owner : undefined);
       if (hit) {
         b.active = false;
         b.pos.copy(hit.point);
@@ -97,6 +121,8 @@ export class Ballistics {
           direction: b.vel.clone().normalize(),
           distance: b.travelled + hit.distance,
           tag: hit.tag,
+          shooter: b.shooter,
+          origin: b.origin.clone(),
         });
         continue;
       }

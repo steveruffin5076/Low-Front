@@ -33,6 +33,10 @@ export type Surface = 'concrete' | 'dirt' | 'metal' | 'wood';
 /** Something bullets can damage through its hitboxes. */
 export interface Hittable {
   readonly label: string;
+  /** Team, for the no-friendly-fire rule (test targets have none). */
+  readonly team?: 'blue' | 'red';
+  /** Match combatant id, for kill reports. */
+  readonly combatantId?: string;
   applyHit(hit: ZoneHit): void;
 }
 
@@ -42,6 +46,10 @@ export interface ZoneHit {
   distance: number;
   point: THREE.Vector3;
   direction: THREE.Vector3;
+  /** Who fired, and from where (for damage direction and kill reports). */
+  attackerId?: string;
+  from?: THREE.Vector3;
+  weapon?: string;
   /** Set by the target: true when this hit killed it, and its HP after the hit. */
   killed?: boolean;
   remainingHp?: number;
@@ -66,6 +74,8 @@ export function raycastSegment(
   from: THREE.Vector3,
   to: THREE.Vector3,
   filterGroups: number,
+  /** Return false to let the ray pass through a collider (e.g. the shooter's own hitboxes). */
+  accept?: (tag: ColliderTag | undefined) => boolean,
 ): SegmentHit | null {
   ray.dir.subVectors(to, from);
   const length = ray.dir.length();
@@ -73,7 +83,8 @@ export function raycastSegment(
   ray.dir.divideScalar(length);
   ray.origin.copy(from);
   const { rapier, world } = physics;
-  const hit = world.castRayAndGetNormal(new rapier.Ray(ray.origin, ray.dir), length, true, undefined, filterGroups);
+  const predicate = accept ? (c: { handle: number }) => accept(physics.tags.get(c.handle)) : undefined;
+  const hit = world.castRayAndGetNormal(new rapier.Ray(ray.origin, ray.dir), length, true, undefined, filterGroups, undefined, undefined, predicate);
   if (!hit) return null;
   return {
     point: from.clone().addScaledVector(ray.dir, hit.timeOfImpact),

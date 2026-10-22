@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import { BALLISTICS } from '../data/ballistics';
 import type { PlayerController } from '../entities/PlayerController';
-import type { Ballistics } from './Ballistics';
+import type { WeaponDef } from '../data/weapons';
+
+/** Where shots go: the shared combat system, tagged with the shooter. */
+export interface BulletSink {
+  fire(origin: THREE.Vector3, direction: THREE.Vector3, def: WeaponDef, tracer: boolean, muzzleOffset: THREE.Vector3): void;
+}
 import type { PlayerWeapons } from './PlayerWeapons';
 import { Recoil } from './Recoil';
 import { Spread, spreadDirection } from './Spread';
@@ -24,7 +29,7 @@ export class PlayerShooting {
   ads = 0;
 
   constructor(
-    private readonly ballistics: Ballistics,
+    private readonly ballistics: BulletSink,
     private readonly weapons: PlayerWeapons,
     private readonly player: PlayerController,
     /** Eye position (bullet origin) and the muzzle in world space (tracer start). */

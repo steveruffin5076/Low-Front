@@ -66,7 +66,11 @@ export class ConquestSession {
   ) {
     this.match = new ConquestMatch(VERDAN);
     this.hud = new MatchHud(this.match, this.mapImage);
-    this.session = new PlaySession(physics, input, loadout, world, { autoRespawn: false, hud: this.hud });
+    this.session = new PlaySession(physics, input, loadout, world, {
+      autoRespawn: false,
+      hud: this.hud,
+      identity: { id: PLAYER_ID, name, team: PLAYER_TEAM },
+    });
     const feet = this.session.player.motor.feet;
     const self = this;
     this.playerCombatant = {
@@ -97,16 +101,17 @@ export class ConquestSession {
       this.match.add(c);
     }
 
+    // Deaths by bullet are reported from the combat hit (with the killer); the rest here.
     this.session.events.on('died', ({ cause }) => {
       this.state = 'dead';
       this.deadTime = 0;
-      this.match.reportDeath({ victimId: PLAYER_ID, cause: cause ?? undefined });
+      if (cause !== null) this.match.reportDeath({ victimId: PLAYER_ID, cause });
     });
-    this.session.events.on('targetHit', (hit) => {
-      const target = hit.target instanceof Soldier ? this.targets.get(hit.target) : undefined;
-      if (hit.kill && target) {
-        this.match.reportDeath({ victimId: target.id, killerId: PLAYER_ID, weapon: hit.weapon, headshot: hit.zone === 'head', distance: hit.distance });
-      }
+    this.session.combatSystem.events.on('hit', (h) => {
+      if (!h.kill) return;
+      const victimId = h.target.combatantId ?? (h.target instanceof Soldier ? this.targets.get(h.target)?.id : undefined);
+      if (!victimId) return;
+      this.match.reportDeath({ victimId, killerId: h.shooter?.id, weapon: h.weapon, headshot: h.zone === 'head', distance: h.distance });
     });
     this.match.events.on('kill', (k) => {
       this.hud.addKill(k);
