@@ -110,6 +110,7 @@ export class PlaySession {
       ads,
     };
     this.weapons.update(dt, weaponInput);
+    this.world.fixedUpdate?.(dt);
     this.combat.fixedUpdate(dt);
     if (this.world.limit !== null) {
       const feet = this.player.motor.feet;

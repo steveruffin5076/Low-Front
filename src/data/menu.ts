@@ -28,9 +28,6 @@ export const PREVIEW = {
     autoRotateSpeed: 0.35,
     /** Radians per pixel of mouse drag. */
     dragSensitivity: 0.01,
-    breathRate: 1.8,
-    breathAmount: 0.012,
-    swayAmount: 0.015,
   },
   weapon: {
     fov: 26,
