@@ -73,12 +73,27 @@ export function profile(points: readonly V2[], thickness: number, centerX = 0, h
   return geo;
 }
 
-/** Cross-section extrusion. `points` are (x, y) pairs seen from the muzzle; extruded along Z from `zFrom` to `zTo`. */
-export function section(points: readonly V2[], zFrom: number, zTo: number): THREE.BufferGeometry {
+/**
+ * Cross-section extrusion. `points` are (x, y) pairs seen from the muzzle; extruded along Z from `zFrom` to `zTo`.
+ * `holes` cut through it (e.g. a rear sight aperture).
+ */
+export function section(points: readonly V2[], zFrom: number, zTo: number, holes: readonly V2[][] = []): THREE.BufferGeometry {
   const length = Math.abs(zTo - zFrom);
-  const geo = new THREE.ExtrudeGeometry(shapeOf(points), { depth: length, bevelEnabled: false, curveSegments: 1 });
+  const shape = shapeOf(points);
+  for (const h of holes) shape.holes.push(new THREE.Path(h.map(([a, b]) => new THREE.Vector2(a, b))));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: false, curveSegments: 1 });
   geo.translate(0, 0, Math.min(zFrom, zTo));
   return geo;
+}
+
+/** A circle of `segments` points around (cx, cy), counter-clockwise. */
+export function circle(cx: number, cy: number, radius: number, segments: number): V2[] {
+  const out: V2[] = [];
+  for (let i = 0; i < segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    out.push([cx + Math.cos(a) * radius, cy + Math.sin(a) * radius]);
+  }
+  return out;
 }
 
 /** Points along a circular arc in the (z, y) plane. Angle 0 points along +Z, angles grow toward −Y. */

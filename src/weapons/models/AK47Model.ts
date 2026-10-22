@@ -9,14 +9,22 @@ import { WM } from './weaponMaterials';
 const BORE_Y = 0.058;
 const RECEIVER = { zRear: 0.095, zFront: -0.135, yBottom: 0.012, yTop: 0.07, halfWidth: 0.015 };
 const MUZZLE_Z = -0.58;
-const SIGHT_Y = 0.093;
+/** Iron sight line about 48.5 mm over the bore. */
+const SIGHT_Y = BORE_Y + 0.0485;
+/** Front post and the rear notch on the tangent leaf: 378 mm sight radius. */
+const FRONT_POST_Z = -0.494;
+const NOTCH_Z = FRONT_POST_Z + 0.378;
+/** U-notch in the rear slider, and the round front post. */
+const NOTCH = { halfWidth: 0.0017, depth: 0.0032 };
+const POST_RADIUS = 0.001;
 const GAS_Y = 0.085;
 const MAGWELL = { zRear: -0.07, zFront: -0.125 };
 
 const POINTS: Record<AttachmentName, V3> = {
   muzzle: [0, BORE_Y, MUZZLE_Z],
   ejectionPort: [0.016, 0.06, -0.02],
-  sightAnchor: [0, SIGHT_Y, 0.15],
+  // The rear sight sits far forward on an AK: the eye is about 10" behind the notch.
+  sightAnchor: [0, SIGHT_Y, NOTCH_Z + 0.26],
   rightHandGrip: [0, -0.045, 0.04],
   leftHandGrip: [0, 0.02, -0.26],
   magWell: [0, RECEIVER.yBottom, (MAGWELL.zRear + MAGWELL.zFront) / 2],
@@ -71,11 +79,23 @@ function buildDetailed(asm: Assembly): void {
   // Charging handle slot on the right side.
   asm.add(interior, boxFromTo([r.halfWidth, 0.052, -0.08], [r.halfWidth + 0.0005, 0.058, 0.05]));
 
-  // Rear sight block over the front trunnion with a tangent leaf and a notch.
-  asm.add(metal, boxFromTo([-0.013, 0.06, -0.165], [0.013, 0.08, -0.1]));
-  asm.add(metal, box([0.016, 0.003, 0.06], { pos: [0, 0.084, -0.128], rot: [-0.08, 0, 0] }));
-  asm.add(metal, boxFromTo([-0.01, 0.08, -0.14], [0.01, 0.087, -0.13]));
-  asm.add(metal, boxFromTo([-0.008, 0.086, -0.161], [-0.0015, SIGHT_Y, -0.157]), boxFromTo([0.0015, 0.086, -0.161], [0.008, SIGHT_Y, -0.157]));
+  // Rear sight block over the front trunnion; the tangent leaf hinges at its front and runs back
+  // to the slider, whose rear face carries the U-notch at the top.
+  const nz = NOTCH_Z;
+  asm.add(metal, boxFromTo([-0.013, 0.06, -0.17], [0.013, 0.08, nz + 0.012]));
+  asm.add(metal, boxFromTo([-0.009, 0.08, -0.165], [0.009, 0.0845, nz]));
+  asm.add(metal, boxFromTo([-0.011, 0.0845, nz - 0.022], [0.011, 0.09, nz + 0.0005]));
+  asm.add(
+    metal,
+    section(
+      [
+        [-0.011, 0.09], [0.011, 0.09], [0.011, SIGHT_Y], [NOTCH.halfWidth, SIGHT_Y], [NOTCH.halfWidth, SIGHT_Y - NOTCH.depth],
+        [-NOTCH.halfWidth, SIGHT_Y - NOTCH.depth], [-NOTCH.halfWidth, SIGHT_Y], [-0.011, SIGHT_Y],
+      ],
+      nz - 0.0015,
+      nz + 0.0015,
+    ),
+  );
 
   // Barrel, gas tube with wood upper handguard, wood lower handguard with a metal retainer.
   asm.add(metal, cylZ(0.0085, r.zFront, -0.545, BORE_Y, 0, 8));
@@ -87,14 +107,15 @@ function buildDetailed(asm: Assembly): void {
   asm.add(metal, boxFromTo([-0.011, 0.046, -0.44], [0.011, 0.096, -0.415]));
   asm.add(metal, box([0.016, 0.02, 0.014], { pos: [0, 0.07, -0.41], rot: [0.6, 0, 0] }));
 
-  // Front sight tower with protective ears and post.
-  asm.add(metal, boxFromTo([-0.011, 0.045, -0.505], [0.011, 0.07, -0.482]));
-  asm.add(metal, profile([[-0.48, 0.07], [-0.507, 0.07], [-0.5, 0.083], [-0.488, 0.083]], 0.016));
+  // Front sight tower with two protective ears around a round post.
+  const fz = FRONT_POST_Z;
+  asm.add(metal, boxFromTo([-0.011, 0.045, fz - 0.011], [0.011, 0.07, fz + 0.012]));
+  asm.add(metal, profile([[fz + 0.014, 0.07], [fz - 0.013, 0.07], [fz - 0.006, SIGHT_Y - 0.02], [fz + 0.006, SIGHT_Y - 0.02]], 0.016));
   asm.add(
     metal,
-    boxFromTo([-0.01, 0.078, -0.498], [-0.006, 0.1, -0.49]),
-    boxFromTo([0.006, 0.078, -0.498], [0.01, 0.1, -0.49]),
-    boxFromTo([-0.0015, 0.083, -0.496], [0.0015, SIGHT_Y, -0.492]),
+    boxFromTo([-0.0095, SIGHT_Y - 0.022, fz - 0.004], [-0.0055, SIGHT_Y + 0.004, fz + 0.004]),
+    boxFromTo([0.0055, SIGHT_Y - 0.022, fz - 0.004], [0.0095, SIGHT_Y + 0.004, fz + 0.004]),
+    cyl(POST_RADIUS, 0.02, { axis: 'y', pos: [0, SIGHT_Y - 0.01, fz], segments: 6 }),
   );
 
   // Slant muzzle brake: longer on top, cut back underneath.
@@ -132,7 +153,8 @@ function buildSimple(asm: Assembly): void {
   asm.add(metal, boxFromTo([-r.halfWidth, r.yBottom, r.zFront], [r.halfWidth, 0.085, r.zRear]));
   asm.add(metal, cylZ(0.009, r.zFront, MUZZLE_Z, BORE_Y, 0, 5));
   asm.add(wood, cylZ(0.0145, -0.17, -0.35, GAS_Y, 0, 5), profile(LOWER_HANDGUARD, 0.04));
-  asm.add(metal, boxFromTo([-0.008, 0.045, -0.505], [0.008, 0.1, -0.482]));
+  asm.add(metal, boxFromTo([-0.008, 0.045, FRONT_POST_Z - 0.011], [0.008, SIGHT_Y, FRONT_POST_Z + 0.012]));
+  asm.add(metal, boxFromTo([-0.01, r.yTop, -0.17], [0.01, SIGHT_Y, NOTCH_Z]));
   asm.add(wood, profile(STOCK_PROFILE, 0.036), profile(GRIP_PROFILE, 0.028));
   const mw = POINTS.magWell;
   asm.node('magazine', mw).add(metal, profile(magazineProfile().map(([z, y]) => [z + mw[2], y + mw[1]] as V2), 0.024));

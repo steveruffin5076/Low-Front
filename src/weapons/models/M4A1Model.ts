@@ -1,4 +1,4 @@
-import { Assembly, box, boxFromTo, cyl, cylZ, profile, type V2, type V3 } from './ModelKit';
+import { Assembly, box, boxFromTo, circle, cyl, cylZ, profile, section, type V2, type V3 } from './ModelKit';
 import type { AttachmentName, WeaponLod, WeaponModel } from './WeaponModel';
 import { WM } from './weaponMaterials';
 
@@ -11,14 +11,23 @@ const UPPER = { zRear: 0.085, zFront: -0.105, yBottom: 0.045, yTop: 0.094, halfW
 const RAIL_TOP = 0.099;
 const HANDGUARD = { zRear: -0.105, zFront: -0.285, radius: 0.024 };
 const MUZZLE_Z = -0.55;
-const SIGHT_Y = 0.121;
+/** Iron sight line: about 2.6" (66 mm) over the bore, the standard AR-15/M4 sight height. */
+const SIGHT_Y = BORE_Y + 0.066;
+/** Flip-up rear sight at the back of the rail and the front sight post on the barrel: ~14.6" sight radius. */
+const REAR_SIGHT_Z = 0.068;
+const FRONT_POST_Z = -0.3075;
+/** Large (CQB) rear aperture, 0.2" across; the small one is 0.07". */
+const APERTURE_RADIUS = 0.0025;
+/** Front sight post, 0.07" square. */
+const POST_HALF = 0.0009;
 const PORT = { zRear: -0.005, zFront: -0.06, yBottom: 0.058, yTop: 0.082 };
 const MAGWELL = { zRear: -0.035, zFront: -0.108, yBottom: -0.048 };
 
 const POINTS: Record<AttachmentName, V3> = {
   muzzle: [0, BORE_Y, MUZZLE_Z],
   ejectionPort: [0.016, 0.07, (PORT.zRear + PORT.zFront) / 2],
-  sightAnchor: [0, SIGHT_Y, 0.2],
+  // The eye about 3" behind the rear aperture, as with a cheek weld on the stock.
+  sightAnchor: [0, SIGHT_Y, REAR_SIGHT_Z + 0.075],
   rightHandGrip: [0, -0.045, 0.032],
   leftHandGrip: [0, 0.045, -0.2],
   magWell: [0, MAGWELL.yBottom, (MAGWELL.zRear + MAGWELL.zFront) / 2],
@@ -98,14 +107,17 @@ function buildDetailed(asm: Assembly): void {
 
   // Barrel, front sight base with triangular post housing, birdcage flash hider.
   asm.add(metal, cylZ(0.0085, hg.zFront, -0.51, BORE_Y, 0, 8));
-  asm.add(metal, boxFromTo([-0.011, 0.058, -0.325], [0.011, 0.086, -0.29]));
-  asm.add(metal, profile([[-0.29, 0.086], [-0.325, 0.086], [-0.312, 0.111], [-0.303, 0.111]], 0.014));
+  // Front sight base: the gas block, a tapered tower and two protective ears around the post.
+  const fz = FRONT_POST_Z;
+  asm.add(metal, boxFromTo([-0.011, 0.058, fz - 0.0175], [0.011, 0.086, fz + 0.0175]));
+  asm.add(metal, profile([[fz + 0.0175, 0.086], [fz - 0.0175, 0.086], [fz - 0.007, SIGHT_Y - 0.024], [fz + 0.005, SIGHT_Y - 0.024]], 0.016));
   asm.add(
     metal,
-    boxFromTo([-0.009, 0.104, -0.311], [-0.005, 0.126, -0.304]),
-    boxFromTo([0.005, 0.104, -0.311], [0.009, 0.126, -0.304]),
-    boxFromTo([-0.0015, 0.104, -0.309], [0.0015, SIGHT_Y, -0.306]),
-    boxFromTo([-0.004, 0.048, -0.32], [0.004, 0.058, -0.3]),
+    boxFromTo([-0.0095, SIGHT_Y - 0.026, fz - 0.004], [0.0095, SIGHT_Y - 0.021, fz + 0.004]),
+    boxFromTo([-0.0095, SIGHT_Y - 0.023, fz - 0.0035], [-0.0055, SIGHT_Y + 0.002, fz + 0.0035]),
+    boxFromTo([0.0055, SIGHT_Y - 0.023, fz - 0.0035], [0.0095, SIGHT_Y + 0.002, fz + 0.0035]),
+    boxFromTo([-POST_HALF, SIGHT_Y - 0.022, fz - POST_HALF], [POST_HALF, SIGHT_Y, fz + POST_HALF]),
+    boxFromTo([-0.004, 0.048, fz - 0.0125], [0.004, 0.058, fz + 0.0075]),
   );
   asm.add(metal, cylZ(0.009, -0.51, -0.514, BORE_Y, 0, 8), cylZ(0.0105, -0.514, MUZZLE_Z, BORE_Y, 0, 8));
   const interior = WM.interior();
@@ -117,20 +129,25 @@ function buildDetailed(asm: Assembly): void {
     cylZ(0.0045, MUZZLE_Z - 0.0005, MUZZLE_Z + 0.002, BORE_Y, 0, 6),
   );
 
-  // Flip-up rear sight with an aperture window.
-  const rz = 0.068;
+  // Flip-up rear sight: base on the rail, protective wings, and a leaf with a round peep aperture.
+  const rz = REAR_SIGHT_Z;
+  const leafBase = RAIL_TOP + 0.01;
+  const leafR = 0.0085;
+  const leaf: V2[] = [[-leafR, leafBase], [leafR, leafBase], ...circle(0, SIGHT_Y, leafR, 8).filter(([, y]) => y > SIGHT_Y)];
+  leaf.splice(2, 0, [leafR, SIGHT_Y]);
+  leaf.push([-leafR, SIGHT_Y]);
   asm.add(
     metal,
-    boxFromTo([-0.011, RAIL_TOP, rz - 0.012], [0.011, RAIL_TOP + 0.008, rz + 0.012]),
-    boxFromTo([-0.01, 0.107, rz - 0.003], [-0.006, 0.135, rz + 0.003]),
-    boxFromTo([0.006, 0.107, rz - 0.003], [0.01, 0.135, rz + 0.003]),
-    boxFromTo([-0.006, 0.131, rz - 0.003], [0.006, 0.135, rz + 0.003]),
-    boxFromTo([-0.006, 0.107, rz - 0.003], [0.006, 0.111, rz + 0.003]),
+    boxFromTo([-0.0125, RAIL_TOP, rz - 0.014], [0.0125, leafBase, rz + 0.014]),
+    boxFromTo([-0.0125, leafBase, rz - 0.005], [-0.0095, SIGHT_Y + 0.006, rz + 0.005]),
+    boxFromTo([0.0095, leafBase, rz - 0.005], [0.0125, SIGHT_Y + 0.006, rz + 0.005]),
+    section(leaf, rz - 0.0015, rz + 0.0015, [circle(0, SIGHT_Y, APERTURE_RADIUS, 12)]),
+    cyl(0.005, 0.004, { axis: 'x', pos: [0.0155, leafBase - 0.003, rz], segments: 6 }),
   );
 
   // Buffer tube with castle nut and stock position notches, collapsible stock with butt pad.
   asm.add(metal, cylZ(0.0145, u.zRear, 0.255, 0.07, 0, 8), cylZ(0.017, u.zRear, u.zRear + 0.01, 0.07, 0, 8));
-  for (let i = 0; i < 6; i++) asm.add(metal, box([0.006, 0.004, 0.004], { pos: [0, 0.0545, 0.115 + i * 0.01] }));
+  for (let i = 0; i < 4; i++) asm.add(metal, box([0.006, 0.004, 0.004], { pos: [0, 0.0545, 0.115 + i * 0.015] }));
   asm.add(polymer, profile(STOCK_PROFILE, 0.04), boxFromTo([-0.021, -0.042, 0.28], [0.021, 0.098, 0.29]));
   asm.add(polymer, boxFromTo([-0.005, 0.024, 0.17], [0.005, 0.034, 0.2]));
 
@@ -183,8 +200,8 @@ function buildSimple(asm: Assembly): void {
   asm.add(metal, boxFromTo([-0.012, -0.045, MAGWELL.zFront], [0.012, 0, MAGWELL.zRear]));
   asm.add(metal, cyl(HANDGUARD.radius, HANDGUARD.zRear - HANDGUARD.zFront, { pos: [0, BORE_Y, (HANDGUARD.zRear + HANDGUARD.zFront) / 2], segments: 6 }));
   asm.add(metal, cylZ(0.009, HANDGUARD.zFront, MUZZLE_Z, BORE_Y, 0, 5));
-  asm.add(metal, profile([[-0.29, 0.06], [-0.325, 0.06], [-0.312, 0.12], [-0.303, 0.12]], 0.012));
-  asm.add(metal, boxFromTo([-0.008, RAIL_TOP, 0.055], [0.008, 0.13, 0.08]));
+  asm.add(metal, profile([[-0.29, 0.06], [-0.325, 0.06], [-0.312, SIGHT_Y], [-0.303, SIGHT_Y]], 0.012));
+  asm.add(metal, boxFromTo([-0.008, RAIL_TOP, 0.055], [0.008, SIGHT_Y + 0.008, 0.08]));
   asm.add(metal, cylZ(0.0145, u.zRear, 0.2, 0.07, 0, 5));
   asm.add(polymer, profile(GRIP_PROFILE, 0.026), profile(STOCK_PROFILE, 0.04));
   asm.node('magazine', POINTS.magWell).add(
