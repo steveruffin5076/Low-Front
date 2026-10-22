@@ -1,5 +1,21 @@
 # PROGRESS.md
 
+## Fix after Phase 6 review: rifle iron sights (done, waiting for review)
+
+Your report: the M4A1 and AK47 sight pictures when aiming did not match the real rifles.
+- **M4A1**:
+  - The sight line is now 66 mm (2.6 in) above the bore, the standard AR-15/M4 sight height. It was 49 mm.
+  - The rear sight is a flip-up sight with a round 5 mm (0.2 in) peep aperture and protective wings. Before, it was a square window.
+  - The front post is 1.8 mm (0.07 in) wide, between the front sight base ears, with its tip at the center of the aperture.
+  - Sight radius is about 14.8 in; the eye is about 3 in behind the aperture.
+- **AK47**:
+  - The sight line is now 48.5 mm above the bore (it was 35 mm), and the sight radius is 378 mm (it was 335 mm).
+  - A U-notch sits on the tangent leaf's slider. The round front post stands between the two protective ears, with its tip level with the top of the notch.
+  - The eye is about 10 in behind the notch, as on the real rifle, so the dust cover shows below the rear sight.
+  - The front post was also lying flat and could not be seen. It now stands upright.
+- New tests check each rifle's sight height, that the sights line up (just over the sight line is clear, just under it meets the front post), and the sight radius. 170 tests in total.
+- How to test: Deploy with each rifle, aim (RMB) at a target, and compare with real sight pictures.
+
 ## Phase 6 — Soldiers (done, waiting for review)
 
 ### What was done

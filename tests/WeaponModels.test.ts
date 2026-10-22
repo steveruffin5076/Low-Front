@@ -62,3 +62,40 @@ describe.each(WEAPON_IDS)('%s model', (id) => {
     expect(s.staticMeshes).toBeLessThanOrEqual(s.materials);
   });
 });
+
+/** Real iron sights: height of the sight line over the bore, and the sight radius (meters). */
+const IRON_SIGHTS = {
+  m4a1: { height: 0.066, radius: 0.368 },
+  ak47: { height: 0.0485, radius: 0.378 },
+} as const;
+
+describe.each(['m4a1', 'ak47'] as const)('%s iron sights', (id) => {
+  const fp = buildWeaponModel(id, 'fp');
+  fp.root.updateMatrixWorld(true);
+  const eye = fp.points.sightAnchor.getWorldPosition(new THREE.Vector3());
+  const muzzle = fp.points.muzzle.getWorldPosition(new THREE.Vector3());
+  const hit = (dx: number, dy: number): THREE.Intersection | undefined => {
+    const ray = new THREE.Raycaster(new THREE.Vector3(eye.x + dx, eye.y + dy, eye.z), new THREE.Vector3(0, 0, -1));
+    return ray.intersectObject(fp.root, true)[0];
+  };
+
+  it('sits at the real height over the bore', () => {
+    expect(eye.y - muzzle.y).toBeCloseTo(IRON_SIGHTS[id].height, 3);
+  });
+
+  it('lines up: just over the sight line is clear, just under it meets the front post', () => {
+    expect(hit(0, 0.001)).toBeUndefined();
+    const post = hit(0, -0.001);
+    expect(post).toBeDefined();
+    // The front post is far forward, past the rear sight.
+    expect(post!.point.z).toBeLessThan(eye.z - 0.3);
+  });
+
+  it('has the real sight radius', () => {
+    const rear = hit(0.004, -0.001);
+    const front = hit(0, -0.001);
+    expect(rear).toBeDefined();
+    expect(rear!.point.z - front!.point.z).toBeCloseTo(IRON_SIGHTS[id].radius, 1);
+    expect(Math.abs(rear!.point.z - front!.point.z - IRON_SIGHTS[id].radius)).toBeLessThan(0.012);
+  });
+});
