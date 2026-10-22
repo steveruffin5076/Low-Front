@@ -1,3 +1,4 @@
+import { debugFlag } from './debugFlags';
 /** Keyboard and mouse state with Pointer Lock. Read state each frame, then call `endFrame()`. */
 export class Input {
   private down = new Set<string>();
@@ -11,6 +12,9 @@ export class Input {
 
   /** When true, clicking the canvas locks the mouse. Only the match enables this. */
   lockOnClick = false;
+  /** Called when Pointer Lock ends (Esc, Alt+Tab): the match opens the Pause Menu. */
+  onLockLost: (() => void) | null = null;
+  private wasLocked = false;
 
   constructor(private readonly target: HTMLElement) {
     window.addEventListener('keydown', this.onKeyDown);
@@ -22,13 +26,14 @@ export class Input {
     window.addEventListener('wheel', this.onWheel, { passive: true });
     target.addEventListener('click', this.requestLock);
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('pointerlockchange', this.onLockChange);
   }
 
   /**
    * Dev only (`?debug=freemouse`): treat the mouse as locked without Pointer Lock,
    * for automated browser checks where Pointer Lock is not available.
    */
-  private readonly freeMouse = new URLSearchParams(window.location.search).get('debug') === 'freemouse';
+  private readonly freeMouse = debugFlag('freemouse');
 
   get locked(): boolean {
     return document.pointerLockElement === this.target || (this.freeMouse && this.lockOnClick);
@@ -80,6 +85,12 @@ export class Input {
     this.dy = 0;
     this.wheel = 0;
   }
+
+  private onLockChange = (): void => {
+    const locked = document.pointerLockElement === this.target;
+    if (this.wasLocked && !locked) this.onLockLost?.();
+    this.wasLocked = locked;
+  };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.code === 'F3' || e.code === 'F4' || e.code === 'Tab') e.preventDefault();

@@ -6,11 +6,13 @@ import type { GameContext, ScreenName } from './GameContext';
 import { Renderer } from '../render/Renderer';
 import { PreviewRenderer } from '../render/PreviewRenderer';
 import { ProfileStore } from '../save/ProfileStore';
+import { SettingsStore } from '../save/SettingsStore';
 import { browserStore } from '../save/Storage';
 import { MenuBackdrop } from '../scenes/MenuBackdrop';
 import { DebugOverlay } from '../ui/DebugOverlay';
 import { LoadingScreen } from '../ui/screens/LoadingScreen';
 import { MainMenu } from '../ui/screens/MainMenu';
+import { EndScreen } from '../ui/screens/EndScreen';
 import { MatchScreen } from '../ui/screens/MatchScreen';
 import { ProfileScreen } from '../ui/screens/ProfileScreen';
 import { QuitScreen } from '../ui/screens/QuitScreen';
@@ -35,6 +37,8 @@ export class Game {
       preview: new PreviewRenderer(),
       input: new Input(canvas),
       profiles: new ProfileStore(browserStore()),
+      settings: new SettingsStore(browserStore()),
+      lastMatch: null,
       backdrop: new MenuBackdrop(),
       changeScreen: (screen) => this.changeScreen(screen),
     };
@@ -45,6 +49,7 @@ export class Game {
       .add('profile', new ProfileScreen(this.ctx))
       .add('loading', new LoadingScreen(this.ctx, () => this.match.load(), 'match'))
       .add('match', this.match)
+      .add('end', new EndScreen(this.ctx))
       .add('quit', new QuitScreen(this.ctx));
     this.loop = new GameLoop({
       fixedUpdate: (dt) => this.screens.fixedUpdate(dt),

@@ -89,6 +89,18 @@ export class AudioManager {
     this.tone({ freq: t.freq, endFreq: t.freq, length: t.length, gain: t.gain });
   }
 
+  /** Flag captured by our team, lost by our team, or neutralized. */
+  flagCue(kind: 'captured' | 'lost' | 'neutralized'): void {
+    const c = AUDIO.flagCues;
+    c[kind].forEach((freq, i) => this.tone({ freq, endFreq: freq, length: c.noteLength, gain: c.gain, delay: i * c.noteGap }));
+  }
+
+  /** Master volume, 0–1 (the player's setting). */
+  setVolume(volume: number): void {
+    this.volume = volume;
+    if (this.master) this.master.gain.value = volume;
+  }
+
   dispose(): void {
     void this.ctx?.close();
     this.ctx = null;
@@ -139,11 +151,11 @@ export class AudioManager {
     src.start(t, Math.random() * 0.5, o.length);
   }
 
-  private tone(o: { freq: number; endFreq: number; length: number; gain: number }, out: AudioNode | null = this.output()): void {
+  private tone(o: { freq: number; endFreq: number; length: number; gain: number; delay?: number }, out: AudioNode | null = this.output()): void {
     const ctx = this.ctx;
     if (!ctx || !out) return;
     const osc = ctx.createOscillator();
-    const t = ctx.currentTime;
+    const t = ctx.currentTime + (o.delay ?? 0);
     osc.frequency.setValueAtTime(o.freq, t);
     osc.frequency.exponentialRampToValueAtTime(Math.max(1, o.endFreq), t + o.length);
     const gain = ctx.createGain();

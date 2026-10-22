@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { LIGHTING } from '../data/lighting';
 import { MAP } from '../data/map/config';
-import type { FlagDef } from '../data/map/types';
+import type { FlagDef, TeamId } from '../data/map/types';
 
-/** Flag pole, cloth and the capture-radius ring on the ground. Owner color changes in Phase 7. */
+/** Lowest cloth height on the pole (a neutral flag). */
+const CLOTH_BOTTOM = 1.2;
+
+/** Flag pole, cloth and the capture-radius ring on the ground. */
 export class FlagVisual {
   readonly root = new THREE.Group();
   private readonly cloth: THREE.Mesh;
@@ -21,7 +24,7 @@ export class FlagVisual {
       new THREE.BoxGeometry(0.04, 1.3, 2.2).translate(0, 0, 1.1),
       new THREE.MeshStandardMaterial({ color: LIGHTING.flag.neutral, flatShading: true }),
     );
-    this.cloth.position.set(0, MAP.flagPoleHeight - 0.8, 0);
+    this.cloth.position.set(0, CLOTH_BOTTOM, 0);
     this.cloth.castShadow = true;
     this.ring = new THREE.Mesh(
       new THREE.RingGeometry(MAP.flagRadius - 0.35, MAP.flagRadius, 48).rotateX(-Math.PI / 2),
@@ -31,9 +34,18 @@ export class FlagVisual {
     this.root.add(pole, this.cloth, this.ring);
   }
 
-  setColor(color: number): void {
-    (this.cloth.material as THREE.MeshStandardMaterial).color.set(color);
-    (this.ring.material as THREE.MeshBasicMaterial).color.set(color);
+  /**
+   * Shows the capture state: the ring takes the owner's color; the cloth is at the top when a
+   * team holds the flag fully and sinks toward the bottom as it is taken down, in the color of
+   * the side it leans to (`control` −1 Red … +1 Blue).
+   */
+  setState(owner: TeamId | null, control: number): void {
+    const f = LIGHTING.flag;
+    (this.ring.material as THREE.MeshBasicMaterial).color.set(owner ? f[owner] : f.neutral);
+    const lean = control > 0 ? 'blue' : control < 0 ? 'red' : null;
+    (this.cloth.material as THREE.MeshStandardMaterial).color.set(lean ? f[lean] : f.neutral);
+    const top = MAP.flagPoleHeight - 0.8;
+    this.cloth.position.y = CLOTH_BOTTOM + (top - CLOTH_BOTTOM) * Math.abs(control);
   }
 
   /** The cloth swings a little in the wind. */

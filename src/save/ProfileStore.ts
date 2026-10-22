@@ -33,6 +33,21 @@ export function kdRatio(stats: PlayerStats): number {
   return stats.kills / Math.max(stats.deaths, 1);
 }
 
+/** Adds one finished match to the saved stats: a win, a loss or neither (draw), plus kills, deaths and headshots. */
+export function applyMatch(
+  stats: PlayerStats,
+  m: { won: boolean | null; kills: number; deaths: number; headshots: number },
+): PlayerStats {
+  return {
+    matchesPlayed: stats.matchesPlayed + 1,
+    wins: stats.wins + (m.won === true ? 1 : 0),
+    losses: stats.losses + (m.won === false ? 1 : 0),
+    kills: stats.kills + m.kills,
+    deaths: stats.deaths + m.deaths,
+    headshots: stats.headshots + m.headshots,
+  };
+}
+
 export function defaultProfile(): Profile {
   return { name: PROFILE.defaultName, stats: { ...EMPTY_STATS }, loadout: { ...DEFAULT_LOADOUT } };
 }

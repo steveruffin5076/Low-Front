@@ -53,6 +53,8 @@ export class FPAnimator {
   private readonly sample = new Map<string, number[]>();
 
   adsBlend = 0;
+  /** Hip-fire field of view (the player's setting). */
+  baseFov: number = MOVEMENT.baseFov;
   private sprintBlend = 0;
   private time = 0;
   private bobPhase = 0;
@@ -145,7 +147,8 @@ export class FPAnimator {
     for (const shot of this.pendingShots) this.spawnShotEffects(shot.visual);
     this.pendingShots = [];
     this.effects.update(dt);
-    return THREE.MathUtils.lerp(MOVEMENT.baseFov, v.vm.adsFov, e);
+    // ADS keeps its zoom ratio when the player changes the base FOV in the settings.
+    return THREE.MathUtils.lerp(this.baseFov, (v.vm.adsFov * this.baseFov) / MOVEMENT.baseFov, e);
   }
 
   dispose(): void {

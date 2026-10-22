@@ -1,6 +1,68 @@
 # PROGRESS.md
 
-## Fix after Phase 6 review: rifle iron sights (done, waiting for review)
+## Phase 7 — Conquest Mode (done, waiting for review)
+
+### What was done
+- **Rules** (all numbers in `src/data/conquest.ts`, pure logic in `src/game/`, unit tested):
+  - 400 tickets per team, −1 per death. A team holding 3–4 flags drains the enemy by 1 ticket every 4 s; all 5 flags, every 2 s.
+  - 25-minute limit. A team at 0 tickets loses; at the time limit, more tickets wins; equal is a draw.
+  - **Capture** (`CaptureZone.ts`): a 12 m cylinder, 6 m tall. Neutral → owned takes 10 s with one soldier, and owned → neutral another 10 s. Speed scales with attackers minus defenders, up to 3×. Equal numbers: contested, no progress. An empty zone keeps its progress.
+  - **Score**: kill 100, headshot +25, capture 200, neutralize 100, defend kill +50 (killing an enemy inside a zone your team owns).
+  - **Enemy HQ**: 5 s warning, then death. Respawn delay 10 s.
+  - **Spawns**: HQ, or any flag your team owns (6 points each; taken points are skipped).
+- **Match session** (`src/scenes/ConquestSession.ts`): Deploy starts a match on the city map, spawning you in Blue HQ.
+  - Your deaths cost tickets and go to the Deploy Screen. Falling, the out-of-bounds timer, the enemy HQ and the K test key all count.
+  - Flags show the owner's color, and the cloth rises and sinks with capture progress.
+  - Short sound cues play when a flag is captured, lost or neutralized.
+- **HUD** (`src/ui/hud/`):
+  - top center: tickets, timer, and the A–E flag strip with owner color and progress;
+  - capture banner ("Capturing C", "Neutralizing C", "Contested", "C secured") with a progress ring;
+  - minimap (top left): turns with you, shows flags, teammates and the enemies you can see (in front, within 90 m, in line of sight);
+  - weapon, ammo and fire mode (bottom right), health (bottom left), crosshair, hit marker, damage direction, kill feed (right) with a headshot mark;
+  - warnings for out of bounds and the enemy HQ.
+  - Hold **Tab** for the scoreboard (your row highlighted). Hold **M** for the whole map.
+- **Deploy Screen**:
+  - shows who killed you, with weapon and distance (or how you died);
+  - you pick a spawn on the map or with the buttons (HQ and Blue flags);
+  - "Deploy" unlocks after the 10 s countdown;
+  - the loadout panel there applies on the next spawn and is saved.
+- **Pause Menu** (Esc, or when the mouse is released):
+  - Resume; mouse sensitivity; field of view (60–100); master volume; Quit to Main Menu (with confirm).
+  - The match pauses while it is open. Settings apply at once and are saved in localStorage.
+- **End Screen**: "BLUE WINS" / "RED WINS" / "DRAW", why it ended, final tickets, the top 3 per team, and your score, kills, deaths, headshots and captures. Your saved profile stats (matches, wins, losses, kills, deaths, headshots) are updated. The scoreboard shows for 3 s before it.
+- `?debug=` now takes a list, e.g. `?debug=freemouse,crowd`. The Phase 6 soldiers are now `?debug=crowd`:
+  - targets you can shoot (kill feed, score, −1 ticket for their team);
+  - they never take flags;
+  - Blue ones show on the minimap as teammates, Red ones when you can see them.
+- Tests (187 in total), including:
+  - capture speed (1, 2 and 4 soldiers, 3× cap), contested stop, neutralize then capture, the zone height;
+  - bleed rates, death tickets, win by tickets, win on time, draw;
+  - all score rules, the enemy HQ timer, spawn options following flag ownership, match summary and profile update, settings store;
+  - a full match where the player alone captures all five flags and Red bleeds to 0 → Blue wins.
+
+### Checked results (headless browser, software rendering)
+- Standing on flag C: Blue in 10 s of game time; the flag strip, banner and flag cloth follow it.
+- A real M4A1 kill on a `?debug=crowd` target shows in the kill feed, gives 100 points and costs Red 1 ticket.
+- Entering Red HQ shows "Leave the enemy HQ: 5"; K opens the Deploy Screen after the death camera.
+- Deploy unlocks after 10 s and spawns at HQ. Esc pauses the match, and a FOV change is saved.
+- Red at 0 tickets → scoreboard → End Screen "BLUE WINS". The saved profile shows 1 match, 1 win and 1 death. Main Menu works.
+- 145–151 draw calls and up to 236k triangles with the HUD; no console errors.
+
+### How to test
+1. `npm run dev`, "Play vs Bots" → "Deploy". You start in Blue HQ (south).
+2. Walk to a flag and stand in the ring: the banner and the flag strip show the capture (10 s for neutral → Blue).
+3. Capture all five flags. The Red ticket count then drops by 1 every 2 s until Blue wins and the End Screen shows; this takes about 13 minutes with all flags.
+4. Hold Tab (scoreboard) and M (map). Walk into Red HQ (north) for the warning. Press K to die: the Deploy Screen opens; change the loadout, wait 10 s and deploy at HQ or a Blue flag.
+5. Press Esc (or release the mouse) for the Pause Menu: change sensitivity, FOV and volume, then Resume.
+6. `?debug=crowd` adds the 32 soldiers as targets to test the kill feed, score and minimap dots.
+7. `npm test`: 187 tests pass.
+
+### Known issues
+- No bots yet (Phase 8), so Red never captures or scores. The scoreboard says so, and the checks for contested flags and for being killed by an enemy are covered by the unit tests only.
+- In a real browser, re-locking the mouse right after Esc can be refused for about a second; click the game to lock it again.
+- Checked with software rendering only (2–4 FPS here, so game time runs slower than real time).
+
+## Fix after Phase 6 review: rifle iron sights (done)
 
 Your report: the M4A1 and AK47 sight pictures when aiming did not match the real rifles.
 - **M4A1**:
@@ -16,7 +78,7 @@ Your report: the M4A1 and AK47 sight pictures when aiming did not match the real
 - New tests check each rifle's sight height, that the sights line up (just over the sight line is clear, just under it meets the front post), and the sight radius. 170 tests in total.
 - How to test: Deploy with each rifle, aim (RMB) at a target, and compare with real sight pictures.
 
-## Phase 6 — Soldiers (done, waiting for review)
+## Phase 6 — Soldiers (done)
 
 ### What was done
 - **Soldier model** (`src/entities/soldier/SoldierModel.ts`, parts and sizes in `src/data/soldier.ts`): blocky low-poly figure, about 1.83 m tall with the helmet.
