@@ -83,8 +83,8 @@
 }
 .ds-map-canvas {
   display: block;
-  width: min(460px, 58vh);
-  height: min(460px, 58vh);
+  width: min(460px, 46vh);
+  height: min(460px, 46vh);
   border-radius: 8px;
   cursor: pointer;
 }
