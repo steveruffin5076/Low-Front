@@ -223,7 +223,7 @@ export const AIM_SPLIT = { spine: 0.3, chest: 0.45, neck: 0.25 } as const;
 
 /**
  * Weapon holds in the chest frame: the weapon's right-hand grip point and its rotation (XYZ Euler).
- * Rifles turn the chest so the left shoulder comes forward; the weapon yaw undoes it.
+ * Rifles turn the chest to the right so the left shoulder comes forward; the weapon yaw undoes it.
  */
 export interface HoldPose {
   pos: readonly [number, number, number];
@@ -233,8 +233,8 @@ export interface HoldPose {
 }
 
 export const HOLDS: Record<'rifle' | 'rifleSprint' | 'pistol' | 'pistolSprint', HoldPose> = {
-  rifle: { pos: [0.11, 0.05, -0.27], rot: [0, -0.35, 0], chestYaw: 0.35 },
-  rifleSprint: { pos: [0.05, -0.06, -0.24], rot: [-0.55, -0.9, 0.45], chestYaw: 0.25 },
+  rifle: { pos: [0.12, 0.08, -0.26], rot: [0, 0.4, 0], chestYaw: -0.4 },
+  rifleSprint: { pos: [0.1, -0.02, -0.24], rot: [-0.55, 0.75, 0.3], chestYaw: -0.3 },
   pistol: { pos: [0.02, 0.1, -0.42], rot: [0, -0.05, 0], chestYaw: 0.05 },
   pistolSprint: { pos: [0.12, -0.12, -0.24], rot: [-0.9, 0, 0], chestYaw: 0 },
 };
