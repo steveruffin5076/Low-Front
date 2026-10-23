@@ -163,7 +163,13 @@ export class PlaySession {
   }
 
   fixedUpdate(dt: number): void {
-    if (this.paused || this.fx.dead) return;
+    if (this.paused) return;
+    // The world (and everyone's bullets) keeps going while the player is dead.
+    if (this.fx.dead) {
+      this.world.fixedUpdate?.(dt);
+      this.combatSystem.fixedUpdate(dt);
+      return;
+    }
     const i = this.input;
     const fireHeld = i.locked && i.isMouseDown(MOUSE.fire);
     const ads = this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads);

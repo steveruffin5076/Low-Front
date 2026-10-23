@@ -57,6 +57,11 @@ export class CharacterMotor {
     return new THREE.Vector3(m.x, m.y, m.z);
   }
 
+  /** A dead soldier's capsule stops blocking others. */
+  setEnabled(on: boolean): void {
+    this.collider.setEnabled(on);
+  }
+
   /** Changes capsule height, keeping the feet in place. Returns false if there is no room to stand up. */
   setHeight(height: number): boolean {
     if (height === this.height) return true;

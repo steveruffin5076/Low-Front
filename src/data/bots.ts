@@ -51,6 +51,13 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyPreset> = {
   },
 };
 
+/** Eye, chest and head heights over the feet, standing and crouched (sight lines and aim points). */
+export const BODY_POINTS = {
+  eye: { stand: 1.62, crouch: 1.05 },
+  chest: { stand: 1.25, crouch: 0.85 },
+  head: { stand: 1.66, crouch: 1.1 },
+} as const;
+
 export const BOTS = {
   /** Bots per team: Blue has the player plus 15, Red has 16. */
   blue: 15,
@@ -66,8 +73,10 @@ export const BOTS = {
     /** A seen enemy stays "known" this long after losing sight. */
     memory: 8,
   },
-  /** A* searches started per frame across all bots. */
-  pathsPerFrame: 2,
+  /** A* searches started per frame across all bots, the heuristic weight (faster, slightly longer paths) and a cap on nodes expanded. */
+  pathsPerFrame: 3,
+  pathWeight: 1.6,
+  pathMaxExpand: 60000,
   thresholds: {
     /** Reload when the magazine is under this fraction and no enemy is visible. */
     reloadFraction: 0.3,
@@ -75,6 +84,8 @@ export const BOTS = {
     retreatHp: 30,
     /** Search the last known enemy position for this long. */
     searchTime: 6,
+    /** In the open, keep advancing on the objective while the enemy is farther than this. */
+    advanceRange: 35,
     /** Take cover in combat if a cover point is this close. */
     coverRange: 8,
     /** Switch to the pistol when the primary is empty and the enemy is this close. */

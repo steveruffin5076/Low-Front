@@ -93,7 +93,7 @@ export class Input {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code === 'F3' || e.code === 'F4' || e.code === 'Tab') e.preventDefault();
+    if (e.code === 'F3' || e.code === 'F4' || e.code === 'F5' || e.code === 'Tab') e.preventDefault();
     if (!this.down.has(e.code)) this.pressed.add(e.code);
     this.down.add(e.code);
   };

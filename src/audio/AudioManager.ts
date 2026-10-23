@@ -28,6 +28,11 @@ export class AudioManager {
   private readonly listenerPos = new THREE.Vector3();
   volume: number = AUDIO.masterVolume;
 
+  /** Distance from the listener (the camera) to `at`. */
+  listenerDistance(at: THREE.Vector3): number {
+    return this.listenerPos.distanceTo(at);
+  }
+
   /** Call once per frame with the camera. */
   setListener(camera: THREE.Camera): void {
     this.listenerPos.setFromMatrixPosition(camera.matrixWorld);
@@ -73,9 +78,10 @@ export class AudioManager {
     if (s.ping) this.tone({ freq: s.ping, endFreq: s.ping * 0.9, length: s.length * 1.5, gain: s.gain * 0.4 }, out);
   }
 
-  footstep(surface: Surface, scale = 1): void {
+  /** A footstep; `at` makes it positional (other soldiers). */
+  footstep(surface: Surface, scale = 1, at?: THREE.Vector3): void {
     const f = AUDIO.footsteps[surface];
-    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain: f.gain * scale, type: 'lowpass' });
+    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain: f.gain * scale, type: 'lowpass' }, this.output(at));
   }
 
   land(): void {

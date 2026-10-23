@@ -74,7 +74,7 @@ export class Game {
     this.screens.update(dt, alpha);
     // Stats are from the previous frame's render, which is accurate enough for an overlay.
     const { drawCalls, triangles } = this.ctx.renderer.takeStats();
-    this.debug.update(dt, { drawCalls, triangles, physicsMs: this.match.physicsMs, bots: 0 });
+    this.debug.update(dt, { drawCalls, triangles, physicsMs: this.match.physicsMs, bots: this.match.botCount });
     input.endFrame();
   }
 }

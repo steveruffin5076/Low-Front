@@ -15,6 +15,8 @@ export interface SightTarget {
   readonly position: THREE.Vector3;
   /** Chest height point used for line of sight. */
   readonly chest: THREE.Vector3;
+  /** Head point, for the occasional headshot. */
+  readonly head?: THREE.Vector3;
 }
 
 /** What a bot knows about one enemy. */

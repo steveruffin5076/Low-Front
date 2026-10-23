@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { BOTS } from '../data/bots';
 import type { NavGrid } from '../world/NavGrid';
-import { smoothPath } from '../world/NavPaths';
+import { clearLine, smoothPath } from '../world/NavPaths';
 
 /** A queued path search. Set `cancelled` to drop it (e.g. the bot changed its mind). */
 export interface PathRequest {
@@ -9,6 +9,8 @@ export interface PathRequest {
   to: THREE.Vector3;
   done: (points: THREE.Vector3[] | null) => void;
   cancelled: boolean;
+  /** Cell centers instead of a smoothed path (keeps away from corners after getting stuck). */
+  raw: boolean;
 }
 
 /**
@@ -30,8 +32,16 @@ export class PathService {
     return this.queue.length;
   }
 
-  request(from: THREE.Vector3, to: THREE.Vector3, done: PathRequest['done']): PathRequest {
-    const r: PathRequest = { from: from.clone(), to: to.clone(), done, cancelled: false };
+  /** A straight walkable line on one floor: no search needed. Returns the two points, or null. */
+  direct(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] | null {
+    const a = this.nav.nearestWalkable(from, 1);
+    const b = this.nav.nearestWalkable(to, 1);
+    if (a === null || b === null || !clearLine(this.nav, a, b)) return null;
+    return [from.clone(), to.clone()];
+  }
+
+  request(from: THREE.Vector3, to: THREE.Vector3, done: PathRequest['done'], raw = false): PathRequest {
+    const r: PathRequest = { from: from.clone(), to: to.clone(), done, cancelled: false, raw };
     this.queue.push(r);
     return r;
   }
@@ -44,8 +54,8 @@ export class PathService {
       if (r.cancelled) continue;
       budget--;
       this.searches++;
-      const path = this.nav.findPath(r.from, r.to);
-      r.done(path && path.length ? smoothPath(this.nav, path) : null);
+      const path = this.nav.findPath(r.from, r.to, undefined, BOTS.pathWeight, BOTS.pathMaxExpand);
+      r.done(path && path.length ? (r.raw ? this.nav.pathPoints(path) : smoothPath(this.nav, path)) : null);
     }
   }
 }

@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import type { NavGrid } from './NavGrid';
+import type { Edge, NavGrid } from './NavGrid';
 
 /**
  * True if a soldier can walk in a straight line from node `a` to node `b` on one level:
@@ -64,4 +64,52 @@ export function smoothPath(nav: NavGrid, path: readonly number[]): THREE.Vector3
   }
   if (anchor !== path.length - 1) out.push(nav.position(path[path.length - 1]));
   return out;
+}
+
+/** The walkable cell nearest to `p` (same floor) whose region is `region`, within `radius` cells. */
+export function nearestInRegion(nav: NavGrid, p: THREE.Vector3, region: number, radius: number): number | null {
+  const n = nav.node(p.x, p.y, p.z);
+  if (n === null) return null;
+  const { level, i, j } = nav.decode(n);
+  let best: number | null = null;
+  let bestD = Infinity;
+  for (let dj = -radius; dj <= radius; dj++) {
+    for (let di = -radius; di <= radius; di++) {
+      const ii = i + di;
+      const jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= level.w || jj >= level.h) continue;
+      const k = jj * level.w + ii;
+      const d = di * di + dj * dj;
+      if (level.walk[k] && nav.region[level.base + k] === region && d < bestD) {
+        bestD = d;
+        best = level.base + k;
+      }
+    }
+  }
+  return best;
+}
+
+/** Labels connected walkable areas (moves and links) so unreachable goals fail at once. */
+export function labelRegions(nav: NavGrid): Int32Array {
+  const count = nav.nodeCount;
+  const region = new Int32Array(count).fill(-1);
+  const edges: Edge[] = [];
+  const stack: number[] = [];
+  let id = 0;
+  for (let n = 0; n < count; n++) {
+    if (region[n] !== -1 || !nav.walkable(n)) continue;
+    region[n] = id;
+    stack.push(n);
+    while (stack.length) {
+      const c = stack.pop()!;
+      for (const e of nav.neighbors(c, edges)) {
+        if (region[e.to] === -1) {
+          region[e.to] = id;
+          stack.push(e.to);
+        }
+      }
+    }
+    id++;
+  }
+  return region;
 }

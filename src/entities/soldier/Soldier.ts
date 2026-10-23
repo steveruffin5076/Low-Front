@@ -18,8 +18,8 @@ const offset = new THREE.Matrix4();
 
 /**
  * A third-person soldier in the world: model, animator and rig, health, hitboxes that follow the
- * bones, and a body that blocks the player. Whoever drives it (the test crowd now, bots in
- * Phase 8) sets `position`, `yaw` and `input` each frame.
+ * bones, and optionally a body that blocks the player. Whoever drives it (a bot, the viewers)
+ * sets `position`, `yaw` and `input` each frame.
  */
 export class Soldier implements Hittable {
   readonly model: SoldierModel;
@@ -31,7 +31,9 @@ export class Soldier implements Hittable {
   lastHit: ZoneHit | null = null;
   private readonly rig: SoldierRig;
   private readonly hitboxes: Hitboxes;
-  private readonly body: RAPIER.Collider;
+  /** Match id when a bot drives this soldier (for kill reports). */
+  combatantId?: string;
+  private readonly body: RAPIER.Collider | null;
   private farClock = 0;
 
   constructor(
@@ -39,12 +41,14 @@ export class Soldier implements Hittable {
     team: Team,
     loadout: Loadout,
     readonly label: string,
+    /** False when a character controller already blocks movement (bots). */
+    blockingBody = true,
   ) {
     this.model = new SoldierModel(team, loadout);
     this.rig = new SoldierRig(this.model);
     this.hitboxes = new Hitboxes(physics, this, SOLDIER_HITBOXES, new THREE.Vector3());
     const { rapier, world } = physics;
-    this.body = world.createCollider(
+    this.body = !blockingBody ? null : world.createCollider(
       rapier.ColliderDesc.capsule(SOLDIER_BODY.halfHeight, SOLDIER_BODY.radius).setCollisionGroups(COLLISION.body),
     );
   }
@@ -71,7 +75,7 @@ export class Soldier implements Hittable {
     this.anim.reset();
     this.lastHit = null;
     this.hitboxes.setEnabled(true);
-    this.body.setEnabled(true);
+    this.body?.setEnabled(true);
     this.model.setOpacity(1);
     this.model.root.visible = true;
     this.pose(0);
@@ -104,7 +108,7 @@ export class Soldier implements Hittable {
     const right = hit.direction.x * c - hit.direction.z * s;
     this.anim.die(Math.atan2(right, forward));
     this.hitboxes.setEnabled(false);
-    this.body.setEnabled(false);
+    this.body?.setEnabled(false);
   }
 
   /** Fixed step: health regeneration and the physics shapes follow the last pose. */
@@ -129,7 +133,7 @@ export class Soldier implements Hittable {
 
   dispose(): void {
     this.hitboxes.dispose();
-    this.physics.world.removeCollider(this.body, false);
+    if (this.body) this.physics.world.removeCollider(this.body, false);
     this.model.dispose();
   }
 
@@ -150,6 +154,6 @@ export class Soldier implements Hittable {
       tmpM.multiplyMatrices(bones[h.bone].matrixWorld, offset).decompose(tmpP, tmpQ, tmpS);
       this.hitboxes.place(i, tmpP, tmpQ);
     });
-    this.body.setTranslation({ x: this.position.x, y: this.position.y + SOLDIER_BODY.centerY, z: this.position.z });
+    this.body?.setTranslation({ x: this.position.x, y: this.position.y + SOLDIER_BODY.centerY, z: this.position.z });
   }
 }

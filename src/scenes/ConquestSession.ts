@@ -4,7 +4,11 @@ import { CONQUEST } from '../data/conquest';
 import { VERDAN } from '../data/map';
 import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
-import { Soldier } from '../entities/soldier/Soldier';
+import type { SightTarget } from '../ai/Perception';
+import { BODY_POINTS } from '../data/bots';
+import { BotManager } from '../game/BotManager';
+import { debugMode } from '../core/debugFlags';
+import { BotDebug } from '../debug/BotDebug';
 import { ConquestMatch, type Combatant, type KillFeedEntry } from '../game/ConquestMatch';
 import { HQZone } from '../game/HQZone';
 import type { MatchResult } from '../game/MatchClock';
@@ -52,8 +56,9 @@ export class ConquestSession {
   readonly hud: MatchHud;
   /** Top-down map image, shared with the Deploy Screen. */
   readonly mapImage = new MapImage(VERDAN);
+  readonly bots: BotManager;
   private readonly playerCombatant: Combatant;
-  private readonly targets = new Map<object, Combatant>();
+  private botDebug: BotDebug | null = null;
   private markers: MapMarker[] = [];
   private markerClock = 0;
 
@@ -84,22 +89,18 @@ export class ConquestSession {
       },
     };
     this.match.add(this.playerCombatant);
-    // `?debug=crowd` targets: they can be shot and cost tickets, but never take flags.
-    for (const s of world.crowd?.soldiers ?? []) {
-      const c: Combatant = {
-        id: s.label,
-        name: s.label,
-        team: s.team,
-        isPlayer: false,
-        capturer: false,
-        position: s.position,
-        get alive() {
-          return !s.dead;
-        },
-      };
-      this.targets.set(s, c);
-      this.match.add(c);
-    }
+    this.bots = new BotManager({
+      physics,
+      scene: world.scene,
+      combat: this.session.combatSystem,
+      audio: this.session.audio,
+      nav: world.nav,
+      cover: world.cover,
+      match: this.match,
+      map: VERDAN,
+      spawns: this.spawns,
+      player: this.playerTarget(),
+    });
 
     // Deaths by bullet are reported from the combat hit (with the killer); the rest here.
     this.session.events.on('died', ({ cause }) => {
@@ -109,7 +110,7 @@ export class ConquestSession {
     });
     this.session.combatSystem.events.on('hit', (h) => {
       if (!h.kill) return;
-      const victimId = h.target.combatantId ?? (h.target instanceof Soldier ? this.targets.get(h.target)?.id : undefined);
+      const victimId = h.target.combatantId;
       if (!victimId) return;
       this.match.reportDeath({ victimId, killerId: h.shooter?.id, weapon: h.weapon, headshot: h.zone === 'head', distance: h.distance });
     });
@@ -172,6 +173,7 @@ export class ConquestSession {
 
   fixedUpdate(dt: number): void {
     if (this.paused || this.state === 'ended') return;
+    this.bots.fixedUpdate(dt);
     this.session.fixedUpdate(dt);
     if (this.state === 'alive') {
       const feet = this.session.player.motor.feet;
@@ -184,6 +186,15 @@ export class ConquestSession {
 
   update(dt: number, alpha: number): void {
     this.session.update(dt, alpha);
+    if (!this.paused) this.bots.update(dt, this.session.camera.position);
+    if (debugMode() && this.input.wasPressed(CONTROLS.botDebug)) {
+      if (!this.botDebug) {
+        this.botDebug = new BotDebug(this.bots.bots, (id) => this.bots.target(id));
+        this.world.scene.add(this.botDebug.root);
+      }
+      this.botDebug.toggle();
+    }
+    this.botDebug?.update();
     for (const [i, f] of this.world.flags.entries()) {
       const z = this.match.zones[i];
       f.setState(z.owner, z.control);
@@ -213,7 +224,7 @@ export class ConquestSession {
     const forward = cam.getWorldDirection(new THREE.Vector3());
     const to = new THREE.Vector3();
     const halfFov = THREE.MathUtils.degToRad(cam.fov * Math.max(1, cam.aspect)) / 2;
-    for (const c of this.targets.values()) {
+    for (const c of this.bots.bots) {
       if (!c.alive) continue;
       if (c.team === PLAYER_TEAM) {
         out.push({ x: c.position.x, z: c.position.z, kind: 'ally' });
@@ -234,7 +245,32 @@ export class ConquestSession {
     this.session.render(renderer);
   }
 
+  /** The player as the bots see them: feet, chest and head following the crouch. */
+  private playerTarget(): SightTarget {
+    const self = this;
+    const p = this.session.player;
+    const chest = new THREE.Vector3();
+    const head = new THREE.Vector3();
+    const at = (out: THREE.Vector3, h: { stand: number; crouch: number }) => out.copy(p.motor.feet).setY(p.motor.feet.y + THREE.MathUtils.lerp(h.stand, h.crouch, p.crouchBlend));
+    return {
+      id: PLAYER_ID,
+      team: PLAYER_TEAM,
+      position: p.motor.feet,
+      get alive() {
+        return self.state === 'alive';
+      },
+      get chest() {
+        return at(chest, BODY_POINTS.chest);
+      },
+      get head() {
+        return at(head, BODY_POINTS.head);
+      },
+    };
+  }
+
   dispose(): void {
+    this.botDebug?.dispose();
+    this.bots.dispose();
     this.session.dispose();
   }
 }

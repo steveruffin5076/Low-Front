@@ -94,6 +94,11 @@ export class BotBrain {
   private stuckCount = 0;
   private avoid: FlagId | null = null;
   private coverSpot: THREE.Vector3 | null = null;
+  /** No new cover until then (after getting stuck on the way to some). */
+  private coverBanUntil = -Infinity;
+  private now = 0;
+  /** Walkable spot in the objective zone the bot heads for. */
+  private approach: THREE.Vector3 | null = null;
 
   constructor(private readonly rand: () => number = Math.random) {}
 
@@ -115,6 +120,7 @@ export class BotBrain {
     o.fireAt = null;
     o.crouch = false;
     o.strafe = 0;
+    this.now = s.time;
     if (s.stuck) this.onStuck();
     else this.stuckCount = 0;
 
@@ -141,7 +147,7 @@ export class BotBrain {
     if (s.activeSlot === 'primary' && s.primaryEmpty && e.distance < T.pistolRange) o.switchTo = 'secondary';
     else if (s.activeSlot === 'secondary' && !s.primaryEmpty && e.distance >= T.pistolRange) o.switchTo = 'primary';
     // Into cover close by, then fight from it; otherwise strafe in the open.
-    if (!this.coverSpot) this.coverSpot = q.cover(s.position, T.coverRange, e.position)?.pos ?? null;
+    if (!this.coverSpot && s.time >= this.coverBanUntil) this.coverSpot = q.cover(s.position, T.coverRange, e.position)?.pos ?? null;
     if (this.coverSpot && this.coverSpot.distanceTo(s.position) > 1) {
       o.moveTo = this.coverSpot;
       return o;
@@ -149,6 +155,9 @@ export class BotBrain {
     o.moveTo = null;
     if (this.coverSpot) {
       o.crouch = true;
+    } else if (e.distance > T.advanceRange && this.approach) {
+      // A far enemy and no cover: keep pushing to the objective, shooting on the way.
+      o.moveTo = this.approach;
     } else {
       if (s.time >= this.strafeUntil) {
         this.strafeUntil = s.time + 0.8 + this.rand() * 1.2;
@@ -204,6 +213,7 @@ export class BotBrain {
     if (target !== o.objective) {
       o.objective = target;
       this.holdSpot = null;
+      this.approach = null;
     }
     const flag = s.flags.find((f) => f.id === target);
     if (!flag) {
@@ -228,7 +238,8 @@ export class BotBrain {
       return o;
     }
     o.state = 'objective';
-    o.moveTo = flag.position;
+    this.approach ??= q.zoneSpot(flag.id);
+    o.moveTo = this.approach;
     const near = flag.position.distanceTo(s.position) < T.walkNear;
     o.pace = near || s.lastKnown ? 'run' : 'sprint';
     return o;
@@ -260,7 +271,9 @@ export class BotBrain {
   private onStuck(): void {
     this.stuckCount++;
     this.holdSpot = null;
+    if (this.coverSpot) this.coverBanUntil = this.now + 3;
     this.coverSpot = null;
+    this.approach = null;
     // A second stuck in a row: give up this objective for another.
     if (this.stuckCount >= 2) {
       this.avoid = this.orders.objective;
