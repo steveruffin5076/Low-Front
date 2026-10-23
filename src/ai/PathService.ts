@@ -37,7 +37,9 @@ export class PathService {
     const a = this.nav.nearestWalkable(from, 1);
     const b = this.nav.nearestWalkable(to, 1);
     if (a === null || b === null || !clearLine(this.nav, a, b)) return null;
-    return [from.clone(), to.clone()];
+    // A spot off the walkable floor (on a car, a crate) becomes its cell on the floor.
+    const end = this.nav.position(b);
+    return [from.clone(), Math.abs(end.y - to.y) > 0.5 ? end : to.clone()];
   }
 
   request(from: THREE.Vector3, to: THREE.Vector3, done: PathRequest['done'], raw = false): PathRequest {

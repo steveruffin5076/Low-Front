@@ -201,6 +201,8 @@ export class BotManager {
       magFraction: active.mag / (active.def.magazine + active.def.chamber),
       activeSlot: w.activeSlot,
       primaryEmpty: primary.mag === 0,
+      primaryOut: primary.mag === 0 && primary.reserve === 0,
+      canReload: active.reserve > 0,
       reloading: w.actionKind === 'reload',
       flags,
       teammatesGoing: mine,

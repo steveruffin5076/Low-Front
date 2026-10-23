@@ -31,6 +31,10 @@ export interface BotSenses {
   /** The active weapon and whether the primary has no rounds at all. */
   activeSlot: WeaponSlot;
   primaryEmpty: boolean;
+  /** The primary has no rounds left in the magazine or in reserve. */
+  primaryOut: boolean;
+  /** The active weapon has reserve rounds to reload with. */
+  canReload: boolean;
   reloading: boolean;
   flags: readonly FlagView[];
   /** Teammates already heading to each flag (this bot excluded). */
@@ -94,8 +98,12 @@ export class BotBrain {
   private stuckCount = 0;
   private avoid: FlagId | null = null;
   private coverSpot: THREE.Vector3 | null = null;
-  /** No new cover until then (after getting stuck on the way to some). */
+  /** No new cover until then (after getting stuck on the way to some, or after leaving one). */
   private coverBanUntil = -Infinity;
+  /** Leave the current cover then and push on. */
+  private coverUntil = Infinity;
+  /** In its objective zone (defends) rather than on the way to it (attacks). */
+  private holding = false;
   private now = 0;
   /** Walkable spot in the objective zone the bot heads for. */
   private approach: THREE.Vector3 | null = null;
@@ -111,6 +119,8 @@ export class BotBrain {
     this.coverSpot = null;
     this.stuckCount = 0;
     this.avoid = null;
+    this.approach = null;
+    this.holding = false;
   }
 
   decide(s: BotSenses, q: BotQueries): BotOrders {
@@ -130,7 +140,7 @@ export class BotBrain {
       return this.combat(s, q);
     }
     this.coverSpot = null;
-    if (!s.reloading && s.magFraction < T.reloadFraction) return this.reload(s, q);
+    if (!s.reloading && s.canReload && s.magFraction < T.reloadFraction) return this.reload(s, q);
     if (s.lastKnown && s.time < this.searchUntil && s.lastKnown.age < T.searchTime) return this.search(s);
     return this.objective(s, q);
   }
@@ -144,30 +154,39 @@ export class BotBrain {
     o.lookAt = e.position;
     o.fireAt = e.id;
     o.pace = 'walk';
-    if (s.activeSlot === 'primary' && s.primaryEmpty && e.distance < T.pistolRange) o.switchTo = 'secondary';
-    else if (s.activeSlot === 'secondary' && !s.primaryEmpty && e.distance >= T.pistolRange) o.switchTo = 'primary';
-    // Into cover close by, then fight from it; otherwise strafe in the open.
-    if (!this.coverSpot && s.time >= this.coverBanUntil) this.coverSpot = q.cover(s.position, T.coverRange, e.position)?.pos ?? null;
-    if (this.coverSpot && this.coverSpot.distanceTo(s.position) > 1) {
-      o.moveTo = this.coverSpot;
+    if (s.activeSlot === 'primary' && (s.primaryOut || (s.primaryEmpty && e.distance < T.pistolRange))) o.switchTo = 'secondary';
+    else if (s.activeSlot === 'secondary' && !s.primaryOut && !s.primaryEmpty && e.distance >= T.pistolRange) o.switchTo = 'primary';
+    // A far enemy on the way to the objective: keep pushing, shooting on the way.
+    if (!this.holding && this.approach && e.distance > T.advanceRange) {
+      this.coverSpot = null;
+      o.moveTo = this.approach;
       return o;
     }
-    o.moveTo = null;
-    if (this.coverSpot) {
-      o.crouch = true;
-    } else if (e.distance > T.advanceRange && this.approach) {
-      // A far enemy and no cover: keep pushing to the objective, shooting on the way.
-      o.moveTo = this.approach;
-    } else {
-      if (s.time >= this.strafeUntil) {
-        this.strafeUntil = s.time + 0.8 + this.rand() * 1.2;
-        this.strafeDir = this.rand() < 0.5 ? -1 : 1;
-      }
-      o.strafe = this.strafeDir;
+    // Into cover close by and fight from it for a while (health comes back meanwhile).
+    if (!this.coverSpot && s.time >= this.coverBanUntil) {
+      this.coverSpot = q.cover(s.position, T.coverRange, e.position)?.pos ?? null;
+      const h = T.coverHold;
+      this.coverUntil = s.time + h.min + (h.max - h.min) * this.rand();
     }
+    if (this.coverSpot && s.time >= this.coverUntil) {
+      this.coverSpot = null;
+      this.coverBanUntil = s.time + T.coverHold.max;
+    }
+    if (this.coverSpot) {
+      const away = this.coverSpot.distanceTo(s.position) > 1;
+      o.moveTo = away ? this.coverSpot : null;
+      o.crouch = !away;
+      return o;
+    }
+    // In the open: attackers close in, defenders and close fights strafe.
+    o.moveTo = !this.holding && e.distance > T.engageRange ? e.position : null;
+    if (s.time >= this.strafeUntil) {
+      this.strafeUntil = s.time + 0.8 + this.rand() * 1.2;
+      this.strafeDir = this.rand() < 0.5 ? -1 : 1;
+    }
+    o.strafe = o.moveTo ? 0 : this.strafeDir;
     return o;
   }
-
 
   private retreat(s: BotSenses, q: BotQueries): BotOrders {
     const o = this.orders;
@@ -226,6 +245,7 @@ export class BotBrain {
     if (inZone) {
       // Capture or defend: stay in the zone, moving between spots from time to time.
       o.state = 'hold';
+      this.holding = true;
       this.avoid = null;
       if (!this.holdSpot || s.time >= this.holdUntil) {
         this.holdSpot = q.zoneSpot(flag.id);
@@ -238,6 +258,7 @@ export class BotBrain {
       return o;
     }
     o.state = 'objective';
+    this.holding = false;
     this.approach ??= q.zoneSpot(flag.id);
     o.moveTo = this.approach;
     const near = flag.position.distanceTo(s.position) < T.walkNear;

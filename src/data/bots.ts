@@ -88,6 +88,10 @@ export const BOTS = {
     advanceRange: 35,
     /** Take cover in combat if a cover point is this close. */
     coverRange: 8,
+    /** Fight from one cover this long, then move on (no new cover for the max time). */
+    coverHold: { min: 3, max: 7 },
+    /** Attackers in the open walk toward an enemy farther than this. */
+    engageRange: 20,
     /** Switch to the pistol when the primary is empty and the enemy is this close. */
     pistolRange: 15,
     /** No progress toward the next waypoint for this long counts as stuck. */

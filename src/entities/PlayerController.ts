@@ -54,8 +54,8 @@ export class PlayerController {
   private airPeakY = 0;
   private wasGrounded = true;
 
-  constructor(physics: PhysicsWorld, spawn: THREE.Vector3) {
-    this.motor = new CharacterMotor(physics, spawn);
+  constructor(physics: PhysicsWorld, spawn: THREE.Vector3, groups?: number) {
+    this.motor = new CharacterMotor(physics, spawn, groups);
     this.prevFeet.copy(spawn);
   }
 

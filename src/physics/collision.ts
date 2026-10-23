@@ -6,7 +6,7 @@ import type { PhysicsWorld } from './PhysicsWorld';
  * Collision groups (Rapier InteractionGroups: membership << 16 | filter).
  * Two colliders interact when each one's membership is in the other's filter.
  */
-export const GROUP = { WORLD: 1, PLAYER: 2, HITBOX: 4, BODY: 8, BULLET: 16 } as const;
+export const GROUP = { WORLD: 1, PLAYER: 2, HITBOX: 4, BODY: 8, BULLET: 16, BOT: 32 } as const;
 const ALL = 0xffff;
 
 export function groups(membership: number, filter: number): number {
@@ -17,7 +17,9 @@ export const COLLISION = {
   /** Static map geometry: blocks movement and bullets. */
   world: groups(GROUP.WORLD, ALL),
   /** Player capsule: blocked by world, other characters and bodies; ignores hitboxes. */
-  player: groups(GROUP.PLAYER, GROUP.WORLD | GROUP.PLAYER | GROUP.BODY),
+  player: groups(GROUP.PLAYER, GROUP.WORLD | GROUP.PLAYER | GROUP.BODY | GROUP.BOT),
+  /** Bot capsule: blocked by world and the player but not by other bots, so bots never jam a doorway. */
+  bot: groups(GROUP.BOT, GROUP.WORLD | GROUP.PLAYER),
   /** Character bodies that block walking but not bullets (bullets use hitboxes). */
   body: groups(GROUP.BODY, GROUP.WORLD | GROUP.PLAYER),
   /** Hitbox sensors: only bullets see them. */

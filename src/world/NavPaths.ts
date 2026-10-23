@@ -1,25 +1,38 @@
 import type * as THREE from 'three';
-import type { Edge, NavGrid } from './NavGrid';
+import type { Edge, NavGrid, NavLevel } from './NavGrid';
+
+/** Side offset (cells) of the two extra lines that give a straight line the soldier's width. */
+const WIDTH = 0.35;
 
 /**
  * True if a soldier can walk in a straight line from node `a` to node `b` on one level:
  * every cell crossed is walkable and every crossing is a legal move (corners need both
- * orthogonal moves, so lines never cut a corner).
+ * orthogonal moves, so lines never cut a corner). The line is checked at its center and
+ * at each side, so a soldier's width clears props along the way.
  */
 export function clearLine(nav: NavGrid, a: number, b: number): boolean {
   const A = nav.decode(a);
   const B = nav.decode(b);
   if (A.level !== B.level) return false;
-  const L = A.level;
   const dx = B.i - A.i;
   const dz = B.j - A.j;
+  const len = Math.hypot(dx, dz);
+  if (len === 0) return true;
+  const ox = (-dz / len) * WIDTH;
+  const oz = (dx / len) * WIDTH;
+  return lineClear(nav, A.level, A.i + 0.5, A.j + 0.5, dx, dz) && lineClear(nav, A.level, A.i + 0.5 + ox, A.j + 0.5 + oz, dx, dz) && lineClear(nav, A.level, A.i + 0.5 - ox, A.j + 0.5 - oz, dx, dz);
+}
+
+/** Walks the cells of one line from grid point (x, z) along (dx, dz). */
+function lineClear(nav: NavGrid, L: NavLevel, x: number, z: number, dx: number, dz: number): boolean {
   const steps = Math.ceil(Math.hypot(dx, dz) * 4);
-  let ci = A.i;
-  let cj = A.j;
+  let ci = Math.floor(x);
+  let cj = Math.floor(z);
+  if (ci < 0 || cj < 0 || ci >= L.w || cj >= L.h || !L.walk[cj * L.w + ci]) return false;
   for (let s = 1; s <= steps; s++) {
     const t = s / steps;
-    const ni = Math.floor(A.i + 0.5 + dx * t);
-    const nj = Math.floor(A.j + 0.5 + dz * t);
+    const ni = Math.floor(x + dx * t);
+    const nj = Math.floor(z + dz * t);
     if (ni === ci && nj === cj) continue;
     const di = ni - ci;
     const dj = nj - cj;

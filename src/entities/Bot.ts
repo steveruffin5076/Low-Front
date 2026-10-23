@@ -10,6 +10,7 @@ import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { Combat } from '../game/Combat';
 import type { Combatant } from '../game/ConquestMatch';
+import { COLLISION } from '../physics/collision';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { BulletShooter } from '../weapons/Ballistics';
 import { PlayerWeapons, type WeaponInput } from '../weapons/PlayerWeapons';
@@ -28,6 +29,8 @@ const SIDESTEP_TIME = 0.7;
 const ARRIVE_RADIUS = 1;
 const BLOCKED_PASS = 1.6;
 const BLOCKED_TIME = 0.6;
+/** A goal that moved this far gets a new path right away. */
+const REPATH_FAR = 8;
 const UP = new THREE.Vector3(0, 1, 0);
 
 const dir = new THREE.Vector3();
@@ -81,6 +84,7 @@ export class Bot implements Combatant, SightTarget {
   private pathIndex = 0;
   private destination: THREE.Vector3 | null = null;
   private request: PathRequest | null = null;
+  private repathAt = 0;
   private bestDistance = Infinity;
   private stallTime = 0;
   private sidestep = 0;
@@ -100,7 +104,7 @@ export class Bot implements Combatant, SightTarget {
     spawn: THREE.Vector3,
     decisionOffset: number,
   ) {
-    this.controller = new PlayerController(world.physics, spawn);
+    this.controller = new PlayerController(world.physics, spawn, COLLISION.bot);
     this.weapons = new PlayerWeapons(loadout);
     this.soldier = new Soldier(world.physics, team, loadout, name, false);
     this.soldier.combatantId = id;
@@ -226,7 +230,9 @@ export class Bot implements Combatant, SightTarget {
     };
     let moving = false;
     if (o.moveTo) {
-      if (!this.destination || this.destination.distanceTo(o.moveTo) > 1.5) this.setDestination(o.moveTo);
+      // A moving goal (an enemy) repaths at most once a second unless it jumped far.
+      const moved = this.destination ? this.destination.distanceTo(o.moveTo) : Infinity;
+      if (moved > REPATH_FAR || (moved > 1.5 && this.now >= this.repathAt)) this.setDestination(o.moveTo);
       while (this.pathIndex < this.path.length) {
         const p = this.path[this.pathIndex];
         // The end counts as reached within the brain's 1 m (cover spots sit against walls).
@@ -271,6 +277,9 @@ export class Bot implements Combatant, SightTarget {
       } else {
         this.stuckFor += dt;
         this.maxStuck = Math.max(this.maxStuck, this.stuckFor);
+        // Sliding along a wall can look like progress; not getting 1 m away cannot.
+        const every = T.stuckTime * 0.75;
+        if (this.stuckFor >= T.stuckTime && Math.floor(this.stuckFor / every) !== Math.floor((this.stuckFor - dt) / every)) this.recover();
       }
     } else {
       this.stuckAnchor.copy(feet);
@@ -289,8 +298,9 @@ export class Bot implements Combatant, SightTarget {
 
   /** `raw`: follow cell centers (after getting stuck) instead of a smoothed path. */
   private setDestination(to: THREE.Vector3, raw = false): void {
+    const near = this.destination !== null && this.destination.distanceTo(to) < REPATH_FAR;
     this.destination = to.clone();
-    this.pathIndex = 0;
+    this.repathAt = this.now + 1;
     this.bestDistance = Infinity;
     if (this.request) this.request.cancelled = true;
     this.request = null;
@@ -298,10 +308,14 @@ export class Bot implements Combatant, SightTarget {
     const direct = raw ? null : this.world.paths.direct(this.position, to);
     if (direct) {
       this.path = [direct[1]];
+      this.pathIndex = 0;
       return;
     }
-    // Head straight there until the path arrives.
-    this.path = [this.destination];
+    // Keep to the old path (to about the same place) until the new one arrives, or head straight there.
+    if (!near || raw || this.pathIndex >= this.path.length) {
+      this.path = [this.destination];
+      this.pathIndex = 0;
+    }
     this.request = this.world.paths.request(
       this.position,
       to,
@@ -334,14 +348,17 @@ export class Bot implements Combatant, SightTarget {
       this.bestDistance = Infinity;
       return;
     }
-    if (this.stallTime >= T.stuckTime) {
-      this.stuck = true;
-      this.stallTime = 0;
-      this.bestDistance = Infinity;
-      this.sidestep = SIDESTEP_TIME;
-      this.sidestepDir = Math.random() < 0.5 ? -1 : 1;
-      if (this.destination) this.setDestination(this.destination, true);
-    }
+    if (this.stallTime >= T.stuckTime) this.recover();
+  }
+
+  /** Stuck: tell the brain, step aside and repath along cell centers. */
+  private recover(): void {
+    this.stuck = true;
+    this.stallTime = 0;
+    this.bestDistance = Infinity;
+    this.sidestep = SIDESTEP_TIME;
+    this.sidestepDir = Math.random() < 0.5 ? -1 : 1;
+    if (this.destination) this.setDestination(this.destination, true);
   }
 
   // --- Weapons ---

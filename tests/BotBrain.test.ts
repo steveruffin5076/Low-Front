@@ -18,6 +18,8 @@ function senses(over: Partial<BotSenses> = {}): BotSenses {
     magFraction: 1,
     activeSlot: 'primary',
     primaryEmpty: false,
+    primaryOut: false,
+    canReload: true,
     reloading: false,
     flags: FLAGS,
     teammatesGoing: {},
@@ -93,11 +95,29 @@ describe('bot brain: fighting', () => {
     expect(o.crouch).toBe(true);
   });
 
-  it('strafes in the open when there is no cover', () => {
+  it('strafes in the open when the enemy is close and there is no cover', () => {
     const b = new BotBrain(noNoise);
-    const o = b.decide(senses({ enemy }), queries(null));
+    const o = b.decide(senses({ enemy: { ...enemy, distance: 15 } }), queries(null));
     expect(o.moveTo).toBeNull();
     expect(Math.abs(o.strafe)).toBe(1);
+  });
+
+  it('closes in on a farther enemy in the open, and leaves cover after a while', () => {
+    const b = new BotBrain(noNoise);
+    expect(b.decide(senses({ enemy }), queries(null)).moveTo).toBe(enemy.position);
+    const cover = V(4, 160);
+    expect(b.decide(senses({ enemy, time: 1 }), queries(cover)).moveTo).toBe(cover);
+    const at = senses({ enemy, time: 2, position: cover });
+    expect(b.decide(at, queries(cover)).crouch).toBe(true);
+    const later = b.decide({ ...at, time: 2 + BOTS.thresholds.coverHold.max + 0.1 }, queries(cover));
+    expect(later.crouch).toBe(false);
+    expect(later.moveTo).toBe(enemy.position);
+  });
+
+  it('switches to the pistol with no primary ammo left, and stops trying to reload', () => {
+    const b = new BotBrain(noNoise);
+    expect(b.decide(senses({ enemy, primaryOut: true, primaryEmpty: true, magFraction: 0 }), queries()).switchTo).toBe('secondary');
+    expect(b.decide(senses({ magFraction: 0, canReload: false }), queries()).state).not.toBe('reload');
   });
 
   it('retreats to cover away from the enemy when hurt', () => {
