@@ -38,7 +38,7 @@ export interface Edge {
 /**
  * 1 m navigation grid per floor level, rasterized from the collision volumes (plan section 10.6):
  * a cell is walkable when a floor supports it and a soldier-sized capsule fits above it.
- * Stair and ramp links connect levels. A* finds paths (smoothing comes with the bots, Phase 8).
+ * Stair and ramp links connect levels. A* finds paths; `NavPaths` smooths them.
  */
 export class NavGrid {
   readonly levels: NavLevel[] = [];

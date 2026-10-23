@@ -1,6 +1,66 @@
 # PROGRESS.md
 
-## Phase 7 — Conquest Mode (done, waiting for review)
+## Phase 8 — Bot AI (done, waiting for review)
+
+### What was done
+- **31 bots**: 15 Blue teammates and 16 Red enemies, named from the plan's list. Each has a random primary (M4A1 or AK47) and the M1911.
+  - They use the player's own systems: movement and the Rapier character controller (`PlayerController`), weapons (`PlayerWeapons`: fire rate, magazines, reloads, switching), the shared bullets, and the third-person `Soldier` for looks and hitboxes.
+  - They capture flags and count in the match like the player: kills, score, tickets, kill feed.
+  - They spawn at HQ, and respawn after 10 s at HQ or the owned flag nearest their objective.
+- **Shared combat** (`src/game/Combat.ts`): every bullet carries its shooter and never hits the shooter's own hitboxes. Bullets hit bots or the player (the player now has hitboxes).
+  - **No friendly fire**: a bullet that hits a teammate stops but does no damage. The plan does not say; this is the usual rule.
+  - Bot kills reach the Deploy Screen ("Killed by Bandit, AK47 · 13 m").
+- **Brain** (`src/ai/BotBrain.ts`, pure logic, decisions at 10 Hz, staggered across bots):
+  - **Objective**: flags are scored by owner, an enemy capturing one of ours, path distance and teammates already going there, so bots spread out.
+  - **Hold**: inside the zone the bot moves between cover points every 4–9 s.
+  - **Combat**: when the enemy is farther than 35 m, attackers keep moving to the objective and shoot on the way. Otherwise the bot fights from cover within 8 m for 3–7 s, then moves on. In the open, attackers close in on enemies farther than 20 m, and others strafe.
+  - **Reload** behind cover under 30% with no enemy in sight. With the primary empty, the bot switches to the M1911 at close range, or at any range when it has no rounds left.
+  - **Retreat** to cover away from the enemy under 30 HP. **Search** the last known position for up to 6 s.
+  - **Stuck**: no progress for 2 s, or not getting 1 m away: step aside and repath along cell centers. Stuck twice in a row: pick another objective.
+- **Perception** (`src/ai/Perception.ts`): 110° view, 90 m sight range, line of sight under a budget of 20 raycasts per frame (round-robin), and gunshots heard within 60 m. Each bot remembers enemies for 8 s.
+- **Aim** (`src/ai/BotAim.ts`):
+  - reaction 0.3–0.6 s;
+  - an error cone that shrinks while the bot tracks the same target;
+  - bursts of 3–6 rounds; a 12% chance per burst to aim at the head;
+  - weapon spread and recoil apply, and the bot pulls back 70% of the recoil.
+  - Easy, Normal and Hard presets are in `src/data/bots.ts`; Normal is used (no menu for it, as planned).
+- **Navigation**:
+  - smoothed paths (straight lines checked with a soldier's width);
+  - a path queue (3 A* searches per frame), with regions and goal snapping so a search for an unreachable spot stays fast;
+  - a cover-point index.
+  - Bot capsules do not block each other, so bots never jam a doorway; the player still blocks them and they block the player.
+- **Sound**: bot gunshots are positional (the distant filter applies), and bot footsteps play within 30 m.
+- **Debug**: F5 with `?debug` shows each bot's name, state and objective, its path in the team color, and a yellow line to the enemy it is shooting at. F3 shows the living bot count.
+- The Phase 6 test crowd and `?debug=crowd` are removed.
+- **Tests**: 212 unit tests, plus `npm run test:match`. That test plays a whole headless match with 31 bots, real physics, nav and bullets, and takes about 3 minutes.
+  - Unit tests cover: objective spread and defending, perception (view, range, reaction, hearing), aim settling, combat → cover → move on, retreat, search timeout, reload rules, path smoothing, no friendly fire, and own hitboxes.
+
+### Checked results
+- **Full headless match** (`npm run test:match`, bots only):
+  - Red wins on tickets at 15:22;
+  - 436 kills, 37 flag changes, about 5,300 reloads;
+  - longest time any bot made no progress: 3.6 s (the limit is 5 s).
+  - Earlier tuning runs ended 400:0 → Red at 15–19 min, with 33–56 flag changes. Red has 16 bots and Blue 15, and in the game the player makes Blue 16.
+- **Headless browser** (software rendering):
+  - 31 bots, 131–163 draw calls, up to 247k triangles;
+  - all bot work for a fixed step: about 1.9 ms;
+  - no console errors.
+  - Seen: firefights at C, bots holding B, bot kills in the kill feed, the F5 view, and the Deploy Screen after a bot kills the player.
+
+### How to test
+1. `npm run dev`, "Play vs Bots" → "Deploy". Bots spread to the flags; Red pushes from the north.
+2. Fight at a flag: bots take cover, reload and retreat when hurt. Watch flags change hands, the kill feed and the scoreboard (Tab).
+3. Get killed by a bot: the Deploy Screen shows who killed you, with what, and from how far.
+4. Open `/?debug=freemouse`, then press F5 for the bot view and F3 for stats.
+5. `npm test` (212 tests). `npm run test:match` for the full match (about 3 minutes).
+
+### Known issues
+- Red won every headless bots-only run (16 vs 15). With you on Blue the teams are even; tune `BOTS.objective` in `src/data/bots.ts` if it still feels one-sided.
+- Bots don't lean, and they don't climb onto props (cars, crates): an enemy standing on one is searched for from the floor next to it.
+- Bots pass through each other.
+- FPS with a full match on real hardware, and how the bots feel, are your check: here software rendering gives 1–3 FPS.
+
+## Phase 7 — Conquest Mode (done)
 
 ### What was done
 - **Rules** (all numbers in `src/data/conquest.ts`, pure logic in `src/game/`, unit tested):

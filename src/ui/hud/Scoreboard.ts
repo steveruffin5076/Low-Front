@@ -31,7 +31,7 @@ export class Scoreboard {
                     el('td', { text: String(r.deaths) }),
                   ]),
                 )
-              : [el('tr', {}, [el('td', { class: 'sb-empty', text: 'No soldiers yet (bots arrive in Phase 8)', attrs: { colspan: '4' } })])],
+              : [el('tr', {}, [el('td', { class: 'sb-empty', text: 'No soldiers', attrs: { colspan: '4' } })])],
           ),
         ]),
       ]);
