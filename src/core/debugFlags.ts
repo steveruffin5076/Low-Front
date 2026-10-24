@@ -1,5 +1,5 @@
 /**
- * Dev-only URL flags: `?debug=freemouse,crowd` turns on each listed flag. Pages such as
+ * Dev-only URL flags: `?debug=freemouse,range` turns on each listed flag. Pages such as
  * `?debug=weapons` use the first one. Safe to call outside a browser (tests): no flags.
  */
 let parsed: string[] | null = null;

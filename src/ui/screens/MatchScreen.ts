@@ -35,6 +35,11 @@ export class MatchScreen implements State {
     return this.physics?.lastStepMs ?? 0;
   }
 
+  /** Living bots, for the F3 overlay. */
+  get botCount(): number {
+    return this.conquest?.bots.bots.filter((b) => b.alive).length ?? 0;
+  }
+
   /** The play session (the player, weapons, camera), for tests and tools. */
   get session(): PlaySession | null {
     return this.range ?? this.conquest?.session ?? null;

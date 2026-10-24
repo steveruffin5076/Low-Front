@@ -25,6 +25,8 @@ export class CharacterMotor {
   constructor(
     private readonly physics: PhysicsWorld,
     feet: THREE.Vector3,
+    /** Collision groups of the capsule and its movement queries. */
+    private readonly groups: number = COLLISION.player,
   ) {
     const { rapier, world } = physics;
     this.feet.copy(feet);
@@ -32,7 +34,7 @@ export class CharacterMotor {
       rapier.RigidBodyDesc.kinematicPositionBased().setTranslation(feet.x, feet.y + this.height / 2, feet.z),
     );
     this.collider = world.createCollider(
-      rapier.ColliderDesc.capsule(this.halfSegment(this.height), MOVEMENT.radius).setCollisionGroups(COLLISION.player),
+      rapier.ColliderDesc.capsule(this.halfSegment(this.height), MOVEMENT.radius).setCollisionGroups(groups),
       this.body,
     );
     this.controller = world.createCharacterController(MOVEMENT.controllerOffset);
@@ -46,7 +48,7 @@ export class CharacterMotor {
 
   /** Moves by `delta` with collisions. Returns the movement actually made. */
   move(delta: THREE.Vector3): THREE.Vector3 {
-    this.controller.computeColliderMovement(this.collider, delta, this.physics.rapier.QueryFilterFlags.EXCLUDE_SENSORS, COLLISION.player);
+    this.controller.computeColliderMovement(this.collider, delta, this.physics.rapier.QueryFilterFlags.EXCLUDE_SENSORS, this.groups);
     const m = this.controller.computedMovement();
     this.grounded = this.controller.computedGrounded();
     this.feet.x += m.x;
@@ -55,6 +57,11 @@ export class CharacterMotor {
     this.liftOutOfFloor(m);
     this.body.setNextKinematicTranslation({ x: this.feet.x, y: this.feet.y + this.height / 2, z: this.feet.z });
     return new THREE.Vector3(m.x, m.y, m.z);
+  }
+
+  /** A dead soldier's capsule stops blocking others. */
+  setEnabled(on: boolean): void {
+    this.collider.setEnabled(on);
   }
 
   /** Changes capsule height, keeping the feet in place. Returns false if there is no room to stand up. */
@@ -107,7 +114,7 @@ export class CharacterMotor {
     const shape = new rapier.Capsule(this.halfSegment(height), MOVEMENT.radius - MOVEMENT.controllerOffset);
     const pos = { x: this.feet.x, y: this.feet.y + height / 2 + MOVEMENT.controllerOffset, z: this.feet.z };
     const flags = rapier.QueryFilterFlags.EXCLUDE_SENSORS;
-    return world.intersectionWithShape(pos, { x: 0, y: 0, z: 0, w: 1 }, shape, flags, COLLISION.player, this.collider) === null;
+    return world.intersectionWithShape(pos, { x: 0, y: 0, z: 0, w: 1 }, shape, flags, this.groups, this.collider) === null;
   }
 
   private halfSegment(height: number): number {

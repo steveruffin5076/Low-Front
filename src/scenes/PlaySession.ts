@@ -16,7 +16,10 @@ import { ViewmodelLayer } from '../render/ViewmodelLayer';
 import type { PlayerHud } from '../ui/PlayerHud';
 import { RangeOverlay } from '../ui/RangeOverlay';
 import { PlayerWeapons, type WeaponInput } from '../weapons/PlayerWeapons';
-import { RangeCombat, type TargetHit } from './RangeCombat';
+import { Combat } from '../game/Combat';
+import { PlayerHitboxes } from '../entities/PlayerHitboxes';
+import type { BulletShooter } from '../weapons/Ballistics';
+import { RangeCombat, type KillerInfo, type TargetHit } from './RangeCombat';
 import type { World } from './World';
 
 /** Pressed keys latched each frame until a fixed step consumes them. */
@@ -33,8 +36,8 @@ interface Latched {
 const NONE: Latched = { crouch: false, jump: false, fire: false, reload: false, fireMode: false, inspect: false, switchTo: null };
 
 export interface SessionEvents {
-  /** The player died; `cause` is null when an enemy killed them. */
-  died: { cause: DeathCause | null };
+  /** The player died; `cause` is null when an enemy killed them (`killer` says who). */
+  died: { cause: DeathCause | null; killer: KillerInfo | null };
   /** The player's bullet hit a target. */
   targetHit: TargetHit;
 }
@@ -43,6 +46,8 @@ export interface SessionOptions {
   /** Respawn at the world spawn after the death camera (test range). The match deploys instead. */
   autoRespawn: boolean;
   hud?: PlayerHud;
+  /** The player's match identity, for hitboxes and bullets (none on the test range). */
+  identity?: { id: string; name: string; team: 'blue' | 'red' };
 }
 
 /** A play session in a world: player movement, weapons, animations, combat and bounds. */
@@ -52,6 +57,12 @@ export class PlaySession {
   readonly camera = new THREE.PerspectiveCamera(MOVEMENT.baseFov, 1, 0.05, 400);
   readonly audio = new AudioManager();
   readonly hud: PlayerHud;
+  /** Bullets, impacts and tracers for everyone in this world (bots fire into it too). */
+  readonly combatSystem: Combat;
+  /** The player as a bullet target. */
+  readonly hitboxes: PlayerHitboxes;
+  /** Tags the player's bullets. */
+  readonly shooter: BulletShooter;
   weapons!: PlayerWeapons;
   /** While paused the simulation and input stop; the frame still renders. */
   paused = false;
@@ -74,6 +85,18 @@ export class PlaySession {
     private readonly options: SessionOptions = { autoRespawn: true },
   ) {
     this.hud = options.hud ?? new RangeOverlay();
+    this.combatSystem = new Combat(physics, world.scene, this.audio);
+    const id = options.identity;
+    this.hitboxes = new PlayerHitboxes(physics, id?.name ?? 'player', id?.team, id?.id, (hit) => {
+      const killer: KillerInfo | null = hit.attackerId
+        ? { id: hit.attackerId, weapon: hit.weapon ?? '', headshot: hit.zone === 'head', distance: hit.distance }
+        : null;
+      const wasDead = this.combat.health.dead;
+      this.combat.damagePlayer(hit.damage, hit.from ?? null, null, killer);
+      hit.killed = !wasDead && this.combat.health.dead;
+      hit.remainingHp = this.combat.health.hp;
+    });
+    this.shooter = { id: id?.id ?? 'player', team: id?.team ?? null, owner: this.hitboxes };
     this.player = new PlayerController(physics, world.spawn.position.clone());
     this.player.yaw = world.spawn.yaw;
     this.player.events.on('jumped', () => this.animator.onJump());
@@ -130,6 +153,8 @@ export class PlaySession {
     }
     this.fx.reset();
     this.player.respawn(at, yaw);
+    this.hitboxes.setEnabled(true);
+    this.hitboxes.follow(this.player.motor.feet, yaw, 0);
     this.bounds.reset();
     this.animator.reset();
     this.combat.reset();
@@ -138,7 +163,13 @@ export class PlaySession {
   }
 
   fixedUpdate(dt: number): void {
-    if (this.paused || this.fx.dead) return;
+    if (this.paused) return;
+    // The world (and everyone's bullets) keeps going while the player is dead.
+    if (this.fx.dead) {
+      this.world.fixedUpdate?.(dt);
+      this.combatSystem.fixedUpdate(dt);
+      return;
+    }
     const i = this.input;
     const fireHeld = i.locked && i.isMouseDown(MOUSE.fire);
     const ads = this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads);
@@ -167,8 +198,10 @@ export class PlaySession {
       ads,
     };
     this.weapons.update(dt, weaponInput);
+    this.hitboxes.follow(this.player.motor.feet, this.player.yaw, this.player.crouchBlend);
     this.world.fixedUpdate?.(dt);
     this.combat.fixedUpdate(dt);
+    this.combatSystem.fixedUpdate(dt);
     if (this.world.limit !== null) {
       const feet = this.player.motor.feet;
       if (this.bounds.update(dt, feet.x, feet.z) === 'expired') this.kill('bounds');
@@ -190,7 +223,7 @@ export class PlaySession {
     this.audio.setListener(this.camera);
     this.world.follow(this.player.motor.feet);
     this.world.update(dt, this.camera);
-    this.combat.update(dt, alpha);
+    this.combatSystem.update(dt, alpha);
 
     this.combat.shooting.ads = this.animator.adsBlend;
     const aiming = live && this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads);
@@ -243,6 +276,8 @@ export class PlaySession {
   dispose(): void {
     this.world.dispose();
     this.disarm();
+    this.combatSystem.dispose();
+    this.hitboxes.dispose();
     this.audio.dispose();
   }
 
@@ -254,7 +289,7 @@ export class PlaySession {
     this.animator.baseFov = this.baseFov;
     this.combat = new RangeCombat(
       this.physics,
-      this.world.scene,
+      this.combatSystem,
       this.player,
       this.weapons,
       this.audio,
@@ -270,11 +305,13 @@ export class PlaySession {
           this.hud.hitFlash();
           this.hud.showDamageFrom(angle);
         },
-        onPlayerDied: (cause) => {
+        onPlayerDied: (cause, killer) => {
           this.fx.die();
-          this.events.emit('died', { cause });
+          this.hitboxes.setEnabled(false);
+          this.events.emit('died', { cause, killer });
         },
       },
+      this.shooter,
     );
   }
 

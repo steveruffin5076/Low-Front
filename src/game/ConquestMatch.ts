@@ -6,7 +6,7 @@ import { matchResult, type MatchResult } from './MatchClock';
 import { killScore, newStats, type CombatantStats } from './Scoring';
 import { Tickets } from './Tickets';
 
-/** A soldier taking part in the match: the player now, bots in Phase 8. */
+/** A soldier taking part in the match: the player or a bot. */
 export interface Combatant {
   readonly id: string;
   readonly name: string;

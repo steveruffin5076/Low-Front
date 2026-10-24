@@ -66,3 +66,15 @@ export const HEALTH = {
   /** Test key H: damage taken. */
   debugHitDamage: 20,
 } as const;
+
+/**
+ * The player's hitboxes (plan section 9), in the feet frame while standing, facing −Z.
+ * Crouching scales the heights by crouchHeight / standHeight.
+ */
+export const PLAYER_HITBOXES = [
+  { zone: 'head', size: [0.26, 0.28, 0.28], pos: [0, 1.64, 0] },
+  { zone: 'torso', size: [0.46, 0.62, 0.32], pos: [0, 1.19, 0] },
+  { zone: 'arm', size: [0.13, 0.56, 0.15], pos: [-0.3, 1.18, -0.05] },
+  { zone: 'arm', size: [0.13, 0.56, 0.15], pos: [0.3, 1.18, -0.05] },
+  { zone: 'leg', size: [0.4, 0.86, 0.26], pos: [0, 0.45, 0] },
+] as const;

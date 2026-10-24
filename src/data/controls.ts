@@ -21,6 +21,8 @@ export const CONTROLS = {
   debugHit: 'KeyH',
   debugDeath: 'KeyK',
   navDebug: 'F4',
+  /** With `?debug`: each bot's state, path and target. */
+  botDebug: 'F5',
 } as const;
 
 export const MOUSE = { fire: 0, ads: 2 } as const;

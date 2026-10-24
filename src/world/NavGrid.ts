@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { NAV } from '../data/nav';
 import type { NavLink } from './LocalFrame';
+import { MinHeap } from './MinHeap';
+import { labelRegions, nearestInRegion } from './NavPaths';
 import { footprintOverlaps, volumeBounds, type Volume } from './Volume';
 
 /** One floor level of the grid (ground, first floor, rooftops, …). */
@@ -26,7 +28,7 @@ interface Indexed {
   max: THREE.Vector3;
 }
 
-interface Edge {
+export interface Edge {
   to: number;
   cost: number;
   /** Points along a stair or ramp link, in travel order. */
@@ -36,7 +38,7 @@ interface Edge {
 /**
  * 1 m navigation grid per floor level, rasterized from the collision volumes (plan section 10.6):
  * a cell is walkable when a floor supports it and a soldier-sized capsule fits above it.
- * Stair and ramp links connect levels. A* finds paths (smoothing comes with the bots, Phase 8).
+ * Stair and ramp links connect levels. A* finds paths; `NavPaths` smooths them.
  */
 export class NavGrid {
   readonly levels: NavLevel[] = [];
@@ -44,6 +46,13 @@ export class NavGrid {
   /** Links that could not be connected (both ends must land on walkable cells). */
   readonly brokenLinks: NavLink[] = [];
   private readonly buckets = new Map<string, Indexed[]>();
+  /** Connected area id per node (−1: not walkable). Links count as connections both ways. */
+  region: Int32Array = new Int32Array(0);
+  // A* scratch arrays, reused between searches.
+  private gScore = new Float64Array(0);
+  private came = new Int32Array(0);
+  private seen = new Uint32Array(0);
+  private searchStamp = 0;
 
   constructor(volumes: readonly Volume[], links: readonly NavLink[], half: number) {
     for (const v of volumes) this.index(v);
@@ -67,6 +76,7 @@ export class NavGrid {
       if (x1 > x0 && z1 > z0) this.addLevel(y, x0, z0, x1, z1, volumes);
     }
     for (const l of links) this.addLink(l);
+    this.region = labelRegions(this);
   }
 
   get nodeCount(): number {
@@ -290,6 +300,18 @@ export class NavGrid {
     return out;
   }
 
+  /** One grid move from cell (i, j) by (di, dj) on `level`: walkable, within step height, no thin wall. */
+  canStep(level: NavLevel, i: number, j: number, di: number, dj: number): boolean {
+    const ii = i + di;
+    const jj = j + dj;
+    if (i < 0 || j < 0 || i >= level.w || j >= level.h || ii < 0 || jj < 0 || ii >= level.w || jj >= level.h) return false;
+    const k = j * level.w + i;
+    const kk = jj * level.w + ii;
+    if (!level.walk[k] || !level.walk[kk]) return false;
+    if (level.blockedDirs[k] & (1 << dirBit(di, dj))) return false;
+    return Math.abs(level.floorY[kk] - level.floorY[k]) <= NAV.step;
+  }
+
   /** World points for a node path, with the stair waypoints of any links inserted. */
   pathPoints(path: readonly number[]): THREE.Vector3[] {
     const out: THREE.Vector3[] = [];
@@ -304,53 +326,71 @@ export class NavGrid {
   }
 
   /**
-   * A* from `from` to `to` (world positions). `blocked` marks extra impassable nodes
-   * (used by tests to find alternative routes). Returns node ids, or null.
+   * A* from `from` to `to` (world positions). `blocked` marks extra impassable nodes (tests use
+   * it to find other routes). `weight` > 1 trades a little path length for much less search
+   * (bots use it; paths are smoothed anyway); `maxExpand` caps the work. A goal in another
+   * region (an unreachable island) snaps to the nearest reachable cell. Returns node ids, or null.
    */
-  findPath(from: THREE.Vector3, to: THREE.Vector3, blocked?: Set<number>): number[] | null {
+  findPath(from: THREE.Vector3, to: THREE.Vector3, blocked?: Set<number>, weight = 1, maxExpand = Infinity): number[] | null {
     const start = this.nearestWalkable(from);
-    const goal = this.nearestWalkable(to);
-    if (start === null || goal === null) return null;
+    if (start === null) return null;
+    let goal = this.nearestWalkable(to);
+    if (goal === null || this.region[goal] !== this.region[start]) goal = nearestInRegion(this, to, this.region[start], NAV.goalSnap);
+    if (goal === null) return null;
     const goalPos = this.position(goal);
-    const g = new Map<number, number>([[start, 0]]);
-    const came = new Map<number, number>();
+    const count = this.nodeCount;
+    if (this.gScore.length < count) {
+      this.gScore = new Float64Array(count);
+      this.came = new Int32Array(count);
+      this.seen = new Uint32Array(count);
+    }
+    const stamp = ++this.searchStamp;
+    // seen[n] === stamp: open or closed in this search; closed nodes get stamp + 2^31.
+    const CLOSED = 0x80000000;
+    const g = this.gScore;
+    const came = this.came;
+    const seen = this.seen;
     const heap = new MinHeap();
     const tmp = new THREE.Vector3();
     const h = (n: number): number => {
       this.position(n, tmp);
       const dx = Math.abs(tmp.x - goalPos.x);
       const dz = Math.abs(tmp.z - goalPos.z);
-      return Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz) + Math.abs(tmp.y - goalPos.y);
+      return weight * (Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz) + Math.abs(tmp.y - goalPos.y));
     };
+    g[start] = 0;
+    came[start] = -1;
+    seen[start] = stamp;
     heap.push(start, h(start));
-    const closed = new Set<number>();
     const edges: Edge[] = [];
+    let expanded = 0;
     while (heap.size) {
       const n = heap.pop();
       if (n === goal) {
         const path = [n];
-        let c = n;
-        while (came.has(c)) {
-          c = came.get(c)!;
-          path.push(c);
-        }
+        for (let c = came[n]; c !== -1; c = came[c]) path.push(c);
         return path.reverse();
       }
-      if (closed.has(n)) continue;
-      closed.add(n);
-      const gn = g.get(n)!;
+      if (seen[n] === ((stamp | CLOSED) >>> 0)) continue;
+      seen[n] = (stamp | CLOSED) >>> 0;
+      if (++expanded > maxExpand) return null;
+      const gn = g[n];
       for (const e of this.neighbors(n, edges)) {
-        if (blocked?.has(e.to) || closed.has(e.to)) continue;
+        if (blocked?.has(e.to)) continue;
+        const st = seen[e.to];
+        if (st === ((stamp | CLOSED) >>> 0)) continue;
         const ng = gn + e.cost;
-        if (ng < (g.get(e.to) ?? Infinity)) {
-          g.set(e.to, ng);
-          came.set(e.to, n);
+        if (st !== stamp || ng < g[e.to]) {
+          g[e.to] = ng;
+          came[e.to] = n;
+          seen[e.to] = stamp;
           heap.push(e.to, ng + h(e.to));
         }
       }
     }
     return null;
   }
+
 }
 
 /** East, south and the two southern diagonals; the other four are their reverses. */
@@ -361,53 +401,4 @@ const WALL_SAMPLE_RADIUS = 0.05;
 
 function dirBit(di: number, dj: number): number {
   return (dj + 1) * 3 + di + 1;
-}
-
-/** Binary min-heap of node ids keyed by priority. */
-class MinHeap {
-  private ids: number[] = [];
-  private keys: number[] = [];
-
-  get size(): number {
-    return this.ids.length;
-  }
-
-  push(id: number, key: number): void {
-    this.ids.push(id);
-    this.keys.push(key);
-    let i = this.ids.length - 1;
-    while (i > 0) {
-      const p = (i - 1) >> 1;
-      if (this.keys[p] <= this.keys[i]) break;
-      this.swap(i, p);
-      i = p;
-    }
-  }
-
-  pop(): number {
-    const top = this.ids[0];
-    const lastId = this.ids.pop()!;
-    const lastKey = this.keys.pop()!;
-    if (this.ids.length) {
-      this.ids[0] = lastId;
-      this.keys[0] = lastKey;
-      let i = 0;
-      for (;;) {
-        const l = i * 2 + 1;
-        const r = l + 1;
-        let m = i;
-        if (l < this.ids.length && this.keys[l] < this.keys[m]) m = l;
-        if (r < this.ids.length && this.keys[r] < this.keys[m]) m = r;
-        if (m === i) break;
-        this.swap(i, m);
-        i = m;
-      }
-    }
-    return top;
-  }
-
-  private swap(a: number, b: number): void {
-    [this.ids[a], this.ids[b]] = [this.ids[b], this.ids[a]];
-    [this.keys[a], this.keys[b]] = [this.keys[b], this.keys[a]];
-  }
 }

@@ -11,6 +11,8 @@ export const NAV = {
   bucket: 8,
   /** Link endpoints snap to the nearest walkable cell within this distance. */
   linkSnap: 2.5,
+  /** An unreachable path goal snaps to a reachable cell within this many cells. */
+  goalSnap: 8,
   cover: {
     lowMin: 0.8,
     highMin: 1.6,
