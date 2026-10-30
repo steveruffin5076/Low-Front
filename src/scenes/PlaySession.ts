@@ -20,6 +20,7 @@ import { Combat } from '../game/Combat';
 import { PlayerHitboxes } from '../entities/PlayerHitboxes';
 import type { BulletShooter } from '../weapons/Ballistics';
 import { RangeCombat, type KillerInfo, type TargetHit } from './RangeCombat';
+import { ScopeOverlay } from '../ui/hud/ScopeOverlay';
 import type { World } from './World';
 
 /** Pressed keys latched each frame until a fixed step consumes them. */
@@ -57,6 +58,7 @@ export class PlaySession {
   readonly camera = new THREE.PerspectiveCamera(MOVEMENT.baseFov, 1, 0.05, 400);
   readonly audio = new AudioManager();
   readonly hud: PlayerHud;
+  private readonly scope = new ScopeOverlay();
   /** Bullets, impacts and tracers for everyone in this world (bots fire into it too). */
   readonly combatSystem: Combat;
   /** The player as a bullet target. */
@@ -138,6 +140,8 @@ export class PlaySession {
 
   mount(parent: HTMLElement): void {
     parent.append(this.hud.element);
+    // Under the HUD widgets, so ammo, minimap and flags stay readable while scoped.
+    this.hud.element.prepend(this.scope.element);
   }
 
   /** Kills the player at once (out of bounds, enemy HQ, test key). */
@@ -268,6 +272,7 @@ export class PlaySession {
       i.locked || this.paused,
     );
     this.hud.setBoundsWarning(this.fx.dead ? null : this.bounds.remaining);
+    this.scope.visible = !this.fx.dead && this.animator.scoped;
   }
 
   /** Builds the world's and the weapon layer's shaders ahead of play. */
@@ -278,7 +283,7 @@ export class PlaySession {
 
   render(renderer: Renderer): void {
     renderer.render(this.world.scene, this.camera);
-    if (!this.fx.dead) renderer.renderLayer(this.layer.scene, this.layer.camera);
+    if (!this.fx.dead && !this.animator.scoped) renderer.renderLayer(this.layer.scene, this.layer.camera);
   }
 
   dispose(): void {
@@ -336,7 +341,9 @@ export class PlaySession {
 
   private readInput(): void {
     const i = this.input;
-    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y, this.sensitivity));
+    // Through a scope the view turns slower, in step with the zoom.
+    const sens = this.animator.scoped ? (this.sensitivity * this.camera.fov) / this.baseFov : this.sensitivity;
+    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y, sens));
     const l = this.latched;
     if (i.wasPressed(CONTROLS.crouch)) l.crouch = true;
     if (i.wasPressed(CONTROLS.jump)) l.jump = true;

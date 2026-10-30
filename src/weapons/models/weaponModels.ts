@@ -1,6 +1,7 @@
 import type { WeaponId } from '../../data/weapons';
 import { buildAK47 } from './AK47Model';
 import { buildBR12 } from './BR12Model';
+import { buildLR24 } from './LR24Model';
 import { buildM1911 } from './M1911Model';
 import { buildM4A1 } from './M4A1Model';
 import { buildSR9 } from './SR9Model';
@@ -11,6 +12,7 @@ const BUILDERS: Record<WeaponId, (lod: WeaponLod) => WeaponModel> = {
   ak47: buildAK47,
   sr9: buildSR9,
   br12: buildBR12,
+  lr24: buildLR24,
   m1911: buildM1911,
 };
 
@@ -20,6 +22,7 @@ export const REQUIRED_NODES: Record<WeaponId, readonly NodeName[]> = {
   ak47: ['magazine', 'chargingHandle', 'trigger', 'selector'],
   sr9: ['magazine', 'bolt', 'chargingHandle', 'trigger', 'selector'],
   br12: ['magazine', 'pump', 'trigger'],
+  lr24: ['magazine', 'bolt', 'trigger'],
   m1911: ['magazine', 'slide', 'hammer', 'trigger', 'slideStop'],
 };
 
@@ -29,11 +32,12 @@ export const TRI_BUDGET: Record<WeaponId, readonly [number, number]> = {
   ak47: [600, 1500],
   sr9: [500, 1500],
   br12: [500, 1500],
+  lr24: [500, 1500],
   m1911: [600, 1500],
 };
 
 /** Real-world overall length in meters, used by tests. */
-export const OVERALL_LENGTH: Record<WeaponId, number> = { m4a1: 0.84, ak47: 0.88, sr9: 0.68, br12: 0.99, m1911: 0.22 };
+export const OVERALL_LENGTH: Record<WeaponId, number> = { m4a1: 0.84, ak47: 0.88, sr9: 0.68, br12: 0.99, lr24: 1.1, m1911: 0.22 };
 
 export function buildWeaponModel(id: WeaponId, lod: WeaponLod): WeaponModel {
   return BUILDERS[id](lod);

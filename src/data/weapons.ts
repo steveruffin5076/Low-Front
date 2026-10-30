@@ -3,7 +3,7 @@
  * Display names are fictional (no real firearm names); the ids are internal and stay stable for saves.
  */
 
-export type WeaponId = 'm4a1' | 'ak47' | 'sr9' | 'br12' | 'm1911';
+export type WeaponId = 'm4a1' | 'ak47' | 'sr9' | 'br12' | 'lr24' | 'm1911';
 export type WeaponSlot = 'primary' | 'secondary';
 export type FireMode = 'auto' | 'semi';
 /** Role on the battlefield: drives bot use and the weapon card. */
@@ -23,8 +23,8 @@ export interface ActionDef {
   hammer: boolean;
   /** A dust cover that springs open on the first shot. */
   dustCover: boolean;
-  /** After an empty magazine is seated: press the bolt release, rack the charging handle, or drop the slide stop. */
-  emptyReload: 'boltRelease' | 'rack' | 'slideStop';
+  /** After an empty magazine is seated: press the bolt release, rack the charging handle, drop the slide stop, or work the bolt by hand. */
+  emptyReload: 'boltRelease' | 'rack' | 'slideStop' | 'bolt';
   /** The shooter works the action by hand after every shot (pump, bolt), taking the whole shot interval. */
   manual: boolean;
 }
@@ -190,6 +190,34 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     spread: { hipDeg: 1.6, adsDeg: 0.6 },
     // One big shove per shot; the pump stroke gives time to recover.
     recoil: { verticalDeg: 2.6, horizontalDeg: 0.5, pattern: [0.4, -0.4], random: 0.6, recoveryDelay: 0.1, recoveryDegPerSec: 14 },
+  },
+  lr24: {
+    id: 'lr24',
+    name: 'LR-24',
+    slot: 'primary',
+    class: 'sniper',
+    action: { cycleNode: 'bolt', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'bolt', manual: true },
+    pellets: 1,
+    pelletSpreadDeg: 0,
+    reloadMode: 'magazine',
+    casing: [0.006, 0.067],
+    fireModes: ['semi'],
+    // The bolt is worked between shots.
+    rpm: 45,
+    damage: { near: 88, far: 70 },
+    falloff: { start: 50, end: 160 },
+    headshotMultiplier: 2.0,
+    limbMultiplier: 0.75,
+    magazine: 5,
+    chamber: 1,
+    startingReserve: 25,
+    muzzleVelocity: 850,
+    reload: { tactical: 2.8, empty: 3.7 },
+    adsTime: 0.55,
+    moveSpeedModifier: 0.9,
+    // Useless from the hip, pinpoint through the 6x scope.
+    spread: { hipDeg: 6.0, adsDeg: 0.02 },
+    recoil: { verticalDeg: 3.5, horizontalDeg: 0.6, pattern: [0.3, -0.3], random: 0.6, recoveryDelay: 0.15, recoveryDegPerSec: 10 },
   },
   m1911: {
     id: 'm1911',

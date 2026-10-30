@@ -37,6 +37,8 @@ export const WEAPON_PALETTE = {
   interior: 0x141518,
   /** Shotgun shell hull. */
   shellHull: 0x9b2b22,
+  /** Sniper rifle stock. */
+  stockGreen: 0x3e4a34,
 } as const;
 
 /** First-person arms and effects. */

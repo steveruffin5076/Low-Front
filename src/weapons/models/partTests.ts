@@ -65,6 +65,19 @@ export const PART_TESTS: Record<WeaponId, readonly PartTest[]> = {
     { label: 'Trigger', duration: 0.5, nodes: ['trigger'], apply: (n, t) => void (n.trigger!.rotation.x = -0.35 * pulse(t)) },
     { label: 'Shell in', duration: 1.2, nodes: ['magazine'], apply: (n, t) => void (n.magazine!.position.y -= 0.03 * hold(t)) },
   ],
+  lr24: [
+    {
+      label: 'Bolt cycle',
+      duration: 1.4,
+      nodes: ['bolt'],
+      apply: (n, t) => {
+        n.bolt!.rotation.z = 1.0 * Math.min(1, hold(t) * 2);
+        n.bolt!.position.z += 0.09 * Math.max(0, hold(t) * 2 - 1);
+      },
+    },
+    { label: 'Trigger', duration: 0.5, nodes: ['trigger'], apply: (n, t) => void (n.trigger!.rotation.x = -0.35 * pulse(t)) },
+    { label: 'Magazine out', duration: 1.5, nodes: ['magazine'], apply: (n, t) => void (n.magazine!.position.y -= 0.2 * hold(t)) },
+  ],
   m1911: [
     {
       label: 'Slide cycle',

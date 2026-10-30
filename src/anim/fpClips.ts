@@ -63,6 +63,11 @@ export function fireClip(c: ClipContext, lastRound: boolean): Clip {
 function manualFireClip(c: ClipContext, _lastRound: boolean): Clip {
   const d = (60 / c.def.rpm) * 0.85;
   const b = new ClipBuilder('fire', d);
+  if (c.vm.bolt) {
+    b.key('node.trigger.rot', 0, ZERO3).key('node.trigger.rot', 0.04, [-0.3, 0, 0], 'out').key('node.trigger.rot', 0.15, ZERO3);
+    addBoltCycle(b, c, d * 0.2, d * 0.8, true);
+    return b.build();
+  }
   const node = cycleNode(c.def);
   const travel = c.vm.cycleTravel;
   const back = d * 0.45;
@@ -78,6 +83,37 @@ function manualFireClip(c: ClipContext, _lastRound: boolean): Clip {
   // The weapon dips with the stroke.
   b.key('weapon.rot', d * 0.2, ZERO3).key('weapon.rot', back, [0.03, 0, -0.05], 'inOut').key('weapon.rot', d, ZERO3, 'inOut');
   return b.event(back, 'cycleBack').event(fwd, 'slideClose').build();
+}
+
+/**
+ * Bolt worked by hand over `d` seconds from `t0`: the right hand leaves the grip for the knob, lifts
+ * the handle, pulls the bolt back (case out), pushes it forward and turns it down. The rifle cants
+ * toward the hand (`afterShot`; a reload already holds its own pose). Events: `cycleBack` (throws the
+ * case out, after a shot) or `boltOpen` (empty chamber), then `slideClose`.
+ */
+function addBoltCycle(b: ClipBuilder, c: ClipContext, t0: number, d: number, afterShot: boolean): void {
+  const bolt = c.vm.bolt!;
+  const travel = c.vm.cycleTravel;
+  const pivot = c.nodePos('bolt');
+  const knob = new THREE.Vector3(...bolt.knob);
+  const knobAt = (lift: number, back: number): number[] => {
+    const k = knob.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), lift);
+    return [pivot.x + k.x + 0.01, pivot.y + k.y - 0.01, pivot.z + k.z + back + 0.02];
+  };
+  const t = (f: number): number => t0 + d * f;
+  const up: V = [0, 0, bolt.lift];
+  b.key('rightHand.blend', t0, [0]).key('rightHand.blend', t(0.18), [1]).key('rightHand.blend', t(0.85), [1]).key('rightHand.blend', t(1), [0], 'inOut');
+  b.key('rightHand.pos', t0, knobAt(0, 0)).key('rightHand.pos', t(0.18), knobAt(0, 0));
+  b.key('rightHand.pos', t(0.32), knobAt(bolt.lift, 0), 'out').key('rightHand.pos', t(0.5), knobAt(bolt.lift, travel), 'inOut');
+  b.key('rightHand.pos', t(0.68), knobAt(bolt.lift, 0), 'inOut').key('rightHand.pos', t(0.8), knobAt(0, 0), 'in');
+  b.key('node.bolt.rot', t0, ZERO3).key('node.bolt.rot', t(0.18), ZERO3).key('node.bolt.rot', t(0.32), up, 'out');
+  b.key('node.bolt.rot', t(0.68), up).key('node.bolt.rot', t(0.8), ZERO3, 'in');
+  b.key('node.bolt.pos', t(0.32), ZERO3).key('node.bolt.pos', t(0.5), [0, 0, travel], 'inOut').key('node.bolt.pos', t(0.68), ZERO3, 'inOut');
+  if (afterShot) {
+    b.key('weapon.rot', t0, ZERO3).key('weapon.rot', t(0.2), [0.04, 0.05, 0.12], 'inOut').key('weapon.rot', t(0.8), [0.04, 0.05, 0.12]);
+    b.key('weapon.rot', t(1), ZERO3, 'inOut');
+  }
+  b.event(t(0.5), afterShot ? 'cycleBack' : 'boltOpen').event(t(0.68), 'slideClose');
 }
 
 /** Empty trigger: small trigger movement only. */
@@ -253,6 +289,8 @@ function addEmptyAction(b: ClipBuilder, c: ClipContext, seat: number, D: number,
     // Turn the right side toward the camera so the rack is visible.
     b.key('weapon.rot', seat + 0.25, RACK_POSE).key('weapon.rot', seat + 0.6, RACK_POSE);
     b.event(seat + 0.56, 'slideClose');
+  } else if (kind === 'bolt') {
+    addBoltCycle(b, c, seat + 0.1, D - seat - 0.25, false);
   } else {
     // Thumb presses the slide stop, the slide snaps closed.
     b.key('node.slideStop.rot', 0, locked ? [-0.25, 0, 0] : ZERO3).key('node.slideStop.rot', seat + 0.12, locked ? [-0.25, 0, 0] : ZERO3);

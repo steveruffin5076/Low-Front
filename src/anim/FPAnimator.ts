@@ -86,6 +86,11 @@ export class FPAnimator {
     this.listen(weapons);
   }
 
+  /** Fully aimed through a scope: the session shows the scope view and hides the weapon. */
+  get scoped(): boolean {
+    return !!this.current.vm.scope && this.adsBlend > 0.97;
+  }
+
   /** 0–1; firing waits until the weapon is fully out of the sprint pose. */
   get sprintAmount(): number {
     return this.sprintBlend;
@@ -305,6 +310,7 @@ export class FPAnimator {
     if (name === 'click') this.audio.play(this.action?.clip.name === 'fireMode' ? 'selector' : 'dryFire');
     if (name === 'magOut') this.audio.play('magOut');
     if (name === 'magIn') this.audio.play('magIn');
+    if (name === 'boltOpen') this.audio.play('cycleBack');
     if (name === 'cycleBack') {
       this.audio.play('cycleBack');
       this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
