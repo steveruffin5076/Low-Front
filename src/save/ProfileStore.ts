@@ -1,5 +1,6 @@
 import { PROFILE } from '../data/player';
 import { DEFAULT_LOADOUT, WEAPONS, type Loadout, type WeaponId, type WeaponSlot } from '../data/weapons';
+import type { TeamId } from '../data/map/types';
 import type { KeyValueStore } from './Storage';
 
 export interface PlayerStats {
@@ -15,6 +16,8 @@ export interface Profile {
   name: string;
   stats: PlayerStats;
   loadout: Loadout;
+  /** The team joined last time, picked again by default on the team screen. */
+  team: TeamId;
 }
 
 export const EMPTY_STATS: PlayerStats = { matchesPlayed: 0, wins: 0, losses: 0, kills: 0, deaths: 0, headshots: 0 };
@@ -49,7 +52,7 @@ export function applyMatch(
 }
 
 export function defaultProfile(): Profile {
-  return { name: PROFILE.defaultName, stats: { ...EMPTY_STATS }, loadout: { ...DEFAULT_LOADOUT } };
+  return { name: PROFILE.defaultName, stats: { ...EMPTY_STATS }, loadout: { ...DEFAULT_LOADOUT }, team: 'blue' };
 }
 
 /** Loads and saves the profile as JSON. Bad or missing fields fall back to defaults. */
@@ -83,6 +86,7 @@ export class ProfileStore {
       profile.loadout.primary = weaponFor('primary', data.loadout.primary) ?? profile.loadout.primary;
       profile.loadout.secondary = weaponFor('secondary', data.loadout.secondary) ?? profile.loadout.secondary;
     }
+    if (data.team === 'blue' || data.team === 'red') profile.team = data.team;
     return profile;
   }
 

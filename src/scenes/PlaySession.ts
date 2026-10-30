@@ -298,7 +298,7 @@ export class PlaySession {
   private arm(loadout: Loadout): void {
     this.loadout = { ...loadout };
     this.weapons = new PlayerWeapons(loadout);
-    this.animator = new FPAnimator(this.layer, this.weapons, this.audio);
+    this.animator = new FPAnimator(this.layer, this.weapons, this.audio, this.options.identity?.team);
     this.animator.baseFov = this.baseFov;
     this.combat = new RangeCombat(
       this.physics,

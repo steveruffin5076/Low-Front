@@ -31,7 +31,7 @@ export class ProfileScreen implements State {
       }
       if (this.deployButton) this.deployButton.disabled = name === null;
     });
-    this.deployButton = button('Deploy', () => this.ctx.changeScreen('loading'), 'btn btn-primary');
+    this.deployButton = button('Deploy', () => this.ctx.changeScreen('team'), 'btn btn-primary');
 
     this.root = el('div', { class: 'screen profile-screen' }, [
       el('div', { class: 'profile-columns' }, [profilePanel.element, this.soldier.element, this.loadout.element]),

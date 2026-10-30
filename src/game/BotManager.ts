@@ -94,7 +94,7 @@ export class BotManager {
       lastShot = { shooter, time: this.time };
       this.perception.gunshot(this.time, { id: shooter.id, team: shooter.team, position: origin }, this.bots);
     });
-    const counts = o.counts ?? { blue: BOTS.blue, red: BOTS.red };
+    const counts = o.counts ?? { blue: BOTS.playerSide, red: BOTS.otherSide };
     let n = 0;
     for (const team of ['blue', 'red'] as const) {
       for (let i = 0; i < counts[team]; i++, n++) {

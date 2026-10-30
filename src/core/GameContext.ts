@@ -6,7 +6,7 @@ import type { ProfileStore } from '../save/ProfileStore';
 import type { SettingsStore } from '../save/SettingsStore';
 import type { MenuBackdrop } from '../scenes/MenuBackdrop';
 
-export type ScreenName = 'mainMenu' | 'profile' | 'loading' | 'match' | 'end' | 'quit';
+export type ScreenName = 'mainMenu' | 'profile' | 'team' | 'loading' | 'match' | 'end' | 'quit';
 
 /** Shared systems handed to each screen. */
 export interface GameContext {

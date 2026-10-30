@@ -18,7 +18,7 @@ const MAP_SIZE = 460;
 
 /**
  * Deploy Screen (plan section 11.3): who killed the player, the battlefield map with the spawn
- * choices (HQ and Blue flags), a 10 s countdown before "Deploy" unlocks, and the loadout panel
+ * choices (HQ and the team's flags), a 10 s countdown before "Deploy" unlocks, and the loadout panel
  * (applied on the next spawn).
  */
 export class DeployScreen {
@@ -109,7 +109,7 @@ export class DeployScreen {
     );
   }
 
-  /** Outlines Blue HQ on the map, highlighted when it is the choice. */
+  /** Outlines the team's HQ on the map, highlighted when it is the choice. */
   private drawHq(): void {
     const g = this.map.canvas.getContext('2d');
     if (!g) return;
@@ -126,10 +126,10 @@ export class DeployScreen {
   }
 
   private hqRect(): Rect {
-    return this.conquest.mapImage.map.hqs.find((h) => h.team === 'blue')!.rect;
+    return this.conquest.mapImage.map.hqs.find((h) => h.team === this.conquest.team)!.rect;
   }
 
-  /** Clicking a Blue flag or the HQ on the map picks it. */
+  /** Clicking a team flag or the HQ on the map picks it. */
   private onMapClick = (e: MouseEvent): void => {
     const rect = this.map.canvas.getBoundingClientRect();
     const sx = ((e.clientX - rect.left) / rect.width) * this.map.canvas.width;

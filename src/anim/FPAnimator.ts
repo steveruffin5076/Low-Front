@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { AudioManager } from '../audio/AudioManager';
 import { MOVEMENT } from '../data/player';
+import type { Team } from '../data/soldier';
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
 import { approach } from '../entities/PlayerMovement';
 import type { ViewmodelLayer } from '../render/ViewmodelLayer';
@@ -41,7 +42,7 @@ const ONE = new THREE.Vector3(1, 1, 1);
  * procedural motion (breathing, sway, bob, kick, jump), keyframed clips, hand IK and effects.
  */
 export class FPAnimator {
-  readonly arms = new FPArms();
+  readonly arms: FPArms;
   readonly effects = new FPEffects();
   private readonly weaponRoot = new THREE.Group();
   private readonly visuals = new Map<WeaponState, WeaponVisual>();
@@ -74,7 +75,9 @@ export class FPAnimator {
     layer: ViewmodelLayer,
     weapons: PlayerWeapons,
     private readonly audio: AudioManager,
+    team: Team = 'blue',
   ) {
+    this.arms = new FPArms(team);
     for (const w of Object.values(weapons.weapons)) {
       const v = new WeaponVisual(w);
       v.model.root.visible = false;

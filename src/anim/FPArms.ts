@@ -1,3 +1,4 @@
+import type { Team } from '../data/soldier';
 import * as THREE from 'three';
 import { FP_PALETTE } from '../data/palette';
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
@@ -71,11 +72,11 @@ class Arm {
   private readonly shoulder: THREE.Vector3;
   private readonly pole: THREE.Vector3;
 
-  constructor(parent: THREE.Object3D, shoulder: V3, pole: V3) {
+  constructor(parent: THREE.Object3D, shoulder: V3, pole: V3, team: Team) {
     this.shoulder = new THREE.Vector3(...shoulder);
     this.pole = new THREE.Vector3(...pole).add(this.shoulder);
-    const sleeve = paletteMaterial(FP_PALETTE.sleeve);
-    const cuff = paletteMaterial(FP_PALETTE.cuff);
+    const sleeve = paletteMaterial(FP_PALETTE.sleeve[team]);
+    const cuff = paletteMaterial(FP_PALETTE.cuff[team]);
     this.upper.add(limb(0.052, 0.045, M.upperArm, sleeve));
     this.lower.add(limb(0.044, 0.034, M.forearm - 0.05, sleeve), limb(0.036, 0.036, 0.05, cuff, M.forearm - 0.05));
     parent.add(this.upper, this.lower, this.hand);
@@ -120,10 +121,10 @@ export class FPArms {
   private readonly right: Arm;
   private readonly left: Arm;
 
-  constructor() {
+  constructor(team: Team = 'blue') {
     const s = M.shoulders;
-    this.right = new Arm(this.root, s.right, s.rightPole);
-    this.left = new Arm(this.root, s.left, s.leftPole);
+    this.right = new Arm(this.root, s.right, s.rightPole, team);
+    this.left = new Arm(this.root, s.left, s.leftPole, team);
     this.right.setStyle('grip');
   }
 

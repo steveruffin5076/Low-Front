@@ -7,6 +7,8 @@ export interface MapMarker {
   z: number;
   /** A crate is one your team can use (owned flag). */
   kind: 'ally' | 'enemy' | 'crate';
+  /** Soldier dots are drawn in their team's color. */
+  team?: TeamId;
 }
 
 /** A flag on a map view: letter in a circle filled with the owner's color. */
@@ -51,7 +53,7 @@ export function drawDot(g: CanvasRenderingContext2D, px: number, py: number, m: 
   }
   g.beginPath();
   g.arc(px, py, 3.5, 0, Math.PI * 2);
-  g.fillStyle = m.kind === 'ally' ? HUD.team.blue : HUD.team.red;
+  g.fillStyle = teamColor(m.team ?? (m.kind === 'ally' ? 'blue' : 'red'));
   g.fill();
   g.lineWidth = 1;
   g.strokeStyle = '#000';

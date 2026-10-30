@@ -70,7 +70,7 @@ export class MatchScreen implements State {
       this.range = new PlaySession(this.physics, this.ctx.input, profile.loadout, new TestRange(this.physics));
       return;
     }
-    const c = new ConquestSession(this.physics, this.ctx.input, profile.name, profile.loadout, new CityMap(this.physics));
+    const c = new ConquestSession(this.physics, this.ctx.input, profile.name, profile.loadout, new CityMap(this.physics), profile.team);
     c.applySettings(this.ctx.settings.load(), this.ctx.renderer);
     c.callbacks.onEnded = () => {
       // The match can end while the Deploy Screen or Pause Menu is open: the final scoreboard takes over.

@@ -8,6 +8,13 @@ import '../match/match.css';
 const RESULT_TEXT = { blue: 'BLUE WINS', red: 'RED WINS', draw: 'DRAW' } as const;
 const REASON_TEXT = { tickets: 'Out of tickets', time: 'Time limit reached' } as const;
 
+/** Victory or defeat from the player's side. */
+function outcome(winner: TeamId | null, team: TeamId): string {
+  const side = team === 'blue' ? 'Blue' : 'Red';
+  if (winner === null) return `You fought for ${side}`;
+  return `${winner === team ? 'Victory' : 'Defeat'}: you fought for ${side}`;
+}
+
 /**
  * End Screen (plan section 11.5): the result, final tickets, the top 3 per team and the
  * player's own stats. The profile was updated when the match ended.
@@ -44,6 +51,7 @@ export class EndScreen implements State {
     this.root = el('div', { class: 'screen end-screen' }, [
       el('div', { class: 'end-panel' }, [
         el('h1', { class: `es-result es-result-${result}`, text: RESULT_TEXT[result] }),
+        el('p', { class: `es-outcome es-${p.team}`, text: outcome(s.result.winner, p.team) }),
         el('p', { class: 'es-reason', text: REASON_TEXT[s.result.reason] }),
         el('div', { class: 'es-teams' }, [top('blue'), top('red')]),
         el('h2', { class: 'es-subtitle', text: 'Your match' }),

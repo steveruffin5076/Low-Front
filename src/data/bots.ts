@@ -83,9 +83,9 @@ export const BODY_POINTS = {
 } as const;
 
 export const BOTS = {
-  /** Bots per team: Blue has the player plus 15, Red has 16. */
-  blue: 15,
-  red: 16,
+  /** Bots per side: the player's side has the player plus 15, the other side 16. */
+  playerSide: 15,
+  otherSide: 16,
   /** Decisions per second, staggered across frames; movement and animation run every frame. */
   decisionRate: 10,
   perception: {
