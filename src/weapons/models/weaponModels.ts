@@ -17,6 +17,13 @@ export const REQUIRED_NODES: Record<WeaponId, readonly NodeName[]> = {
   m1911: ['magazine', 'slide', 'hammer', 'trigger', 'slideStop'],
 };
 
+/** First-person triangle budget per weapon [min, max] (tests): enough detail, not too much. */
+export const TRI_BUDGET: Record<WeaponId, readonly [number, number]> = {
+  m4a1: [600, 1500],
+  ak47: [600, 1500],
+  m1911: [600, 1500],
+};
+
 /** Real-world overall length in meters, used by tests. */
 export const OVERALL_LENGTH: Record<WeaponId, number> = { m4a1: 0.84, ak47: 0.88, m1911: 0.22 };
 

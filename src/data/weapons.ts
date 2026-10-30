@@ -3,11 +3,37 @@
 export type WeaponId = 'm4a1' | 'ak47' | 'm1911';
 export type WeaponSlot = 'primary' | 'secondary';
 export type FireMode = 'auto' | 'semi';
+/** Role on the battlefield: drives bot use and the weapon card. */
+export type WeaponClass = 'rifle' | 'smg' | 'shotgun' | 'sniper' | 'pistol';
+/** The part that moves back and forward with each shot. */
+export type CycleNode = 'bolt' | 'chargingHandle' | 'slide' | 'pump';
+
+/** How the weapon cycles and reloads; first-person animation and rules read this, not the id. */
+export interface ActionDef {
+  cycleNode: CycleNode;
+  /** The bolt or slide stays back after the last round. */
+  locksOnEmpty: boolean;
+  /** Pistol triggers slide straight back (and have a hammer); rifle triggers pivot. */
+  trigger: 'pivot' | 'slide';
+  hammer: boolean;
+  /** A dust cover that springs open on the first shot. */
+  dustCover: boolean;
+  /** After an empty magazine is seated: press the bolt release, rack the charging handle, or drop the slide stop. */
+  emptyReload: 'boltRelease' | 'rack' | 'slideStop';
+  /** The shooter works the action by hand after every shot (pump, bolt), taking the whole shot interval. */
+  manual: boolean;
+}
 
 export interface WeaponDef {
   id: WeaponId;
   name: string;
   slot: WeaponSlot;
+  class: WeaponClass;
+  action: ActionDef;
+  /** Projectiles per shot (shotguns fire several pellets; damage is per pellet). */
+  pellets: number;
+  /** Spent casing size: radius and length (m). */
+  casing: readonly [number, number];
   fireModes: readonly FireMode[];
   /** Rounds per minute (max rate for semi-only weapons). */
   rpm: number;
@@ -49,6 +75,10 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     id: 'm4a1',
     name: 'M4A1',
     slot: 'primary',
+    class: 'rifle',
+    action: { cycleNode: 'bolt', locksOnEmpty: true, trigger: 'pivot', hammer: false, dustCover: true, emptyReload: 'boltRelease', manual: false },
+    pellets: 1,
+    casing: [0.0048, 0.045],
     fireModes: ['auto', 'semi'],
     rpm: 750,
     damage: { near: 30, far: 22 },
@@ -70,6 +100,10 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     id: 'ak47',
     name: 'AK47',
     slot: 'primary',
+    class: 'rifle',
+    action: { cycleNode: 'chargingHandle', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'rack', manual: false },
+    pellets: 1,
+    casing: [0.0056, 0.039],
     fireModes: ['auto', 'semi'],
     rpm: 600,
     damage: { near: 36, far: 26 },
@@ -91,6 +125,10 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     id: 'm1911',
     name: 'M1911',
     slot: 'secondary',
+    class: 'pistol',
+    action: { cycleNode: 'slide', locksOnEmpty: true, trigger: 'slide', hammer: true, dustCover: false, emptyReload: 'slideStop', manual: false },
+    pellets: 1,
+    casing: [0.006, 0.023],
     fireModes: ['semi'],
     rpm: 400,
     damage: { near: 40, far: 28 },
@@ -121,10 +159,15 @@ export const DEFAULT_LOADOUT: Loadout = { primary: 'm4a1', secondary: 'm1911' };
 
 /** Scales used to turn raw stats into 0–1 stat bars on weapon cards. */
 export const STAT_BARS = {
-  damageMax: 50,
+  /** Damage per trigger pull (all pellets, near) that fills the bar: a one-shot kill. */
+  damageMax: 100,
   fireRateMax: 900,
-  rangeMax: 100,
-  /** Accuracy penalty = hip spread * w + vertical recoil * w + horizontal recoil * w. */
-  accuracy: { hipSpreadWeight: 0.2, verticalRecoilWeight: 0.6, horizontalRecoilWeight: 1.0, worstPenalty: 1.8 },
+  /** Falloff end that fills the Range bar (the sniper's). */
+  rangeMax: 160,
+  /**
+   * Accuracy penalty = hip spread * w + aimed spread * w + recoil * w, with recoil scaled by
+   * how fast it stacks (fire rate / `recoilRpm`, at most 1): a bolt-action's kick barely counts.
+   */
+  accuracy: { hipSpreadWeight: 0.05, adsSpreadWeight: 1.5, verticalRecoilWeight: 0.6, horizontalRecoilWeight: 1.0, recoilRpm: 600, worstPenalty: 2.2 },
   mobility: { speedMin: 0.85, speedMax: 1.0, adsTimeMin: 0.1, adsTimeMax: 0.4 },
 } as const;

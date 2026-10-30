@@ -1,15 +1,9 @@
 import * as THREE from 'three';
 import { FP_PALETTE } from '../data/palette';
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
-import type { WeaponId } from '../data/weapons';
+import { WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
 import { paletteMaterial } from '../render/Materials';
 
-/** Shell casing size per weapon: radius and length in meters. */
-const SHELL_SIZE: Record<WeaponId, [number, number]> = {
-  m4a1: [0.0048, 0.045],
-  ak47: [0.0056, 0.039],
-  m1911: [0.006, 0.023],
-};
 
 interface Shell {
   mesh: THREE.Mesh;
@@ -30,18 +24,15 @@ export class FPEffects {
   private next = 0;
   private readonly geometries: Record<WeaponId, THREE.CylinderGeometry>;
 
+
   constructor() {
     this.flash = buildFlash();
     this.flash.visible = false;
     this.root.add(this.flash);
-    this.geometries = {
-      m4a1: shellGeometry('m4a1'),
-      ak47: shellGeometry('ak47'),
-      m1911: shellGeometry('m1911'),
-    };
+    this.geometries = Object.fromEntries(WEAPON_IDS.map((id) => [id, shellGeometry(id)])) as Record<WeaponId, THREE.CylinderGeometry>;
     const brass = paletteMaterial(FP_PALETTE.brass, { roughness: 0.4, metalness: 0.6 });
     for (let i = 0; i < M.shell.poolSize; i++) {
-      const mesh = new THREE.Mesh(this.geometries.m4a1, brass);
+      const mesh = new THREE.Mesh(this.geometries[WEAPON_IDS[0]], brass);
       mesh.visible = false;
       this.root.add(mesh);
       this.shells.push({ mesh, velocity: new THREE.Vector3(), spin: new THREE.Vector3(), age: 0 });
@@ -107,7 +98,7 @@ export class FPEffects {
 }
 
 function shellGeometry(id: WeaponId): THREE.CylinderGeometry {
-  const [r, l] = SHELL_SIZE[id];
+  const [r, l] = WEAPONS[id].casing;
   return new THREE.CylinderGeometry(r, r, l, 6).rotateX(Math.PI / 2);
 }
 

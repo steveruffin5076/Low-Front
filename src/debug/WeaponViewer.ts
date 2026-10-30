@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { GameLoop } from '../core/GameLoop';
-import { WEAPONS, WEAPON_IDS, type WeaponId } from '../data/weapons';
+import { DEFAULT_LOADOUT, WEAPONS, WEAPON_IDS, type WeaponId } from '../data/weapons';
 import { allPaletteMaterials } from '../render/Materials';
 import { Renderer } from '../render/Renderer';
 import { disposeObject } from '../render/dispose';
@@ -53,7 +53,7 @@ export class WeaponViewer {
   private readonly loop: GameLoop;
   private readonly panel: HTMLElement;
 
-  private weapon: WeaponId = 'm4a1';
+  private weapon: WeaponId = DEFAULT_LOADOUT.primary;
   private lod: WeaponLod = 'fp';
   private model: WeaponModel | null = null;
   /** Model bounds measured before helpers are added. */

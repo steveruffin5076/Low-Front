@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { VIEWMODEL_MOTION as M, type ViewmodelDef } from '../data/viewmodel';
 import { WEAPON_TIMING } from '../data/weaponTiming';
-import type { WeaponDef } from '../data/weapons';
+import type { CycleNode, WeaponDef } from '../data/weapons';
 import { ClipBuilder, type Clip } from './Timeline';
 
 /**
@@ -22,27 +22,27 @@ export interface ClipContext {
 }
 
 const ZERO3 = [0, 0, 0] as const;
-/** AK47 empty reload: rifle rolled and turned so its right side (charging handle) faces the camera. */
+/** Racking the charging handle on an empty reload: rifle rolled and turned so its right side (charging handle) faces the camera. */
 const RACK_POSE = [0.3, 0, 1.2] as const;
 type V = readonly number[];
 const add = (a: THREE.Vector3, b: THREE.Vector3, k = 1): number[] => [a.x + b.x * k, a.y + b.y * k, a.z + b.z * k];
 
-/** Bolt carrier (M4A1), charging handle (AK47) or slide (M1911): the part that cycles each shot. */
-export function cycleNode(def: WeaponDef): 'bolt' | 'chargingHandle' | 'slide' {
-  return def.id === 'm4a1' ? 'bolt' : def.id === 'ak47' ? 'chargingHandle' : 'slide';
+/** The part that cycles each shot (bolt carrier, charging handle, slide or pump). */
+export function cycleNode(def: WeaponDef): CycleNode {
+  return def.action.cycleNode;
 }
 
-/** One shot. On the last round the M4A1 bolt and M1911 slide stay back (event `lock`). */
+/** One shot. On the last round a locking bolt or slide stays back (event `lock`). */
 export function fireClip(c: ClipContext, lastRound: boolean): Clip {
   const interval = 60 / c.def.rpm;
   const d = Math.min(interval * 0.9, 0.12);
   const b = new ClipBuilder('fire', d);
   const node = cycleNode(c.def);
   const travel = c.vm.cycleTravel;
-  const locks = lastRound && c.def.id !== 'ak47';
+  const locks = lastRound && c.def.action.locksOnEmpty;
   b.key(`node.${node}.pos`, 0, ZERO3).key(`node.${node}.pos`, d * 0.4, [0, 0, travel], 'out');
   b.key(`node.${node}.pos`, d, locks ? [0, 0, travel] : ZERO3, 'in');
-  if (c.def.id === 'm1911') {
+  if (c.def.action.hammer) {
     // Hammer falls, then the slide cocks it again (rest pose is cocked).
     b.key('node.hammer.rot', 0, ZERO3).key('node.hammer.rot', d * 0.1, [-0.9, 0, 0], 'linear').key('node.hammer.rot', d * 0.5, ZERO3, 'out');
     b.key('node.trigger.pos', 0, ZERO3).key('node.trigger.pos', d * 0.15, [0, 0, 0.003], 'out').key('node.trigger.pos', d, ZERO3);
@@ -58,7 +58,7 @@ export function fireClip(c: ClipContext, lastRound: boolean): Clip {
 export function dryFireClip(c: ClipContext): Clip {
   const d = 0.18;
   const b = new ClipBuilder('dryFire', d);
-  if (c.def.id === 'm1911') b.key('node.trigger.pos', 0, ZERO3).key('node.trigger.pos', 0.05, [0, 0, 0.003]).key('node.trigger.pos', d, ZERO3);
+  if (c.def.action.trigger === 'slide') b.key('node.trigger.pos', 0, ZERO3).key('node.trigger.pos', 0.05, [0, 0, 0.003]).key('node.trigger.pos', d, ZERO3);
   else b.key('node.trigger.rot', 0, ZERO3).key('node.trigger.rot', 0.05, [-0.3, 0, 0]).key('node.trigger.rot', d, ZERO3);
   return b.event(0.05, 'click').build();
 }
@@ -146,19 +146,20 @@ export function reloadClip(c: ClipContext, kind: 'tactical' | 'empty', startsLoc
   return b.build();
 }
 
-/** After seating: M4A1 bolt release, AK47 charging handle rack, M1911 slide stop. */
+/** After seating: press the bolt release, rack the charging handle, or drop the slide stop. */
 function addEmptyAction(b: ClipBuilder, c: ClipContext, seat: number, D: number, locked: boolean): void {
   const travel = c.vm.cycleTravel;
   const node = cycleNode(c.def);
   const start = locked ? [0, 0, travel] : ZERO3;
-  if (c.def.id === 'm4a1') {
+  const kind = c.def.action.emptyReload;
+  if (kind === 'boltRelease') {
     const release = c.nodePos('boltRelease');
     const press = [release.x - 0.035, release.y - 0.01, release.z + 0.01];
     b.key('leftHand.pos', seat + 0.25, press, 'inOut').key('leftHand.pos', seat + 0.42, press);
     b.key('node.boltRelease.pos', seat + 0.3, ZERO3).key('node.boltRelease.pos', seat + 0.34, [0.0025, 0, 0]).key('node.boltRelease.pos', seat + 0.45, ZERO3);
     b.key(`node.${node}.pos`, 0, start).key(`node.${node}.pos`, seat + 0.33, start).key(`node.${node}.pos`, seat + 0.37, ZERO3, 'in');
     b.event(seat + 0.37, 'slideClose');
-  } else if (c.def.id === 'ak47') {
+  } else if (kind === 'rack') {
     // Right hand reaches over the top and racks the charging handle.
     const ch = c.nodePos('chargingHandle');
     const grab = [ch.x + 0.012, ch.y, ch.z + 0.01];

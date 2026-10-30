@@ -309,7 +309,7 @@ export class FPAnimator {
     ev.on('fired', ({ weapon, lastRound }) => {
       const v = this.visuals.get(weapon)!;
       this.play('fire', clips.fireClip(v.ctx, lastRound));
-      if (weapon.def.id === 'm4a1') v.dustCoverOpen = true;
+      if (weapon.def.action.dustCover) v.dustCoverOpen = true;
       const k = v.vm.kick;
       const scale = 1 - 0.5 * this.adsBlend;
       this.kickBack.impulse(peakToImpulse(k.back * scale, M.kickFrequency));

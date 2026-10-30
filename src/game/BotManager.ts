@@ -8,7 +8,7 @@ import type { AudioManager } from '../audio/AudioManager';
 import { BOTS } from '../data/bots';
 import { CONQUEST } from '../data/conquest';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
-import { WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
+import { DEFAULT_LOADOUT, WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
 import { RESUPPLY } from '../data/resupply';
 import { Bot } from '../entities/Bot';
 import { COLLISION, raycastSegment } from '../physics/collision';
@@ -85,7 +85,7 @@ export class BotManager {
       for (let i = 0; i < counts[team]; i++, n++) {
         const primary: WeaponId = PRIMARIES[Math.floor(this.rand() * PRIMARIES.length)];
         const name = BOTS.names[n % BOTS.names.length];
-        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: 'm1911' }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
+        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
         o.scene.add(bot.soldier.model.root);
         this.bots.push(bot);
         this.resuppliers.push({
