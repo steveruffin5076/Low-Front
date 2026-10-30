@@ -22,6 +22,12 @@ export const CONQUEST = {
     /** Enemies inside an HQ get this long before they die. HQs cannot be captured. */
     enemyWarning: 5,
   },
+  /**
+   * Countdown before the battle: everyone spawns at their HQ and may move inside it, but nobody
+   * can fire or leave; the clock, tickets and flags start after it. "GO" shows this long.
+   */
+  warmup: 20,
+  goBanner: 1.5,
   respawnDelay: 10,
   /** The Deploy Screen opens this long after death (the death camera plays first). */
   deployScreenDelay: 1.6,

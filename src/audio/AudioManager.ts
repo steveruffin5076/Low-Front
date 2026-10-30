@@ -108,6 +108,13 @@ export class AudioManager {
     c[kind].forEach((freq, i) => this.tone({ freq, endFreq: freq, length: c.noteLength, gain: c.gain, delay: i * c.noteGap }));
   }
 
+  /** Pre-battle countdown: a tick, or the "GO" note at the start. */
+  countdownCue(go: boolean): void {
+    const c = AUDIO.countdownCue;
+    const freq = go ? c.go : c.tick;
+    this.tone({ freq, endFreq: freq, length: go ? c.goLength : c.tickLength, gain: c.gain, delay: 0 });
+  }
+
   /** Picked up ammo and health at a crate. */
   resupplyCue(): void {
     const c = AUDIO.resupplyCue;

@@ -22,6 +22,8 @@ export const AUDIO = {
     noteGap: 0.11,
     gain: 0.26,
   },
+  /** Countdown: a tick for each of the last seconds, then a long high "GO" note. */
+  countdownCue: { tick: 880, go: 1320, tickLength: 0.08, goLength: 0.45, gain: 0.25, ticksFrom: 3 },
   /** Resupply pickup: two quick rising notes. */
   resupplyCue: { notes: [660, 990], noteLength: 0.09, noteGap: 0.07, gain: 0.22 },
   masterVolume: 0.8,

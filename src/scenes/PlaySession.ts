@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Rect } from '../data/map/types';
 import { FPAnimator } from '../anim/FPAnimator';
 import { CameraFx } from '../anim/CameraFx';
 import { AudioManager } from '../audio/AudioManager';
@@ -59,6 +60,10 @@ export class PlaySession {
   readonly audio = new AudioManager();
   readonly hud: PlayerHud;
   private readonly scope = new ScopeOverlay();
+  /** No firing (the pre-battle countdown). */
+  holdFire = false;
+  /** Keeps the player inside this area (the HQ during the countdown), or null. */
+  confine: Rect | null = null;
   /** Bullets, impacts and tracers for everyone in this world (bots fire into it too). */
   readonly combatSystem: Combat;
   /** The player as a bullet target. */
@@ -189,6 +194,7 @@ export class PlaySession {
       jumpPressed: this.latched.jump,
     };
     this.player.fixedUpdate(dt, intent, this.weapons.active.def.moveSpeedModifier);
+    if (this.confine) this.keepInside(this.confine);
 
     const weaponInput: WeaponInput = {
       firePressed: this.latched.fire,
@@ -197,7 +203,7 @@ export class PlaySession {
       switchTo: this.latched.switchTo,
       fireModePressed: this.latched.fireMode,
       inspectPressed: this.latched.inspect,
-      canFire: !this.player.sprinting && this.animator.sprintAmount === 0,
+      canFire: !this.player.sprinting && this.animator.sprintAmount === 0 && !this.holdFire,
       sprinting: this.player.sprinting,
       ads,
     };
@@ -331,6 +337,15 @@ export class PlaySession {
   private disarm(): void {
     this.animator.dispose();
     this.combat.dispose();
+  }
+
+  /** Pushes the player back inside `r` (with a small margin) when a step took them out. */
+  private keepInside(r: Rect): void {
+    const feet = this.player.motor.feet;
+    const m = 0.5;
+    const x = THREE.MathUtils.clamp(feet.x, r.x0 + m, r.x1 - m);
+    const z = THREE.MathUtils.clamp(feet.z, r.z0 + m, r.z1 - m);
+    if (x !== feet.x || z !== feet.z) this.player.motor.teleport(new THREE.Vector3(x, feet.y, z));
   }
 
   /** ADS is blocked while sprinting, switching weapons and reloading. */

@@ -26,6 +26,37 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.warmup-banner {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 28px 10px;
+  border-radius: 10px;
+  background: rgba(10, 14, 20, 0.6);
+  text-align: center;
+  pointer-events: none;
+}
+.wb-label {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #d7dde4;
+}
+.wb-count {
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+}
+.warmup-banner.wb-go .wb-count {
+  color: #9be59b;
+  letter-spacing: 0.08em;
+}
 .match-hud .health-bar {
   left: 18px;
   bottom: 20px;

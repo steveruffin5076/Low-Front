@@ -8,6 +8,7 @@ import type { SightTarget } from '../ai/Perception';
 import { BODY_POINTS, BOTS } from '../data/bots';
 import { GRAPHICS } from '../data/graphics';
 import { RESUPPLY } from '../data/resupply';
+import { AUDIO } from '../data/audio';
 import { kitNeedsResupply, placeCrates, resupplyKit, type Kit, type Resupplier } from '../game/Resupply';
 import { ResupplyCrate } from '../world/ResupplyCrate';
 import { BotManager } from '../game/BotManager';
@@ -67,6 +68,7 @@ export class ConquestSession {
   private readonly playerKit: Resupplier;
   private markers: MapMarker[] = [];
   private markerClock = 0;
+  private countdownSecond = 0;
 
   constructor(
     private readonly physics: PhysicsWorld,
@@ -152,6 +154,9 @@ export class ConquestSession {
     });
 
     this.deploy({ kind: 'hq' });
+    // Pre-battle countdown: everyone at their HQ, no firing, nothing counts yet.
+    this.match.startWarmup(CONQUEST.warmup);
+    this.match.events.on('started', () => this.session.audio.countdownCue(true));
   }
 
   /** Applies the player's settings (sensitivity multiplier, FOV, volume, graphics preset). */
@@ -186,7 +191,9 @@ export class ConquestSession {
     if (this.state === 'ended') return;
     const valid = this.spawnOptions().some((o) => o.kind === choice.kind && (o.kind === 'hq' || (choice.kind === 'flag' && o.flag === choice.flag)));
     const pick = valid ? choice : { kind: 'hq' as const };
-    const p = this.spawns.point(this.team, pick, []);
+    // Not on top of a soldier already standing there.
+    const taken = this.bots.bots.filter((b) => b.alive).map((b) => b.position);
+    const p = this.spawns.point(this.team, pick, taken);
     this.session.respawn(new THREE.Vector3(p.x, 0, p.z), p.yaw, loadout);
     this.hq.reset();
     this.bots.resupply.reset(PLAYER_ID);
@@ -213,6 +220,18 @@ export class ConquestSession {
       this.deadTime += dt;
     }
     this.match.update(dt);
+    this.updateWarmup();
+  }
+
+  /** During the countdown the player stays in the HQ and cannot fire; a tick sounds for the last seconds. */
+  private updateWarmup(): void {
+    const left = this.match.warmupLeft;
+    const warm = left > 0;
+    this.session.holdFire = warm;
+    this.session.confine = warm ? VERDAN.hqs.find((h) => h.team === this.team)!.rect : null;
+    const second = Math.ceil(left);
+    if (warm && second !== this.countdownSecond && second <= AUDIO.countdownCue.ticksFrom) this.session.audio.countdownCue(false);
+    this.countdownSecond = second;
   }
 
   update(dt: number, alpha: number): void {

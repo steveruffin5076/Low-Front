@@ -135,7 +135,8 @@ export class BotManager {
         continue;
       }
       bot.decisionClock -= dt;
-      if (bot.decisionClock <= 0) {
+      // During the pre-battle countdown bots stand at their spawn points.
+      if (bot.decisionClock <= 0 && !this.o.match.inWarmup) {
         bot.decisionClock += 1 / BOTS.decisionRate;
         this.deciding = bot;
         bot.brain.decide(this.senses(bot, going[bot.team]), this.queries);
@@ -167,6 +168,8 @@ export class BotManager {
 
   private spawn(bot: Bot, choice: SpawnChoice): void {
     const taken = this.bots.filter((b) => b !== bot && b.alive).map((b) => b.position);
+    const player = this.o.player;
+    if (player?.alive) taken.push(player.position);
     const p = this.o.spawns.point(bot.team, choice, taken, this.rand());
     bot.spawn(new THREE.Vector3(p.x, 0, p.z), p.yaw);
     this.resupply.reset(bot.id);
