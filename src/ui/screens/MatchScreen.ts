@@ -72,7 +72,11 @@ export class MatchScreen implements State {
     }
     const c = new ConquestSession(this.physics, this.ctx.input, profile.name, profile.loadout, new CityMap(this.physics));
     c.applySettings(this.ctx.settings.load());
-    c.callbacks.onEnded = () => (this.endTimer = CONQUEST.endScreenDelay);
+    c.callbacks.onEnded = () => {
+      // The match can end while the Deploy Screen or Pause Menu is open: the final scoreboard takes over.
+      this.closeOverlays();
+      this.endTimer = CONQUEST.endScreenDelay;
+    };
     this.conquest = c;
   }
 

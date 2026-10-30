@@ -127,6 +127,8 @@ export class MatchHud implements PlayerHud {
     this.largeMap.element.hidden = !v.showLargeMap;
     if (v.showLargeMap) this.largeMap.draw(flags, v.markers, v.player);
     this.scoreboard.element.hidden = !v.showScoreboard;
+    // The kill feed would show through the scoreboard and large map panels.
+    this.killFeed.element.hidden = v.showScoreboard || v.showLargeMap;
     // The scoreboard is DOM work: refresh it a few times a second while open.
     if (v.showScoreboard && (this.scoreboardClock -= dt) <= 0) {
       this.scoreboardClock = 0.25;
