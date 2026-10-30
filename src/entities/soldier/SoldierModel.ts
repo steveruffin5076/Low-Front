@@ -146,6 +146,7 @@ export class SoldierModel {
     this.skeleton = new THREE.Skeleton(list);
     this.near = this.mesh(soldierGeometry(team, loadout, 'near'));
     this.far = this.mesh(soldierGeometry(team, loadout, 'far'));
+    this.setShadows(true);
     this.far.visible = false;
   }
 
@@ -178,8 +179,10 @@ export class SoldierModel {
     this.fadeMaterial.opacity = Math.max(0, opacity);
   }
 
+  /** Only the near model casts a shadow: far soldiers' shadows are too small to see, and skipping them saves shadow-pass draws. */
   setShadows(cast: boolean): void {
-    this.near.castShadow = this.far.castShadow = cast;
+    this.near.castShadow = cast;
+    this.far.castShadow = false;
   }
 
   dispose(): void {
@@ -192,7 +195,6 @@ export class SoldierModel {
     const m = new THREE.SkinnedMesh(geo, soldierMaterial());
     m.bind(this.skeleton, new THREE.Matrix4());
     m.boundingSphere = BOUNDS.clone();
-    m.castShadow = true;
     this.root.add(m);
     return m;
   }

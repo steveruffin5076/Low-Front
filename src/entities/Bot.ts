@@ -409,10 +409,12 @@ export class Bot implements Combatant, SightTarget {
     spreadDirection(shotDir, spread.cone({ ads: this.orders.pace === 'walk' ? 1 : 0, speed: this.controller.horizontalSpeed, grounded: this.controller.grounded }), shotDir);
     spread.onShot();
     if (this.aim.shot()) this.triggerHeld = false;
-    muzzleOffset.copy(aimDir).multiplyScalar(0.6).add(new THREE.Vector3(0, -0.12, 0));
+    muzzleOffset.copy(aimDir).multiplyScalar(BOTS.muzzle.forward);
+    muzzleOffset.y -= BOTS.muzzle.down;
     const tracer = Math.random() < 1 / BALLISTICS.tracerEvery;
-    this.world.combat.ballistics.fire(this.eye.clone(), shotDir.clone(), def, tracer, muzzleOffset, this.shooter);
-    this.world.audio.gunshot(def.id, this.position.clone().setY(this.eye.y));
+    // Ballistics copies what it needs, and the sound only reads its position.
+    this.world.combat.ballistics.fire(this.eye, shotDir, def, tracer, muzzleOffset, this.shooter);
+    this.world.audio.gunshot(def.id, this.eye);
   }
 
   private updatePoints(): void {

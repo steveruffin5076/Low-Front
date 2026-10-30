@@ -26,6 +26,8 @@ export const AUDIO = {
   /** Positional sounds: full volume within `refDistance`, then fades. */
   refDistance: 3,
   maxDistance: 120,
+  /** Other soldiers' sounds are dropped while this many sound sources play (a gunshot uses 2). */
+  maxVoices: 48,
   rolloff: 1.2,
   /** Shots farther than this use the filtered distant version. */
   distantShotDistance: 40,

@@ -6,6 +6,7 @@ import type { PhysicsWorld } from './PhysicsWorld';
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const tmpOrigin = new THREE.Vector3();
+const moved = new THREE.Vector3();
 /** How far below the feet the floor probe looks, and how deep the feet may sink before correction (m). */
 const FLOOR_PROBE = 0.05;
 const FLOOR_TOLERANCE = 0.005;
@@ -19,6 +20,7 @@ export class CharacterMotor {
   private readonly collider: RAPIER.Collider;
   private readonly controller: RAPIER.KinematicCharacterController;
   private height: number = MOVEMENT.standHeight;
+  private ray: RAPIER.Ray | null = null;
   readonly feet = new THREE.Vector3();
   grounded = false;
 
@@ -46,7 +48,7 @@ export class CharacterMotor {
     this.controller.setApplyImpulsesToDynamicBodies(true);
   }
 
-  /** Moves by `delta` with collisions. Returns the movement actually made. */
+  /** Moves by `delta` with collisions. Returns the movement actually made (a shared vector: read it before the next move). */
   move(delta: THREE.Vector3): THREE.Vector3 {
     this.controller.computeColliderMovement(this.collider, delta, this.physics.rapier.QueryFilterFlags.EXCLUDE_SENSORS, this.groups);
     const m = this.controller.computedMovement();
@@ -56,7 +58,7 @@ export class CharacterMotor {
     this.feet.z += m.z;
     this.liftOutOfFloor(m);
     this.body.setNextKinematicTranslation({ x: this.feet.x, y: this.feet.y + this.height / 2, z: this.feet.z });
-    return new THREE.Vector3(m.x, m.y, m.z);
+    return moved.set(m.x, m.y, m.z);
   }
 
   /** A dead soldier's capsule stops blocking others. */
@@ -86,8 +88,10 @@ export class CharacterMotor {
 
   /** Distance to the first hit along a ray, ignoring this character, or null. */
   raycast(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): number | null {
-    const { rapier, world } = this.physics;
-    const hit = world.castRay(new rapier.Ray(origin, dir), maxDist, true, undefined, COLLISION.view, this.collider);
+    const ray = (this.ray ??= new this.physics.rapier.Ray(origin, dir));
+    ray.origin = origin;
+    ray.dir = dir;
+    const hit = this.physics.world.castRay(ray, maxDist, true, undefined, COLLISION.view, this.collider);
     return hit ? hit.timeOfImpact : null;
   }
 

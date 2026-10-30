@@ -83,7 +83,9 @@ export class AudioManager {
   /** A footstep; `at` makes it positional (other soldiers). */
   footstep(surface: Surface, scale = 1, at?: THREE.Vector3): void {
     const f = AUDIO.footsteps[surface];
-    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain: f.gain * scale, type: 'lowpass' }, this.output(at));
+    const out = this.output(at);
+    if (!out) return;
+    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain: f.gain * scale, type: 'lowpass' }, out);
   }
 
   land(): void {
@@ -114,11 +116,16 @@ export class AudioManager {
     this.ctx = null;
   }
 
-  /** Positional output (panner) when `at` is given, otherwise the master bus. */
+  /**
+   * Positional output (panner) when `at` is given, otherwise the master bus. Other soldiers'
+   * sounds out of hearing range, or over the voice limit, are dropped (null): a 31-bot
+   * firefight would otherwise build hundreds of audio nodes a second.
+   */
   private output(at?: THREE.Vector3): AudioNode | null {
     const ctx = this.context();
     if (!ctx || !this.master) return null;
     if (!at) return this.master;
+    if (this.voices >= AUDIO.maxVoices || at.distanceToSquared(this.listenerPos) > AUDIO.maxDistance * AUDIO.maxDistance) return null;
     const p = ctx.createPanner();
     p.panningModel = 'equalpower';
     p.distanceModel = 'inverse';

@@ -73,6 +73,8 @@ export const BOTS = {
     /** A seen enemy stays "known" this long after losing sight. */
     memory: 8,
   },
+  /** Where a bot's tracer starts: this far along the aim and this far below the eye (m). */
+  muzzle: { forward: 0.6, down: 0.12 },
   /** A* searches started per frame across all bots, the heuristic weight (faster, slightly longer paths) and a cap on nodes expanded. */
   pathsPerFrame: 3,
   pathWeight: 1.6,

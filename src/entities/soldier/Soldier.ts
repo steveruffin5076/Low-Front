@@ -35,6 +35,8 @@ export class Soldier implements Hittable {
   combatantId?: string;
   private readonly body: RAPIER.Collider | null;
   private farClock = 0;
+  /** Posed since the hitboxes were last placed. */
+  private posed = true;
 
   constructor(
     private readonly physics: PhysicsWorld,
@@ -114,7 +116,8 @@ export class Soldier implements Hittable {
   /** Fixed step: health regeneration and the physics shapes follow the last pose. */
   fixedUpdate(dt: number): void {
     this.health.update(dt);
-    if (!this.dead) this.syncPhysics();
+    // Hitboxes follow the pose; far soldiers pose less often, so most steps have nothing new.
+    if (!this.dead && this.posed) this.syncPhysics();
   }
 
   /** Frame update: level of detail by distance to the camera, animation, fade. */
@@ -143,11 +146,13 @@ export class Soldier implements Hittable {
     root.rotation.y = this.yaw;
     root.updateWorldMatrix(true, false);
     this.rig.apply(this.anim.update(dt, this.input));
+    this.posed = true;
     this.model.setOpacity(this.anim.pose.opacity);
     if (this.anim.gone) root.visible = false;
   }
 
   private syncPhysics(): void {
+    this.posed = false;
     const bones = this.model.bones;
     SOLDIER_HITBOXES.forEach((h, i) => {
       offset.makeTranslation(h.pos[0], h.pos[1], h.pos[2]);
