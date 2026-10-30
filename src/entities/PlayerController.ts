@@ -128,6 +128,15 @@ export class PlayerController {
     }
     this.velocity.y -= MOVEMENT.gravity * dt;
 
+    // Standing still on the ground: nothing can move us (the map is static), so skip the
+    // collision query. Most bots spend much of the match holding a spot.
+    const still = grounded && this.velocity.y <= 0 && Math.hypot(this.velocity.x, this.velocity.z) < MOVEMENT.idleSpeed * 0.1;
+    if (still) {
+      this.velocity.set(0, 0, 0);
+      this.trackFall();
+      this.updateLean(dt, intent);
+      return;
+    }
     tmpDelta.copy(this.velocity).multiplyScalar(dt);
     const moved = this.motor.move(tmpDelta);
     if (this.motor.grounded && this.velocity.y < 0) this.velocity.y = 0;
@@ -182,6 +191,8 @@ export class PlayerController {
   private updateLean(dt: number, intent: PlayerIntent): void {
     let target = (intent.leanRight ? 1 : 0) - (intent.leanLeft ? 1 : 0);
     if (this.sprinting) target = 0;
+    // Not leaning and not asked to: no need to look for walls (bots never lean).
+    if (target === 0 && this.lean === 0) return;
     // Do not lean the head into a wall.
     const eye = THREE.MathUtils.lerp(MOVEMENT.standEyeHeight, MOVEMENT.crouchEyeHeight, this.crouchBlend);
     tmpHead.set(this.motor.feet.x, this.motor.feet.y + eye, this.motor.feet.z);

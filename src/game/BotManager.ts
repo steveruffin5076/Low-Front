@@ -50,6 +50,8 @@ export class BotManager {
   time = 0;
   private readonly byId = new Map<string, Bot>();
   private readonly targets: SightTarget[] = [];
+  /** Flag positions never change; the brain only reads them. */
+  private readonly flagPositions: THREE.Vector3[];
   private readonly rand: () => number;
   private readonly queries: BotQueries;
   /** The bot deciding right now (its own cover claim does not count against it). */
@@ -57,6 +59,7 @@ export class BotManager {
 
   constructor(private readonly o: BotManagerOptions) {
     this.rand = o.rand ?? Math.random;
+    this.flagPositions = o.match.zones.map((z) => new THREE.Vector3(z.flag.x, z.flag.y, z.flag.z));
     this.paths = new PathService(o.nav);
     this.coverIndex = new CoverIndex(o.cover);
     this.perception = new Perception((from, to) => !raycastSegment(o.physics, from, to, COLLISION.view));
@@ -179,9 +182,9 @@ export class BotManager {
 
   private senses(bot: Bot, going: Partial<Record<FlagId, number>>): BotSenses {
     const enemyTeam = enemyOf(bot.team);
-    const flags: FlagView[] = this.o.match.zones.map((z) => ({
+    const flags: FlagView[] = this.o.match.zones.map((z, i) => ({
       id: z.flag.id,
-      position: new THREE.Vector3(z.flag.x, z.flag.y, z.flag.z),
+      position: this.flagPositions[i],
       owner: z.owner,
       control: z.control,
       enemyCapturing: z.inside[enemyTeam].length > z.inside[bot.team].length,

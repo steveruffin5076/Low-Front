@@ -2,6 +2,7 @@ import { debugFlag } from '../../core/debugFlags';
 import type { State } from '../../core/StateMachine';
 import type { GameContext } from '../../core/GameContext';
 import { CONQUEST } from '../../data/conquest';
+import { ENGINE } from '../../data/engine';
 import { summarize } from '../../game/MatchSummary';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import { applyMatch } from '../../save/ProfileStore';
@@ -35,6 +36,22 @@ export class MatchScreen implements State {
     return this.physics?.lastStepMs ?? 0;
   }
 
+  /**
+   * Debug benchmark (`?debug`, from the console: `__game.match.benchmark(20)`): runs `seconds`
+   * of match time as fast as possible, without rendering, and returns CPU ms per fixed step.
+   */
+  benchmark(seconds: number): number {
+    const c = this.conquest;
+    if (!c || !this.physics) return 0;
+    const steps = Math.round(seconds * ENGINE.fixedHz);
+    const t = performance.now();
+    for (let i = 0; i < steps; i++) {
+      c.fixedUpdate(1 / ENGINE.fixedHz);
+      this.physics.step();
+    }
+    return (performance.now() - t) / steps;
+  }
+
   /** Living bots, for the F3 overlay. */
   get botCount(): number {
     return this.conquest?.bots.bots.filter((b) => b.alive).length ?? 0;
@@ -55,7 +72,11 @@ export class MatchScreen implements State {
     }
     const c = new ConquestSession(this.physics, this.ctx.input, profile.name, profile.loadout, new CityMap(this.physics));
     c.applySettings(this.ctx.settings.load());
-    c.callbacks.onEnded = () => (this.endTimer = CONQUEST.endScreenDelay);
+    c.callbacks.onEnded = () => {
+      // The match can end while the Deploy Screen or Pause Menu is open: the final scoreboard takes over.
+      this.closeOverlays();
+      this.endTimer = CONQUEST.endScreenDelay;
+    };
     this.conquest = c;
   }
 

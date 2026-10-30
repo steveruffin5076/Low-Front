@@ -90,8 +90,13 @@ export class FPAnimator {
   }
 
   /** Muzzle of the shown weapon in world space (`camera` is the world camera this layer follows). */
-  muzzleWorld(camera: THREE.Camera, out: THREE.Vector3): THREE.Vector3 {
+  muzzleWorld(camera: THREE.PerspectiveCamera, layerFov: number, out: THREE.Vector3): THREE.Vector3 {
     this.current.model.points.muzzle.getWorldPosition(out);
+    // The weapon draws with its own FOV: keep the muzzle at the same spot on screen (same depth)
+    // when moving it into the world camera's view.
+    const k = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.tan(THREE.MathUtils.degToRad(layerFov) / 2);
+    out.x *= k;
+    out.y *= k;
     return out.applyMatrix4(camera.matrixWorld);
   }
 

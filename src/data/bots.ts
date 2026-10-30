@@ -73,6 +73,8 @@ export const BOTS = {
     /** A seen enemy stays "known" this long after losing sight. */
     memory: 8,
   },
+  /** Where a bot's tracer starts: this far along the aim and this far below the eye (m). */
+  muzzle: { forward: 0.6, down: 0.12 },
   /** A* searches started per frame across all bots, the heuristic weight (faster, slightly longer paths) and a cap on nodes expanded. */
   pathsPerFrame: 3,
   pathWeight: 1.6,
@@ -96,6 +98,8 @@ export const BOTS = {
     pistolRange: 15,
     /** No progress toward the next waypoint for this long counts as stuck. */
     stuckTime: 2,
+    /** Still stuck this long after the recoveries: move onto the nearest walkable cell. */
+    unstickTime: 4,
     /** Waypoint reached within this distance (horizontal). */
     waypointRadius: 0.6,
     /** Walk instead of sprint this close to the objective or a known enemy. */

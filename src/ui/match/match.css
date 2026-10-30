@@ -83,8 +83,9 @@
 }
 .ds-map-canvas {
   display: block;
-  width: min(460px, 46vh);
-  height: min(460px, 46vh);
+  /* The last term keeps the spawn buttons inside the panel on short screens (600 px). */
+  width: min(460px, 46vh, 100vh - 380px);
+  height: min(460px, 46vh, 100vh - 380px);
   border-radius: 8px;
   cursor: pointer;
 }

@@ -7,9 +7,13 @@ declare const process: { env: Record<string, string | undefined> };
  * A full headless Conquest match (plan section 12 check): 31 bots, real physics, nav and
  * bullets, run until a result. Slow (minutes), so it runs only with `npm run test:match`.
  */
+/** `BOT_MATCH_SEEDS=7,11,23` plays one match per seed. */
+const SEEDS = (process.env.BOT_MATCH_SEEDS ?? '7').split(',').map(Number);
+
 describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
-  it('plays to a winner with no bot stuck over 5 s', async () => {
-    const m = await createBotMatch();
+  it.each(SEEDS)('seed %i plays to a winner with no bot stuck over 5 s', async (seed) => {
+    const m = await createBotMatch(seed);
+    const t0 = performance.now();
     let kills = 0;
     let flips = 0;
     let reloads = 0;
@@ -31,7 +35,8 @@ describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
         console.log(`t=${(i / 60).toFixed(0)}s tickets ${t.blue}/${t.red} kills ${kills} flags ${m.match.zones.map((z) => z.flag.id + (z.owner?.[0] ?? '-')).join(' ')}`);
       }
     }
-    console.log(`result ${JSON.stringify(m.match.result)} at ${(i / 60).toFixed(0)}s, kills ${kills}, flips ${flips}, reloads ${reloads}, longest stuck ${maxStuck.toFixed(1)}s`);
+    const msPerStep = (performance.now() - t0) / i;
+    console.log(`seed ${seed}: result ${JSON.stringify(m.match.result)} at ${(i / 60).toFixed(0)}s, kills ${kills}, flips ${flips}, reloads ${reloads}, longest stuck ${maxStuck.toFixed(1)}s, unsticks ${m.bots.bots.reduce((n, b) => n + b.unsticks, 0)}, ${msPerStep.toFixed(2)} ms per step`);
     expect(m.match.result).not.toBeNull();
     expect(m.match.result!.winner).not.toBeNull();
     expect(kills).toBeGreaterThan(20);

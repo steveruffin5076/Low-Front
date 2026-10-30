@@ -27,6 +27,8 @@ export class AudioManager {
   private noise: AudioBuffer | null = null;
   private readonly listenerPos = new THREE.Vector3();
   volume: number = AUDIO.masterVolume;
+  /** Sound sources playing now. */
+  voices = 0;
 
   /** Distance from the listener (the camera) to `at`. */
   listenerDistance(at: THREE.Vector3): number {
@@ -66,8 +68,9 @@ export class AudioManager {
     const out = this.output(at);
     if (!out) return;
     const lowpass = distant ? AUDIO.distantLowpass : 12000;
-    this.burst({ freq: s.crackFreq, q: 0.7, length: s.crackLength * (distant ? 1.8 : 1), gain: s.gain, type: 'bandpass', lowpass }, out);
-    this.tone({ freq: s.bodyFreq, endFreq: s.bodyFreq * 0.45, length: s.bodyLength, gain: s.gain * 0.9 }, out);
+    const gain = at ? s.gain * AUDIO.mix.otherShots : s.gain;
+    this.burst({ freq: s.crackFreq, q: 0.7, length: s.crackLength * (distant ? 1.8 : 1), gain, type: 'bandpass', lowpass }, out);
+    this.tone({ freq: s.bodyFreq, endFreq: s.bodyFreq * 0.45, length: s.bodyLength, gain: gain * 0.9 }, out);
   }
 
   impact(surface: Surface | 'flesh', at: THREE.Vector3): void {
@@ -81,7 +84,10 @@ export class AudioManager {
   /** A footstep; `at` makes it positional (other soldiers). */
   footstep(surface: Surface, scale = 1, at?: THREE.Vector3): void {
     const f = AUDIO.footsteps[surface];
-    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain: f.gain * scale, type: 'lowpass' }, this.output(at));
+    const out = this.output(at);
+    if (!out) return;
+    const gain = f.gain * scale * (at ? AUDIO.mix.otherSteps : 1);
+    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain, type: 'lowpass' }, out);
   }
 
   land(): void {
@@ -112,11 +118,16 @@ export class AudioManager {
     this.ctx = null;
   }
 
-  /** Positional output (panner) when `at` is given, otherwise the master bus. */
+  /**
+   * Positional output (panner) when `at` is given, otherwise the master bus. Other soldiers'
+   * sounds out of hearing range, or over the voice limit, are dropped (null): a 31-bot
+   * firefight would otherwise build hundreds of audio nodes a second.
+   */
   private output(at?: THREE.Vector3): AudioNode | null {
     const ctx = this.context();
     if (!ctx || !this.master) return null;
     if (!at) return this.master;
+    if (this.voices >= AUDIO.maxVoices || at.distanceToSquared(this.listenerPos) > AUDIO.maxDistance * AUDIO.maxDistance) return null;
     const p = ctx.createPanner();
     p.panningModel = 'equalpower';
     p.distanceModel = 'inverse';
@@ -154,6 +165,7 @@ export class AudioManager {
     gain.gain.setValueAtTime(o.gain, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + o.length);
     node.connect(gain).connect(out);
+    this.track(src);
     src.start(t, Math.random() * 0.5, o.length);
   }
 
@@ -168,8 +180,14 @@ export class AudioManager {
     gain.gain.setValueAtTime(o.gain, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + o.length);
     osc.connect(gain).connect(out);
+    this.track(osc);
     osc.start(t);
     osc.stop(t + o.length);
+  }
+
+  private track(src: AudioScheduledSourceNode): void {
+    this.voices++;
+    src.onended = () => this.voices--;
   }
 
   /** Created lazily: browsers only allow audio after a user gesture. */
@@ -179,7 +197,14 @@ export class AudioManager {
         this.ctx = new AudioContext();
         this.master = this.ctx.createGain();
         this.master.gain.value = this.volume;
-        this.master.connect(this.ctx.destination);
+        const l = AUDIO.limiter;
+        const limiter = this.ctx.createDynamicsCompressor();
+        limiter.threshold.value = l.threshold;
+        limiter.knee.value = l.knee;
+        limiter.ratio.value = l.ratio;
+        limiter.attack.value = l.attack;
+        limiter.release.value = l.release;
+        this.master.connect(limiter).connect(this.ctx.destination);
         // One second of white noise, reused by every burst.
         this.noise = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate);
         const data = this.noise.getChannelData(0);
