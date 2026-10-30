@@ -32,7 +32,7 @@
   - **Wedged bots:** a bot could get wedged in a small wall corner for up to 5.1 s. Paths from off-nav spots now start with the nearest walkable cell. As a last resort, a bot still stuck after 4 s moves onto the nearest walkable cell (1–5 times per match; the match test reports it).
 
 ### Checked results
-- `npm run typecheck`, `npm test` (213 tests) and `npm run build` pass.
+- `npm run typecheck`, `npm test` (212 tests) and `npm run build` pass.
 - `npm run test:match` with 3 seeds:
   - Red won on tickets at 18:26, 16:18 and 15:44;
   - 437–494 kills and 30–42 flag changes;
