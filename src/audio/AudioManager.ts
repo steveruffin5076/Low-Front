@@ -68,8 +68,9 @@ export class AudioManager {
     const out = this.output(at);
     if (!out) return;
     const lowpass = distant ? AUDIO.distantLowpass : 12000;
-    this.burst({ freq: s.crackFreq, q: 0.7, length: s.crackLength * (distant ? 1.8 : 1), gain: s.gain, type: 'bandpass', lowpass }, out);
-    this.tone({ freq: s.bodyFreq, endFreq: s.bodyFreq * 0.45, length: s.bodyLength, gain: s.gain * 0.9 }, out);
+    const gain = at ? s.gain * AUDIO.mix.otherShots : s.gain;
+    this.burst({ freq: s.crackFreq, q: 0.7, length: s.crackLength * (distant ? 1.8 : 1), gain, type: 'bandpass', lowpass }, out);
+    this.tone({ freq: s.bodyFreq, endFreq: s.bodyFreq * 0.45, length: s.bodyLength, gain: gain * 0.9 }, out);
   }
 
   impact(surface: Surface | 'flesh', at: THREE.Vector3): void {
@@ -85,7 +86,8 @@ export class AudioManager {
     const f = AUDIO.footsteps[surface];
     const out = this.output(at);
     if (!out) return;
-    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain: f.gain * scale, type: 'lowpass' }, out);
+    const gain = f.gain * scale * (at ? AUDIO.mix.otherSteps : 1);
+    this.burst({ freq: f.freq, q: 1, length: AUDIO.footstepLength, gain, type: 'lowpass' }, out);
   }
 
   land(): void {
@@ -195,7 +197,14 @@ export class AudioManager {
         this.ctx = new AudioContext();
         this.master = this.ctx.createGain();
         this.master.gain.value = this.volume;
-        this.master.connect(this.ctx.destination);
+        const l = AUDIO.limiter;
+        const limiter = this.ctx.createDynamicsCompressor();
+        limiter.threshold.value = l.threshold;
+        limiter.knee.value = l.knee;
+        limiter.ratio.value = l.ratio;
+        limiter.attack.value = l.attack;
+        limiter.release.value = l.release;
+        this.master.connect(limiter).connect(this.ctx.destination);
         // One second of white noise, reused by every burst.
         this.noise = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate);
         const data = this.noise.getChannelData(0);

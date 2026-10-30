@@ -20,9 +20,16 @@ export const AUDIO = {
     neutralized: [587, 440],
     noteLength: 0.14,
     noteGap: 0.11,
-    gain: 0.18,
+    gain: 0.26,
   },
   masterVolume: 0.8,
+  /**
+   * Mix (plan section 13): other soldiers' shots and steps sit under your own, so your gun
+   * stays the loudest sound and nearby enemies are still easy to place.
+   */
+  mix: { otherShots: 0.7, otherSteps: 0.85 },
+  /** Master limiter: keeps a 31-bot firefight from clipping. Threshold and knee in dB, times in s. */
+  limiter: { threshold: -12, knee: 8, ratio: 8, attack: 0.003, release: 0.2 },
   /** Positional sounds: full volume within `refDistance`, then fades. */
   refDistance: 3,
   maxDistance: 120,
