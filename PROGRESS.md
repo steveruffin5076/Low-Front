@@ -1,6 +1,67 @@
 # PROGRESS.md
 
-## Phase 8 — Bot AI (done, waiting for review)
+## Phase 9 — Polish and Performance (done, waiting for review)
+
+### What was done
+- **Measurement**:
+  - F3 now also shows CPU time per frame for the simulation (all fixed steps) and for the render call, and how many sounds are playing.
+  - With `?debug`, `__game.match.benchmark(20)` in the browser console runs 20 s of the match without rendering and returns ms per fixed step.
+  - `npm run test:match` reports ms per step and takes `BOT_MATCH_SEEDS=7,11,23`.
+- **Performance** (31 bots in combat): one fixed step went from 2.60 to 1.43 ms in the headless browser.
+  - Bots standing still skip the character controller query; nothing can move them on a static map.
+  - Lean wall checks only run while leaning; bots never lean.
+  - Hitboxes are only re-placed after a new pose. Far soldiers pose at 20 Hz.
+  - Other soldiers' sounds beyond hearing range (120 m), or over a 48-voice limit, are dropped instead of building audio nodes.
+  - No per-shot or per-decision object creation.
+  - Far (LOD) soldiers no longer cast shadows.
+  - Not changed: about 0.4 ms per step is Rapier handling the 2,789 static map colliders, even with nothing moving. Merging colliders would change collisions and bullet impacts, so I left it.
+- **Visuals** (the "Faceted low-poly" direction you chose; plan §6 palette unchanged):
+  - a stronger, warmer sun against a weaker, cooler sky fill, so each flat face reads clearly as lit or in shade;
+  - sky and fog tuned to match;
+  - the first-person lights move to `src/data/lighting.ts` and gain a cool rim light, so the black rifle shows its edges;
+  - a subtle vignette, done as a CSS overlay (strength in `src/data/hud.ts`).
+- **Audio**:
+  - other soldiers' shots (70%) and steps (85%) sit under your own;
+  - flag cues are louder;
+  - a compressor/limiter on the master output keeps big firefights from clipping. All levels are in `src/data/audio.ts`.
+- **Fixes**:
+  - **Match ending while dead:** if the match ended while the Deploy Screen or Pause Menu was open, it stayed on top of the final scoreboard. Now it closes.
+  - **Deploy Screen at 1024×600:** the spawn buttons spilled out of their panel; the map now shrinks on short screens.
+  - **Kill feed:** it showed through the scoreboard and large map; it now hides while they are open.
+  - **GPU memory between matches:** each match left the old sun's shadow map in GPU memory. It is now freed.
+  - **Wedged bots:** a bot could get wedged in a small wall corner for up to 5.1 s. Paths from off-nav spots now start with the nearest walkable cell. As a last resort, a bot still stuck after 4 s moves onto the nearest walkable cell (1–5 times per match; the match test reports it).
+
+### Checked results
+- `npm run typecheck`, `npm test` (213 tests) and `npm run build` pass.
+- `npm run test:match` with 3 seeds:
+  - Red won on tickets at 18:26, 16:18 and 15:44;
+  - 437–494 kills and 30–42 flag changes;
+  - the longest stall was 4.0 s;
+  - about 2.0 ms per step in Node, where there is no audio.
+- **Headless browser**:
+  - three menu → match → End Screen → menu loops return to the same geometry, texture, DOM node and audio-context counts. JS heap: +0.25 MB per match (caches).
+  - every screen checked at 1280×720, 1920×1080 and 1024×600;
+  - pause freezes the bots; deploying at a flag, and dying to a bot while aiming and reloading, both work;
+  - sounds peak at 20 in a firefight (limit 48);
+  - no console errors.
+  - Before and after screenshots of the same views were compared for the lighting.
+
+### How to test
+1. `npm run dev`, play a full match, and press F3:
+   - **CPU sim** should stay well under 16 ms with one fixed step per frame;
+   - **Draw calls** should stay under 300, and **Triangles** under 500k.
+   - Please send me your FPS, the F3 numbers in a big firefight, and your computer (CPU, GPU, browser).
+2. Look at the city and your rifle: lit and shaded faces should differ clearly; the rifle shows a light edge along its top.
+3. Fight at C: your own gun is the loudest sound; a big firefight should not crackle.
+4. Let the match end while you are dead: the scoreboard and End Screen show without the Deploy Screen on top.
+5. `npm test`, and `npm run test:match` (about 3 minutes per seed).
+
+### Known issues
+- The 60 FPS check needs your hardware. Here software rendering gives 1–3 FPS, so only the CPU side was measured.
+- Red still wins every bots-only run (16 against 15). With you on Blue the teams are even.
+- The last-resort bot move is a jump of up to 2 m. It happens a few times per match, usually out of your sight.
+
+## Phase 8 — Bot AI (done)
 
 ### What was done
 - **31 bots**: 15 Blue teammates and 16 Red enemies, named from the plan's list. Each has a random primary (M4A1 or AK47) and the M1911.
