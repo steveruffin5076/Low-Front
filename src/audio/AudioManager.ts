@@ -27,6 +27,8 @@ export class AudioManager {
   private noise: AudioBuffer | null = null;
   private readonly listenerPos = new THREE.Vector3();
   volume: number = AUDIO.masterVolume;
+  /** Sound sources playing now. */
+  voices = 0;
 
   /** Distance from the listener (the camera) to `at`. */
   listenerDistance(at: THREE.Vector3): number {
@@ -154,6 +156,7 @@ export class AudioManager {
     gain.gain.setValueAtTime(o.gain, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + o.length);
     node.connect(gain).connect(out);
+    this.track(src);
     src.start(t, Math.random() * 0.5, o.length);
   }
 
@@ -168,8 +171,14 @@ export class AudioManager {
     gain.gain.setValueAtTime(o.gain, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + o.length);
     osc.connect(gain).connect(out);
+    this.track(osc);
     osc.start(t);
     osc.stop(t + o.length);
+  }
+
+  private track(src: AudioScheduledSourceNode): void {
+    this.voices++;
+    src.onended = () => this.voices--;
   }
 
   /** Created lazily: browsers only allow audio after a user gesture. */

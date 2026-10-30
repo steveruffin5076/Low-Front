@@ -29,6 +29,9 @@ export class Game {
   private readonly debug: DebugOverlay;
   private readonly loop: GameLoop;
   private readonly match: MatchScreen;
+  /** CPU time this frame: fixed steps (simulation) and the last render call. */
+  private simMs = 0;
+  private renderMs = 0;
 
   constructor(canvas: HTMLCanvasElement, ui: HTMLElement) {
     this.ctx = {
@@ -52,9 +55,17 @@ export class Game {
       .add('end', new EndScreen(this.ctx))
       .add('quit', new QuitScreen(this.ctx));
     this.loop = new GameLoop({
-      fixedUpdate: (dt) => this.screens.fixedUpdate(dt),
+      fixedUpdate: (dt) => {
+        const t = performance.now();
+        this.screens.fixedUpdate(dt);
+        this.simMs += performance.now() - t;
+      },
       update: (dt, alpha) => this.update(dt, alpha),
-      render: () => this.screens.render(),
+      render: () => {
+        const t = performance.now();
+        this.screens.render();
+        this.renderMs = performance.now() - t;
+      },
     });
   }
 
@@ -74,7 +85,16 @@ export class Game {
     this.screens.update(dt, alpha);
     // Stats are from the previous frame's render, which is accurate enough for an overlay.
     const { drawCalls, triangles } = this.ctx.renderer.takeStats();
-    this.debug.update(dt, { drawCalls, triangles, physicsMs: this.match.physicsMs, bots: this.match.botCount });
+    this.debug.update(dt, {
+      drawCalls,
+      triangles,
+      physicsMs: this.match.physicsMs,
+      bots: this.match.botCount,
+      simMs: this.simMs,
+      renderMs: this.renderMs,
+      voices: this.match.session?.audio.voices ?? 0,
+    });
+    this.simMs = 0;
     input.endFrame();
   }
 }
