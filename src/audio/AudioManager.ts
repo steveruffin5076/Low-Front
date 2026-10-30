@@ -107,6 +107,12 @@ export class AudioManager {
     c[kind].forEach((freq, i) => this.tone({ freq, endFreq: freq, length: c.noteLength, gain: c.gain, delay: i * c.noteGap }));
   }
 
+  /** Picked up ammo and health at a crate. */
+  resupplyCue(): void {
+    const c = AUDIO.resupplyCue;
+    c.notes.forEach((freq, i) => this.tone({ freq, endFreq: freq, length: c.noteLength, gain: c.gain, delay: i * c.noteGap }));
+  }
+
   /** Master volume, 0–1 (the player's setting). */
   setVolume(volume: number): void {
     this.volume = volume;

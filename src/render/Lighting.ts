@@ -20,6 +20,17 @@ export class Lighting {
     if (fog) scene.fog = new THREE.Fog(c.fog.color, c.fog.near, c.fog.far);
   }
 
+  /** Graphics preset: sun shadows on or off, and the shadow map size. */
+  setShadows(enabled: boolean, mapSize: number): void {
+    const s = this.sun.shadow;
+    this.sun.castShadow = enabled;
+    if (s.mapSize.x === mapSize) return;
+    s.mapSize.set(mapSize, mapSize);
+    // The map is rebuilt at the new size on the next frame.
+    s.map?.dispose();
+    s.map = null;
+  }
+
   follow(pos: THREE.Vector3): void {
     const o = LIGHTING.sun.offset;
     this.sun.target.position.copy(pos);

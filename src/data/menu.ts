@@ -7,6 +7,12 @@ export const MENU = {
   quitFallbackDelayMs: 300,
   /** Loading screen stays visible at least this long so it does not flash. */
   loadingMinMs: 400,
+  /** Main-menu tip when the web build runs on built-in graphics (Phase 10). */
+  gpuTip: {
+    text: 'For better FPS, run your browser on your graphics card: Windows Settings → System → Display → Graphics → your browser → High performance.',
+    /** Dismissed once, never shown again on this browser. */
+    storageKey: 'lowfront.gpuTip.dismissed',
+  },
 } as const;
 
 /** Menu fly-over of the real map (plan section 5.1). */

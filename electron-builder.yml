@@ -1,0 +1,30 @@
+# Windows installer for the desktop app (plan section 15, Phase 10): npm run build:pc
+appId: io.github.steveruffin5076.lowfront
+productName: Low Front
+copyright: Low Front
+directories:
+  output: release
+  buildResources: build
+# The game is already bundled into dist/ by Vite; runtime node_modules are not needed.
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+  - "!**/node_modules/**/*"
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Low Front
+  artifactName: LowFront-Setup-${version}.exe
+linux:
+  # Only for local launch tests in a Linux container.
+  target: dir
+# No auto-update server: the installer is a build artifact.
+publish: null

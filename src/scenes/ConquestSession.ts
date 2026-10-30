@@ -6,6 +6,10 @@ import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { SightTarget } from '../ai/Perception';
 import { BODY_POINTS } from '../data/bots';
+import { GRAPHICS } from '../data/graphics';
+import { RESUPPLY } from '../data/resupply';
+import { kitNeedsResupply, placeCrates, resupplyKit, type Kit, type Resupplier } from '../game/Resupply';
+import { ResupplyCrate } from '../world/ResupplyCrate';
 import { BotManager } from '../game/BotManager';
 import { debugMode } from '../core/debugFlags';
 import { BotDebug } from '../debug/BotDebug';
@@ -59,6 +63,8 @@ export class ConquestSession {
   readonly bots: BotManager;
   private readonly playerCombatant: Combatant;
   private botDebug: BotDebug | null = null;
+  private readonly crates: ResupplyCrate[];
+  private readonly playerKit: Resupplier;
   private markers: MapMarker[] = [];
   private markerClock = 0;
 
@@ -89,7 +95,20 @@ export class ConquestSession {
       },
     };
     this.match.add(this.playerCombatant);
+    const crates = placeCrates(VERDAN, world.nav);
+    this.crates = crates.map((c) => new ResupplyCrate(c));
+    for (const c of this.crates) world.scene.add(c.root);
+    this.playerKit = {
+      id: PLAYER_ID,
+      team: PLAYER_TEAM,
+      get alive() {
+        return self.state === 'alive';
+      },
+      position: feet,
+      needsResupply: () => kitNeedsResupply(this.kit()),
+    };
     this.bots = new BotManager({
+      crates,
       physics,
       scene: world.scene,
       combat: this.session.combatSystem,
@@ -132,11 +151,14 @@ export class ConquestSession {
     this.deploy({ kind: 'hq' });
   }
 
-  /** Applies the player's settings (sensitivity multiplier, FOV, volume). */
-  applySettings(s: Settings): void {
+  /** Applies the player's settings (sensitivity multiplier, FOV, volume, graphics preset). */
+  applySettings(s: Settings, renderer: Renderer): void {
     this.session.sensitivity = MOVEMENT.mouseSensitivity * s.sensitivity;
     this.session.setBaseFov(s.fov);
     this.session.audio.setVolume(s.volume);
+    const g = GRAPHICS[s.graphics];
+    renderer.setRenderScale(g.renderScale);
+    this.world.setShadows(g.shadows, g.shadowMapSize);
   }
 
   get paused(): boolean {
@@ -164,6 +186,7 @@ export class ConquestSession {
     const p = this.spawns.point(PLAYER_TEAM, pick, []);
     this.session.respawn(new THREE.Vector3(p.x, 0, p.z), p.yaw, loadout);
     this.hq.reset();
+    this.bots.resupply.reset(PLAYER_ID);
     this.state = 'alive';
   }
 
@@ -175,6 +198,11 @@ export class ConquestSession {
     if (this.paused || this.state === 'ended') return;
     this.bots.fixedUpdate(dt);
     this.session.fixedUpdate(dt);
+    if (this.bots.resupply.update(this.bots.time, this.match.owners(), [this.playerKit]).length) {
+      resupplyKit(this.kit());
+      this.hud.showNotice('Resupplied', RESUPPLY.noticeTime);
+      this.session.audio.resupplyCue();
+    }
     if (this.state === 'alive') {
       const feet = this.session.player.motor.feet;
       if (this.hq.update(dt, PLAYER_TEAM, feet.x, feet.z) === 'expired') this.session.kill('hq');
@@ -186,6 +214,7 @@ export class ConquestSession {
 
   update(dt: number, alpha: number): void {
     this.session.update(dt, alpha);
+    for (const [i, c] of this.crates.entries()) c.setOwner(this.match.zones[i].owner);
     if (!this.paused) this.bots.update(dt, this.session.camera.position);
     if (debugMode() && this.input.wasPressed(CONTROLS.botDebug)) {
       if (!this.botDebug) {
@@ -220,6 +249,9 @@ export class ConquestSession {
   /** Teammates always; enemies only when the player can see them (in front, in range, line of sight). */
   private mapMarkers(): MapMarker[] {
     const out: MapMarker[] = [];
+    for (const c of this.bots.resupply.crates) {
+      if (this.match.owners()[c.flag] === PLAYER_TEAM) out.push({ x: c.position.x, z: c.position.z, kind: 'crate' });
+    }
     const cam = this.session.camera;
     const forward = cam.getWorldDirection(new THREE.Vector3());
     const to = new THREE.Vector3();
@@ -266,6 +298,11 @@ export class ConquestSession {
         return at(head, BODY_POINTS.head);
       },
     };
+  }
+
+  /** The player's weapons and health, for resupply. */
+  private kit(): Kit {
+    return { weapons: this.session.weapons, health: this.session.health };
   }
 
   dispose(): void {

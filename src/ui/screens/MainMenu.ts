@@ -1,6 +1,7 @@
 import type { State } from '../../core/StateMachine';
 import type { GameContext } from '../../core/GameContext';
 import { MENU } from '../../data/menu';
+import { isBuiltInGpu } from '../../platform/gpu';
 import { quitGame } from '../../platform/quit';
 import { showConfirm } from '../ConfirmDialog';
 import { button, el } from '../dom';
@@ -22,7 +23,27 @@ export class MainMenu implements State {
         ]),
       ]),
     ]);
+    const tip = this.gpuTip();
+    if (tip) this.root.append(tip);
     this.ctx.ui.append(this.root);
+  }
+
+  /**
+   * Web build on built-in graphics: a dismissable tip to switch the browser to the graphics
+   * card. The desktop app asks for the fast GPU itself, so it never shows this.
+   */
+  private gpuTip(): HTMLElement | null {
+    const w = window as unknown as { lowFront?: unknown };
+    const key = MENU.gpuTip.storageKey;
+    if (w.lowFront || !isBuiltInGpu(this.ctx.renderer.gpuName) || readFlag(key)) return null;
+    const tip: HTMLElement = el('div', { class: 'gpu-tip', attrs: { role: 'note' } }, [
+      el('span', { text: `Running on ${this.ctx.renderer.gpuName}. ${MENU.gpuTip.text}` }),
+      button('×', () => {
+        writeFlag(key);
+        tip.remove();
+      }, 'gpu-tip-close'),
+    ]);
+    return tip;
   }
 
   exit(): void {
@@ -47,5 +68,21 @@ export class MainMenu implements State {
         delayMs: MENU.quitFallbackDelayMs,
       }),
     );
+  }
+}
+
+function readFlag(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string): void {
+  try {
+    window.localStorage.setItem(key, '1');
+  } catch {
+    // Storage blocked: the tip just comes back next time.
   }
 }

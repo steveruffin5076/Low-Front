@@ -24,7 +24,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # The web build does not need the Electron binary (desktop app only).
       - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
       - run: npm test
       - run: npm run build
       - uses: actions/configure-pages@v5

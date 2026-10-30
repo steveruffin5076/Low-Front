@@ -4,6 +4,7 @@ import { AudioManager } from '../../src/audio/AudioManager';
 import { VERDAN } from '../../src/data/map';
 import { BotManager } from '../../src/game/BotManager';
 import { Combat } from '../../src/game/Combat';
+import { placeCrates } from '../../src/game/Resupply';
 import { ConquestMatch } from '../../src/game/ConquestMatch';
 import { SpawnSystem } from '../../src/game/SpawnSystem';
 import { PhysicsWorld } from '../../src/physics/PhysicsWorld';
@@ -31,7 +32,8 @@ export async function createBotMatch(seed = 7) {
   const combat = new Combat(physics, scene, audio);
   const match = new ConquestMatch(VERDAN);
   const spawns = new SpawnSystem(VERDAN);
-  const bots = new BotManager({ physics, scene, combat, audio, nav, cover, match, map: VERDAN, spawns, player: null, rand });
+  const crates = placeCrates(VERDAN, nav);
+  const bots = new BotManager({ crates, physics, scene, combat, audio, nav, cover, match, map: VERDAN, spawns, player: null, rand });
   // Kills reach the match from the combat hits, as in the game.
   combat.events.on('hit', (h) => {
     if (h.kill && h.target.combatantId) {

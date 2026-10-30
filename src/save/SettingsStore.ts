@@ -1,3 +1,4 @@
+import { DEFAULT_GRAPHICS, GRAPHICS_PRESETS, type GraphicsPreset } from '../data/graphics';
 import { SETTINGS } from '../data/settings';
 import type { KeyValueStore } from './Storage';
 
@@ -5,10 +6,12 @@ export interface Settings {
   sensitivity: number;
   fov: number;
   volume: number;
+  /** Graphics quality preset. Saves from before Phase 10 have none and get the default. */
+  graphics: GraphicsPreset;
 }
 
 export function defaultSettings(): Settings {
-  return { sensitivity: SETTINGS.sensitivity.default, fov: SETTINGS.fov.default, volume: SETTINGS.volume.default };
+  return { sensitivity: SETTINGS.sensitivity.default, fov: SETTINGS.fov.default, volume: SETTINGS.volume.default, graphics: DEFAULT_GRAPHICS };
 }
 
 /** Clamps every value into its allowed range; missing or broken values fall back to defaults. */
@@ -21,6 +24,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     const range = SETTINGS[key];
     if (typeof v === 'number' && Number.isFinite(v)) out[key] = Math.min(range.max, Math.max(range.min, v));
   }
+  if (GRAPHICS_PRESETS.includes(r.graphics as GraphicsPreset)) out.graphics = r.graphics as GraphicsPreset;
   return out;
 }
 

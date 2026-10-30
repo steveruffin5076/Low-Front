@@ -22,6 +22,8 @@ export const AUDIO = {
     noteGap: 0.11,
     gain: 0.26,
   },
+  /** Resupply pickup: two quick rising notes. */
+  resupplyCue: { notes: [660, 990], noteLength: 0.09, noteGap: 0.07, gain: 0.22 },
   masterVolume: 0.8,
   /**
    * Mix (plan section 13): other soldiers' shots and steps sit under your own, so your gun

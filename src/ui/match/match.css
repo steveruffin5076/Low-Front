@@ -40,6 +40,20 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
 }
+.pm-choices {
+  grid-column: 2 / 4;
+  display: flex;
+  gap: 6px;
+}
+.pm-choice {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 13px;
+}
+.pm-choice.active {
+  background: var(--blue);
+  border-color: var(--blue);
+}
 .pm-quit {
   margin-top: 6px;
 }
