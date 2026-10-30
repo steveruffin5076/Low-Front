@@ -7,13 +7,21 @@ export class Renderer {
 
   constructor(canvas: HTMLCanvasElement) {
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.gl.setPixelRatio(Math.min(window.devicePixelRatio, ENGINE.maxPixelRatio));
+    this.setRenderScale(1);
     this.gl.shadowMap.enabled = true;
     this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.gl.outputColorSpace = THREE.SRGBColorSpace;
     // Draw calls/triangles are summed per frame, not per render() call.
     this.gl.info.autoReset = false;
     window.addEventListener('resize', this.resize);
+    this.resize();
+  }
+
+  /** Renders the 3D view at this fraction of the screen's resolution (graphics preset). */
+  setRenderScale(scale: number): void {
+    const ratio = Math.min(window.devicePixelRatio, ENGINE.maxPixelRatio) * scale;
+    if (ratio === this.gl.getPixelRatio()) return;
+    this.gl.setPixelRatio(ratio);
     this.resize();
   }
 

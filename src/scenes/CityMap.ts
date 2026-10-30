@@ -50,6 +50,10 @@ export class CityMap implements World {
     for (const f of this.flags) f.update(dt);
   }
 
+  setShadows(enabled: boolean, mapSize: number): void {
+    this.lighting.setShadows(enabled, mapSize);
+  }
+
   toggleNavDebug(): void {
     if (!this.navDebug) {
       this.navDebug = new NavDebug(this.nav, this.cover);

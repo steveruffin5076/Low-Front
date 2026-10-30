@@ -1,3 +1,4 @@
+import { GRAPHICS } from '../data/graphics';
 import { EventBus } from './EventBus';
 import { GameLoop } from './GameLoop';
 import { Input } from './Input';
@@ -49,6 +50,8 @@ export class Game {
     };
     this.debug = new DebugOverlay(ui);
     this.gpuName = this.ctx.renderer.gpuName;
+    // The menus render at the saved preset's resolution too.
+    this.ctx.renderer.setRenderScale(GRAPHICS[this.ctx.settings.load().graphics].renderScale);
     this.match = new MatchScreen(this.ctx);
     this.screens
       .add('mainMenu', new MainMenu(this.ctx))

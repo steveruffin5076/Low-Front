@@ -12,6 +12,8 @@ export interface World {
   update(dt: number, camera: THREE.Camera): void;
   /** Fixed step for things in the world that have physics (soldiers' hitboxes). */
   fixedUpdate?(dt: number): void;
+  /** Graphics preset: sun shadows on or off, and their map size. */
+  setShadows?(enabled: boolean, mapSize: number): void;
   /** F4: show or hide the navigation and cover debug view, if the world has one. */
   toggleNavDebug?(): void;
   dispose(): void;

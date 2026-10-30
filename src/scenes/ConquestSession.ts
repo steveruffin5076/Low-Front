@@ -6,6 +6,7 @@ import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { SightTarget } from '../ai/Perception';
 import { BODY_POINTS } from '../data/bots';
+import { GRAPHICS } from '../data/graphics';
 import { BotManager } from '../game/BotManager';
 import { debugMode } from '../core/debugFlags';
 import { BotDebug } from '../debug/BotDebug';
@@ -132,11 +133,14 @@ export class ConquestSession {
     this.deploy({ kind: 'hq' });
   }
 
-  /** Applies the player's settings (sensitivity multiplier, FOV, volume). */
-  applySettings(s: Settings): void {
+  /** Applies the player's settings (sensitivity multiplier, FOV, volume, graphics preset). */
+  applySettings(s: Settings, renderer: Renderer): void {
     this.session.sensitivity = MOVEMENT.mouseSensitivity * s.sensitivity;
     this.session.setBaseFov(s.fov);
     this.session.audio.setVolume(s.volume);
+    const g = GRAPHICS[s.graphics];
+    renderer.setRenderScale(g.renderScale);
+    this.world.setShadows(g.shadows, g.shadowMapSize);
   }
 
   get paused(): boolean {
