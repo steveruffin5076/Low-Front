@@ -15,6 +15,7 @@ import type { WeaponState } from './WeaponState';
 const DEG = Math.PI / 180;
 const forward = new THREE.Vector3();
 const dir = new THREE.Vector3();
+const pellet = new THREE.Vector3();
 const euler = new THREE.Euler();
 
 /**
@@ -71,7 +72,12 @@ export class PlayerShooting {
     const origin = this.eye();
     const muzzleOffset = this.muzzle(new THREE.Vector3()).sub(origin);
     this.shots++;
-    this.ballistics.fire(origin, dir, weapon.def, this.shots % BALLISTICS.tracerEvery === 0, muzzleOffset);
+    const def = weapon.def;
+    for (let i = 0; i < def.pellets; i++) {
+      // Pellets scatter around the aimed shot; only the first can be a tracer.
+      const d = def.pellets > 1 ? spreadDirection(dir, def.pelletSpreadDeg, pellet) : dir;
+      this.ballistics.fire(origin, d, def, i === 0 && this.shots % BALLISTICS.tracerEvery === 0, muzzleOffset);
+    }
     spread.onShot();
 
     const kick = this.recoil.kick(weapon.def, THREE.MathUtils.lerp(1, BALLISTICS.adsRecoilScale, this.ads));

@@ -4,7 +4,7 @@ import { IDLE_INPUT, SoldierAnimator, type SoldierInput } from '../anim/SoldierA
 import { GameLoop } from '../core/GameLoop';
 import { GAIT, type Team } from '../data/soldier';
 import { MOVEMENT } from '../data/player';
-import { WEAPONS, type WeaponId } from '../data/weapons';
+import { DEFAULT_LOADOUT, WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
 import { SoldierModel, type SoldierLod } from '../entities/soldier/SoldierModel';
 import { SoldierRig } from '../entities/soldier/SoldierRig';
 import { Lighting } from '../render/Lighting';
@@ -62,7 +62,7 @@ export class SoldierViewer {
   private rig!: SoldierRig;
   private readonly anim = new SoldierAnimator();
   private team: Team = 'blue';
-  private primary: WeaponId = 'm4a1';
+  private primary: WeaponId = DEFAULT_LOADOUT.primary;
   private lod: SoldierLod = 'near';
   private motion: Motion = 'Idle';
   private pitch = 0;
@@ -141,7 +141,7 @@ export class SoldierViewer {
 
   action(name: 'reload' | 'switch' | 'dieFront' | 'dieBack' | 'dieLeft' | 'dieRight' | 'reset'): void {
     const a = this.anim;
-    const def = WEAPONS[a.active === 'primary' ? this.primary : 'm1911'];
+    const def = WEAPONS[a.active === 'primary' ? this.primary : DEFAULT_LOADOUT.secondary];
     if (name === 'reload') a.reload(def.reload.tactical);
     else if (name === 'switch') a.switchWeapon();
     else if (name === 'reset') a.reset();
@@ -152,7 +152,7 @@ export class SoldierViewer {
 
   private build(): void {
     if (this.model) this.model.dispose();
-    this.model = new SoldierModel(this.team, { primary: this.primary, secondary: 'm1911' });
+    this.model = new SoldierModel(this.team, { primary: this.primary, secondary: DEFAULT_LOADOUT.secondary });
     this.model.setLod(this.lod);
     this.rig = new SoldierRig(this.model);
     this.anim.reset();
@@ -214,8 +214,7 @@ export class SoldierViewer {
       el('div', { class: 'viewer-row' }, [
         choice('Blue', 'blue' as Team, this.team, (v) => this.setTeam(v)),
         choice('Red', 'red' as Team, this.team, (v) => this.setTeam(v)),
-        choice('M4A1', 'm4a1' as WeaponId, this.primary, (v) => this.setPrimary(v)),
-        choice('AK47', 'ak47' as WeaponId, this.primary, (v) => this.setPrimary(v)),
+        ...WEAPON_IDS.filter((id) => WEAPONS[id].slot === 'primary').map((id) => choice(WEAPONS[id].name, id, this.primary, (v) => this.setPrimary(v))),
         choice('Near model', 'near' as SoldierLod, this.lod, (v) => this.setLod(v)),
         choice('Far model', 'far' as SoldierLod, this.lod, (v) => this.setLod(v)),
       ]),
@@ -239,7 +238,7 @@ export class SoldierViewer {
     this.info.textContent = [
       `Triangles   ${tris}`,
       `Draw calls  ${this.stats.drawCalls}`,
-      `Weapon      ${a.active === 'primary' ? WEAPONS[this.primary].name : 'M1911'}`,
+      `Weapon      ${a.active === 'primary' ? WEAPONS[this.primary].name : WEAPONS[DEFAULT_LOADOUT.secondary].name}`,
       `State       ${a.dead ? 'dead' : a.reloading ? 'reloading' : a.switching ? 'switching' : this.motion.toLowerCase()}`,
     ].join('\n');
   }

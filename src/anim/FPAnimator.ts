@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { AudioManager } from '../audio/AudioManager';
 import { MOVEMENT } from '../data/player';
+import type { Team } from '../data/soldier';
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
 import { approach } from '../entities/PlayerMovement';
 import type { ViewmodelLayer } from '../render/ViewmodelLayer';
@@ -41,7 +42,7 @@ const ONE = new THREE.Vector3(1, 1, 1);
  * procedural motion (breathing, sway, bob, kick, jump), keyframed clips, hand IK and effects.
  */
 export class FPAnimator {
-  readonly arms = new FPArms();
+  readonly arms: FPArms;
   readonly effects = new FPEffects();
   private readonly weaponRoot = new THREE.Group();
   private readonly visuals = new Map<WeaponState, WeaponVisual>();
@@ -65,6 +66,8 @@ export class FPAnimator {
   private readonly swayY = new Spring(M.sway.frequency);
   private readonly jump = new Spring(M.jump.frequency);
   private pendingShots: { visual: WeaponVisual }[] = [];
+  /** Shell-loading clips hold their last pose until the next shell (game logic may run behind the frame). */
+  private holdAction = false;
   /** Re-lock the bolt/slide if an empty reload is cancelled before it closes. */
   private relockOnCancel = false;
 
@@ -72,7 +75,9 @@ export class FPAnimator {
     layer: ViewmodelLayer,
     weapons: PlayerWeapons,
     private readonly audio: AudioManager,
+    team: Team = 'blue',
   ) {
+    this.arms = new FPArms(team);
     for (const w of Object.values(weapons.weapons)) {
       const v = new WeaponVisual(w);
       v.model.root.visible = false;
@@ -82,6 +87,11 @@ export class FPAnimator {
     this.current = this.visuals.get(weapons.active)!;
     layer.scene.add(this.weaponRoot, this.arms.root, this.effects.root);
     this.listen(weapons);
+  }
+
+  /** Fully aimed through a scope: the session shows the scope view and hides the weapon. */
+  get scoped(): boolean {
+    return !!this.current.vm.scope && this.adsBlend > 0.97;
   }
 
   /** 0–1; firing waits until the weapon is fully out of the sprint pose. */
@@ -107,6 +117,7 @@ export class FPAnimator {
       v.dustCoverOpen = false;
     }
     this.action = null;
+    this.holdAction = false;
     this.fire = null;
     this.fading = [];
     this.adsBlend = 0;
@@ -230,19 +241,28 @@ export class FPAnimator {
   private spawnShotEffects(v: WeaponVisual): void {
     if (v !== this.current) return;
     this.effects.muzzleFlash(v.model.points.muzzle, v.weapon.def.slot === 'secondary' ? 0.7 : 1);
-    this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
+    // A manual action throws the case out when it is worked, not on the shot.
+    if (!v.weapon.def.action.manual) this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
   }
 
   // --- Clips ---
 
   private play(slot: 'action' | 'fire', clip: Clip): void {
     const old = this[slot];
+    if (slot === 'action') this.holdAction = false;
     if (old && !old.done) this.fade(old);
+    this[slot] = new ClipPlayer(clip);
+  }
+
+  /** Replaces a clip with no blend: for clips that start where the previous one ends. */
+  private swap(slot: 'action' | 'fire', clip: Clip, hold = false): void {
+    if (slot === 'action') this.holdAction = hold;
     this[slot] = new ClipPlayer(clip);
   }
 
   private stop(slot: 'action' | 'fire'): void {
     const p = this[slot];
+    if (slot === 'action') this.holdAction = false;
     if (p) this.fade(p);
     this[slot] = null;
   }
@@ -255,7 +275,7 @@ export class FPAnimator {
     const onEvent = (name: string): void => this.onClipEvent(name);
     this.action?.update(dt, onEvent);
     this.fire?.update(dt, onEvent);
-    if (this.action?.done) this.action = null;
+    if (this.action?.done && !this.holdAction) this.action = null;
     if (this.fire?.done) this.fire = null;
     for (const p of this.fading) p.weight -= dt / FADE_TIME;
     this.fading = this.fading.filter((p) => p.weight > 0);
@@ -293,6 +313,11 @@ export class FPAnimator {
     if (name === 'click') this.audio.play(this.action?.clip.name === 'fireMode' ? 'selector' : 'dryFire');
     if (name === 'magOut') this.audio.play('magOut');
     if (name === 'magIn') this.audio.play('magIn');
+    if (name === 'boltOpen') this.audio.play('cycleBack');
+    if (name === 'cycleBack') {
+      this.audio.play('cycleBack');
+      this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
+    }
   }
 
   private listen(weapons: PlayerWeapons): void {
@@ -303,13 +328,14 @@ export class FPAnimator {
       this.arms.setLeftStyle(this.current.vm.leftHand);
       this.fading = [];
       this.fire = null;
+      this.holdAction = false;
       this.action = new ClipPlayer(clips.drawClip(duration));
     });
     ev.on('holsterStart', ({ duration }) => this.play('action', clips.holsterClip(duration)));
     ev.on('fired', ({ weapon, lastRound }) => {
       const v = this.visuals.get(weapon)!;
       this.play('fire', clips.fireClip(v.ctx, lastRound));
-      if (weapon.def.id === 'm4a1') v.dustCoverOpen = true;
+      if (weapon.def.action.dustCover) v.dustCoverOpen = true;
       const k = v.vm.kick;
       const scale = 1 - 0.5 * this.adsBlend;
       this.kickBack.impulse(peakToImpulse(k.back * scale, M.kickFrequency));
@@ -320,10 +346,24 @@ export class FPAnimator {
     ev.on('dryFire', ({ weapon }) => this.play('fire', clips.dryFireClip(this.visuals.get(weapon)!.ctx)));
     ev.on('reloadStart', ({ weapon, kind }) => {
       const v = this.visuals.get(weapon)!;
+      if (weapon.def.reloadMode === 'shell') {
+        this.play('action', clips.shellStartClip(v.ctx));
+        this.holdAction = true;
+        return;
+      }
       const locked = v.locked;
       this.relockOnCancel = locked;
       v.locked = false;
       this.play('action', clips.reloadClip(v.ctx, kind, locked));
+    });
+    ev.on('shellIn', ({ weapon, more }) => {
+      const v = this.visuals.get(weapon)!;
+      this.swap('action', more ? clips.shellInsertClip(v.ctx) : clips.shellEndClip(v.ctx), more);
+    });
+    ev.on('reloadEnd', () => {
+      // Firing stopped a shell reload part way: blend back to the hip.
+      const name = this.action?.clip.name;
+      if (name === 'shellStart' || name === 'shellInsert') this.stop('action');
     });
     ev.on('reloadCancel', ({ weapon }) => {
       this.stop('action');

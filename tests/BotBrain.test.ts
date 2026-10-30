@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { BotBrain, type BotQueries, type BotSenses, type FlagView } from '../src/ai/BotBrain';
-import { BOTS } from '../src/data/bots';
+import { BotAim } from '../src/ai/BotAim';
+import { BOTS, DIFFICULTIES } from '../src/data/bots';
 import type { FlagId } from '../src/data/map/types';
 
 const V = (x: number, z: number): THREE.Vector3 => new THREE.Vector3(x, 0, z);
@@ -16,6 +17,8 @@ function senses(over: Partial<BotSenses> = {}): BotSenses {
     position: V(0, 160),
     hp: 100,
     magFraction: 1,
+    weaponClass: 'rifle',
+    primaryClass: 'rifle',
     activeSlot: 'primary',
     primaryEmpty: false,
     primaryOut: false,
@@ -165,5 +168,56 @@ describe('bot brain: fighting', () => {
     expect(o.moveTo).toBe(lastKnown.position);
     o = b.decide(senses({ time: 10 + BOTS.thresholds.searchTime + 0.1, lastKnown: { ...lastKnown, age: 3 } }), queries());
     expect(o.state).toBe('objective');
+  });
+});
+
+describe('bot weapons', () => {
+  it('picks primaries by weight: the sniper about 1 in 16', async () => {
+    const { pickPrimary } = await import('../src/game/BotManager');
+    const counts: Record<string, number> = {};
+    const n = 1600;
+    for (let i = 0; i < n; i++) {
+      const id = pickPrimary((i + 0.5) / n);
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+    expect(counts.lr24).toBe(100);
+    expect(counts.m4a1).toBeGreaterThan(counts.sr9);
+    expect(counts.br12).toBeGreaterThan(0);
+  });
+
+  it('a shotgun bot closes in where a rifle bot would hold, a sniper stays put and crouches', () => {
+    const enemy = { id: 'e', position: new THREE.Vector3(15, 0, 0), distance: 15 };
+    const shotgun = new BotBrain(() => 0.5).decide(senses({ enemy, weaponClass: 'shotgun' }), queries());
+    expect(shotgun.moveTo).not.toBeNull();
+    const rifle = new BotBrain(() => 0.5).decide(senses({ enemy, weaponClass: 'rifle' }), queries());
+    expect(rifle.moveTo).toBeNull();
+    const sniper = new BotBrain(() => 0.5).decide(senses({ enemy: { ...enemy, position: new THREE.Vector3(60, 0, 0), distance: 60 }, weaponClass: 'sniper' }), queries());
+    expect(sniper.moveTo).toBeNull();
+    expect(sniper.strafe).toBe(0);
+    expect(sniper.crouch).toBe(true);
+  });
+
+  it('a shotgun bot uses the pistol on far enemies and goes back to the shotgun up close', () => {
+    const b = new BotBrain(() => 0.5);
+    const far = { id: 'e', position: new THREE.Vector3(40, 0, 0), distance: 40 };
+    expect(b.decide(senses({ enemy: far, weaponClass: 'shotgun', primaryClass: 'shotgun' }), queries()).switchTo).toBe('secondary');
+    const near = { id: 'e', position: new THREE.Vector3(8, 0, 0), distance: 8 };
+    expect(b.decide(senses({ enemy: near, activeSlot: 'secondary', weaponClass: 'pistol', primaryClass: 'shotgun' }), queries()).switchTo).toBe('primary');
+  });
+
+  it('a shotgun bot pushes in on the enemy instead of taking cover', () => {
+    const enemy = { id: 'e', position: new THREE.Vector3(15, 0, 0), distance: 15 };
+    const cover = new THREE.Vector3(2, 0, 2);
+    const o = new BotBrain(() => 0.5).decide(senses({ enemy, weaponClass: 'shotgun', primaryClass: 'shotgun' }), queries(cover));
+    expect(o.moveTo).toEqual(enemy.position);
+  });
+
+  it('a sniper bot waits longer and fires single shots', () => {
+    const aim = new BotAim(DIFFICULTIES.normal, () => 0.5);
+    aim.style = BOTS.styles.sniper;
+    aim.track(0, 't');
+    expect(aim.reaction).toBeGreaterThan(DIFFICULTIES.normal.reaction.max);
+    expect(aim.shot()).toBe(true);
+    expect(aim.pause).toBeGreaterThanOrEqual(BOTS.styles.sniper.burstPause!.min);
   });
 });

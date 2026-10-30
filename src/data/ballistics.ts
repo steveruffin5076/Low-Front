@@ -3,7 +3,8 @@ export const BALLISTICS = {
   gravity: 9.81,
   /** Bullets are removed after this many seconds. */
   maxLife: 2,
-  maxBullets: 128,
+  /** Shotgun pellets count too: 9 per shot from several bots at once. */
+  maxBullets: 384,
   /** Every Nth round is a tracer. */
   tracerEvery: 3,
   /** Camera recoil is scaled by this while aiming. */

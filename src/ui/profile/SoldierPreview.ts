@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PREVIEW } from '../../data/menu';
-import type { WeaponId } from '../../data/weapons';
+import { DEFAULT_LOADOUT, type WeaponId } from '../../data/weapons';
 import { IDLE_INPUT, SoldierAnimator } from '../../anim/SoldierAnimator';
 import { SoldierModel } from '../../entities/soldier/SoldierModel';
 import { SoldierRig } from '../../entities/soldier/SoldierRig';
@@ -43,7 +43,7 @@ export class SoldierPreview {
   /** The player's soldier (Blue team) holding the selected primary. */
   setWeapon(id: WeaponId): void {
     if (this.soldier) this.soldier.dispose();
-    this.soldier = new SoldierModel('blue', { primary: id, secondary: 'm1911' });
+    this.soldier = new SoldierModel('blue', { primary: id, secondary: DEFAULT_LOADOUT.secondary });
     this.rig = new SoldierRig(this.soldier);
     this.scene.add(this.soldier.root);
   }

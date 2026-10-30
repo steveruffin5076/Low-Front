@@ -5,9 +5,10 @@ import { VERDAN } from '../data/map';
 import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { SightTarget } from '../ai/Perception';
-import { BODY_POINTS } from '../data/bots';
+import { BODY_POINTS, BOTS } from '../data/bots';
 import { GRAPHICS } from '../data/graphics';
 import { RESUPPLY } from '../data/resupply';
+import { AUDIO } from '../data/audio';
 import { kitNeedsResupply, placeCrates, resupplyKit, type Kit, type Resupplier } from '../game/Resupply';
 import { ResupplyCrate } from '../world/ResupplyCrate';
 import { BotManager } from '../game/BotManager';
@@ -15,6 +16,7 @@ import { debugMode } from '../core/debugFlags';
 import { BotDebug } from '../debug/BotDebug';
 import { ConquestMatch, type Combatant, type KillFeedEntry } from '../game/ConquestMatch';
 import { HQZone } from '../game/HQZone';
+import { enemyOf } from '../game/Tickets';
 import type { MatchResult } from '../game/MatchClock';
 import { SpawnSystem, type SpawnChoice } from '../game/SpawnSystem';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
@@ -31,7 +33,6 @@ import type { CityMap } from './CityMap';
 import { PlaySession } from './PlaySession';
 
 export const PLAYER_ID = 'player';
-const PLAYER_TEAM: TeamId = 'blue';
 
 export type ConquestState = 'alive' | 'dead' | 'ended';
 
@@ -67,6 +68,7 @@ export class ConquestSession {
   private readonly playerKit: Resupplier;
   private markers: MapMarker[] = [];
   private markerClock = 0;
+  private countdownSecond = 0;
 
   constructor(
     private readonly physics: PhysicsWorld,
@@ -74,20 +76,22 @@ export class ConquestSession {
     readonly name: string,
     loadout: Loadout,
     readonly world: CityMap,
+    /** The side the player joined; it has one bot fewer. */
+    readonly team: TeamId = 'blue',
   ) {
     this.match = new ConquestMatch(VERDAN);
     this.hud = new MatchHud(this.match, this.mapImage);
     this.session = new PlaySession(physics, input, loadout, world, {
       autoRespawn: false,
       hud: this.hud,
-      identity: { id: PLAYER_ID, name, team: PLAYER_TEAM },
+      identity: { id: PLAYER_ID, name, team: this.team },
     });
     const feet = this.session.player.motor.feet;
     const self = this;
     this.playerCombatant = {
       id: PLAYER_ID,
       name,
-      team: PLAYER_TEAM,
+      team: this.team,
       isPlayer: true,
       position: feet,
       get alive() {
@@ -100,7 +104,7 @@ export class ConquestSession {
     for (const c of this.crates) world.scene.add(c.root);
     this.playerKit = {
       id: PLAYER_ID,
-      team: PLAYER_TEAM,
+      team: this.team,
       get alive() {
         return self.state === 'alive';
       },
@@ -119,6 +123,7 @@ export class ConquestSession {
       map: VERDAN,
       spawns: this.spawns,
       player: this.playerTarget(),
+      counts: { [team]: BOTS.playerSide, [enemyOf(team)]: BOTS.otherSide } as Record<TeamId, number>,
     });
 
     // Deaths by bullet are reported from the combat hit (with the killer); the rest here.
@@ -141,14 +146,17 @@ export class ConquestSession {
       }
     });
     const audio = this.session.audio;
-    this.match.events.on('captured', ({ team }) => audio.flagCue(team === PLAYER_TEAM ? 'captured' : 'lost'));
-    this.match.events.on('neutralized', ({ team }) => audio.flagCue(team === PLAYER_TEAM ? 'lost' : 'neutralized'));
+    this.match.events.on('captured', ({ team }) => audio.flagCue(team === this.team ? 'captured' : 'lost'));
+    this.match.events.on('neutralized', ({ team }) => audio.flagCue(team === this.team ? 'lost' : 'neutralized'));
     this.match.events.on('ended', (r) => {
       this.state = 'ended';
       this.callbacks.onEnded?.(r);
     });
 
     this.deploy({ kind: 'hq' });
+    // Pre-battle countdown: everyone at their HQ, no firing, nothing counts yet.
+    this.match.startWarmup(CONQUEST.warmup);
+    this.match.events.on('started', () => this.session.audio.countdownCue(true));
   }
 
   /** Applies the player's settings (sensitivity multiplier, FOV, volume, graphics preset). */
@@ -175,7 +183,7 @@ export class ConquestSession {
   }
 
   spawnOptions(): SpawnChoice[] {
-    return this.spawns.options(PLAYER_TEAM, this.match.owners());
+    return this.spawns.options(this.team, this.match.owners());
   }
 
   /** Spawns the player at `choice` (HQ or an owned flag) with `loadout` (default: the current one). */
@@ -183,7 +191,9 @@ export class ConquestSession {
     if (this.state === 'ended') return;
     const valid = this.spawnOptions().some((o) => o.kind === choice.kind && (o.kind === 'hq' || (choice.kind === 'flag' && o.flag === choice.flag)));
     const pick = valid ? choice : { kind: 'hq' as const };
-    const p = this.spawns.point(PLAYER_TEAM, pick, []);
+    // Not on top of a soldier already standing there.
+    const taken = this.bots.bots.filter((b) => b.alive).map((b) => b.position);
+    const p = this.spawns.point(this.team, pick, taken);
     this.session.respawn(new THREE.Vector3(p.x, 0, p.z), p.yaw, loadout);
     this.hq.reset();
     this.bots.resupply.reset(PLAYER_ID);
@@ -205,11 +215,23 @@ export class ConquestSession {
     }
     if (this.state === 'alive') {
       const feet = this.session.player.motor.feet;
-      if (this.hq.update(dt, PLAYER_TEAM, feet.x, feet.z) === 'expired') this.session.kill('hq');
+      if (this.hq.update(dt, this.team, feet.x, feet.z) === 'expired') this.session.kill('hq');
     } else {
       this.deadTime += dt;
     }
     this.match.update(dt);
+    this.updateWarmup();
+  }
+
+  /** During the countdown the player stays in the HQ and cannot fire; a tick sounds for the last seconds. */
+  private updateWarmup(): void {
+    const left = this.match.warmupLeft;
+    const warm = left > 0;
+    this.session.holdFire = warm;
+    this.session.confine = warm ? VERDAN.hqs.find((h) => h.team === this.team)!.rect : null;
+    const second = Math.ceil(left);
+    if (warm && second !== this.countdownSecond && second <= AUDIO.countdownCue.ticksFrom) this.session.audio.countdownCue(false);
+    this.countdownSecond = second;
   }
 
   update(dt: number, alpha: number): void {
@@ -236,7 +258,7 @@ export class ConquestSession {
     const alive = this.state === 'alive';
     this.hud.updateMatch(dt, {
       match: this.match,
-      team: PLAYER_TEAM,
+      team: this.team,
       zone: alive ? this.match.zoneOf(feet) : null,
       player: { x: feet.x, z: feet.z, yaw: this.session.player.yaw },
       markers: this.markers,
@@ -250,7 +272,7 @@ export class ConquestSession {
   private mapMarkers(): MapMarker[] {
     const out: MapMarker[] = [];
     for (const c of this.bots.resupply.crates) {
-      if (this.match.owners()[c.flag] === PLAYER_TEAM) out.push({ x: c.position.x, z: c.position.z, kind: 'crate' });
+      if (this.match.owners()[c.flag] === this.team) out.push({ x: c.position.x, z: c.position.z, kind: 'crate' });
     }
     const cam = this.session.camera;
     const forward = cam.getWorldDirection(new THREE.Vector3());
@@ -258,8 +280,8 @@ export class ConquestSession {
     const halfFov = THREE.MathUtils.degToRad(cam.fov * Math.max(1, cam.aspect)) / 2;
     for (const c of this.bots.bots) {
       if (!c.alive) continue;
-      if (c.team === PLAYER_TEAM) {
-        out.push({ x: c.position.x, z: c.position.z, kind: 'ally' });
+      if (c.team === this.team) {
+        out.push({ x: c.position.x, z: c.position.z, kind: 'ally', team: c.team });
         continue;
       }
       if (this.state !== 'alive') continue;
@@ -268,7 +290,7 @@ export class ConquestSession {
       if (dist > HUD.minimap.enemyRange || to.angleTo(forward) > halfFov) continue;
       const end = cam.position.clone().addScaledVector(to, (dist - 0.6) / dist);
       if (raycastSegment(this.physics, cam.position, end, COLLISION.view)) continue;
-      out.push({ x: c.position.x, z: c.position.z, kind: 'enemy' });
+      out.push({ x: c.position.x, z: c.position.z, kind: 'enemy', team: c.team });
     }
     return out;
   }
@@ -286,7 +308,7 @@ export class ConquestSession {
     const at = (out: THREE.Vector3, h: { stand: number; crouch: number }) => out.copy(p.motor.feet).setY(p.motor.feet.y + THREE.MathUtils.lerp(h.stand, h.crouch, p.crouchBlend));
     return {
       id: PLAYER_ID,
-      team: PLAYER_TEAM,
+      team: this.team,
       position: p.motor.feet,
       get alive() {
         return self.state === 'alive';

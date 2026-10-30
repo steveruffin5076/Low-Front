@@ -8,7 +8,7 @@ import type { AudioManager } from '../audio/AudioManager';
 import { BOTS } from '../data/bots';
 import { CONQUEST } from '../data/conquest';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
-import { WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
+import { DEFAULT_LOADOUT, WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
 import { RESUPPLY } from '../data/resupply';
 import { Bot } from '../entities/Bot';
 import { COLLISION, raycastSegment } from '../physics/collision';
@@ -41,8 +41,19 @@ export interface BotManagerOptions {
 
 const PRIMARIES = WEAPON_IDS.filter((id) => WEAPONS[id].slot === 'primary');
 
+/** A primary picked by `BOTS.primaryWeights` (`r` in 0–1). */
+export function pickPrimary(r: number): WeaponId {
+  const weight = (id: WeaponId): number => BOTS.primaryWeights[id] ?? 1;
+  let left = r * PRIMARIES.reduce((sum, id) => sum + weight(id), 0);
+  for (const id of PRIMARIES) {
+    left -= weight(id);
+    if (left < 0) return id;
+  }
+  return PRIMARIES[PRIMARIES.length - 1];
+}
+
 /**
- * Runs the bots (plan section 12): creates 15 Blue and 16 Red bots with random primaries,
+ * Runs the bots (plan section 12): creates 15 Blue and 16 Red bots with weighted random primaries,
  * spawns and respawns them, shares perception (with its raycast budget) and the path queue,
  * staggers their 10 Hz decisions, and answers the brain's world questions.
  */
@@ -75,17 +86,21 @@ export class BotManager {
       cover: (from, radius, threat) => this.cover(from, radius, threat),
       zoneSpot: (flag) => this.zoneSpot(flag),
     };
+    let lastShot: { shooter: unknown; time: number } = { shooter: null, time: -1 };
     o.combat.ballistics.events.on('fired', ({ shooter, origin }) => {
       if (!shooter?.team) return;
+      // A shotgun fires several pellets at once: one shot to hear.
+      if (lastShot.shooter === shooter && lastShot.time === this.time) return;
+      lastShot = { shooter, time: this.time };
       this.perception.gunshot(this.time, { id: shooter.id, team: shooter.team, position: origin }, this.bots);
     });
-    const counts = o.counts ?? { blue: BOTS.blue, red: BOTS.red };
+    const counts = o.counts ?? { blue: BOTS.playerSide, red: BOTS.otherSide };
     let n = 0;
     for (const team of ['blue', 'red'] as const) {
       for (let i = 0; i < counts[team]; i++, n++) {
-        const primary: WeaponId = PRIMARIES[Math.floor(this.rand() * PRIMARIES.length)];
+        const primary = pickPrimary(this.rand());
         const name = BOTS.names[n % BOTS.names.length];
-        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: 'm1911' }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
+        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
         o.scene.add(bot.soldier.model.root);
         this.bots.push(bot);
         this.resuppliers.push({
@@ -120,7 +135,8 @@ export class BotManager {
         continue;
       }
       bot.decisionClock -= dt;
-      if (bot.decisionClock <= 0) {
+      // During the pre-battle countdown bots stand at their spawn points.
+      if (bot.decisionClock <= 0 && !this.o.match.inWarmup) {
         bot.decisionClock += 1 / BOTS.decisionRate;
         this.deciding = bot;
         bot.brain.decide(this.senses(bot, going[bot.team]), this.queries);
@@ -152,6 +168,8 @@ export class BotManager {
 
   private spawn(bot: Bot, choice: SpawnChoice): void {
     const taken = this.bots.filter((b) => b !== bot && b.alive).map((b) => b.position);
+    const player = this.o.player;
+    if (player?.alive) taken.push(player.position);
     const p = this.o.spawns.point(bot.team, choice, taken, this.rand());
     bot.spawn(new THREE.Vector3(p.x, 0, p.z), p.yaw);
     this.resupply.reset(bot.id);
@@ -225,10 +243,12 @@ export class BotManager {
       hp: bot.soldier.health.hp,
       magFraction: active.mag / (active.def.magazine + active.def.chamber),
       activeSlot: w.activeSlot,
+      weaponClass: active.def.class,
+      primaryClass: primary.def.class,
       primaryEmpty: primary.mag === 0,
       primaryOut: primary.mag === 0 && primary.reserve === 0,
       canReload: active.reserve > 0,
-      reloading: w.actionKind === 'reload',
+      reloading: w.actionKind === 'reload' || w.actionKind === 'shells',
       flags,
       teammatesGoing: mine,
       enemy: seen ? { id: seen.id, position: seen.position, distance: seen.position.distanceTo(bot.position) } : null,

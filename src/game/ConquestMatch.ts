@@ -45,6 +45,8 @@ export interface MatchEvents {
   captured: { flag: FlagId; team: TeamId; by: string[] };
   neutralized: { flag: FlagId; team: TeamId; by: string[] };
   ended: MatchResult;
+  /** The pre-battle countdown ended. */
+  started: Record<string, never>;
 }
 
 /**
@@ -58,6 +60,8 @@ export class ConquestMatch {
   readonly tickets = new Tickets();
   readonly stats = new Map<string, CombatantStats>();
   elapsed = 0;
+  /** Seconds of pre-battle countdown left (0: the battle is on). */
+  warmupLeft = 0;
   result: MatchResult | null = null;
   private readonly combatants = new Map<string, Combatant>();
   private readonly occupants: ZoneOccupant[] = [];
@@ -70,6 +74,15 @@ export class ConquestMatch {
   add(c: Combatant): void {
     this.combatants.set(c.id, c);
     if (!this.stats.has(c.id)) this.stats.set(c.id, newStats(c.id, c.name, c.team, c.isPlayer));
+  }
+
+  /** Starts the pre-battle countdown: nothing counts until it ends. */
+  startWarmup(seconds: number): void {
+    this.warmupLeft = seconds;
+  }
+
+  get inWarmup(): boolean {
+    return this.warmupLeft > 0;
   }
 
   get timeLeft(): number {
@@ -93,6 +106,11 @@ export class ConquestMatch {
 
   update(dt: number): void {
     if (this.result) return;
+    if (this.warmupLeft > 0) {
+      this.warmupLeft = Math.max(0, this.warmupLeft - dt);
+      if (this.warmupLeft === 0) this.events.emit('started', {});
+      return;
+    }
     this.elapsed += dt;
     this.occupants.length = 0;
     for (const c of this.combatants.values()) {

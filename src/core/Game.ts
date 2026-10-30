@@ -16,6 +16,7 @@ import { MainMenu } from '../ui/screens/MainMenu';
 import { EndScreen } from '../ui/screens/EndScreen';
 import { MatchScreen } from '../ui/screens/MatchScreen';
 import { ProfileScreen } from '../ui/screens/ProfileScreen';
+import { TeamScreen } from '../ui/screens/TeamScreen';
 import { QuitScreen } from '../ui/screens/QuitScreen';
 
 export interface GameEvents {
@@ -56,6 +57,7 @@ export class Game {
     this.screens
       .add('mainMenu', new MainMenu(this.ctx))
       .add('profile', new ProfileScreen(this.ctx))
+      .add('team', new TeamScreen(this.ctx))
       .add('loading', new LoadingScreen(this.ctx, () => this.match.load(), 'match'))
       .add('match', this.match)
       .add('end', new EndScreen(this.ctx))

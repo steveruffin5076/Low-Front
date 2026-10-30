@@ -1,3 +1,4 @@
+import { CONQUEST } from '../../data/conquest';
 import { HUD } from '../../data/hud';
 import type { TeamId } from '../../data/map/types';
 import type { CaptureZone } from '../../game/CaptureZone';
@@ -53,6 +54,10 @@ export class MatchHud implements PlayerHud {
   private noticeTime = 0;
   private boundsSeconds: number | null = null;
   private hqSeconds: number | null = null;
+  /** Pre-battle countdown, then "GO" for a moment. */
+  private readonly countdown = el('div', { class: 'warmup-banner' });
+  private goTime = 0;
+  private wasWarmup = false;
   private scoreboardClock = 0;
 
   constructor(match: ConquestMatch, image: MapImage) {
@@ -78,8 +83,10 @@ export class MatchHud implements PlayerHud {
       this.scoreboard.element,
       this.lockHint,
       this.notice,
+      this.countdown,
     ]);
     this.notice.hidden = true;
+    this.countdown.hidden = true;
   }
 
   addKill(k: KillFeedEntry): void {
@@ -116,6 +123,20 @@ export class MatchHud implements PlayerHud {
   }
 
   /** Per-frame match state (called by the Conquest session). */
+  private updateCountdown(dt: number, left: number): void {
+    if (this.wasWarmup && left === 0) this.goTime = CONQUEST.goBanner;
+    this.wasWarmup = left > 0;
+    if (left > 0) {
+      this.countdown.replaceChildren(el('span', { class: 'wb-label', text: 'Battle starts in' }), el('span', { class: 'wb-count', text: String(Math.ceil(left)) }));
+      this.countdown.classList.remove('wb-go');
+    } else if (this.goTime > 0) {
+      this.goTime -= dt;
+      this.countdown.replaceChildren(el('span', { class: 'wb-count', text: 'GO!' }));
+      this.countdown.classList.add('wb-go');
+    }
+    this.countdown.hidden = left === 0 && this.goTime <= 0;
+  }
+
   /** Shows `text` under the crosshair for `seconds`. */
   showNotice(text: string, seconds: number): void {
     this.notice.textContent = text;
@@ -126,6 +147,7 @@ export class MatchHud implements PlayerHud {
   updateMatch(dt: number, v: MatchView): void {
     if (this.noticeTime > 0 && (this.noticeTime -= dt) <= 0) this.notice.hidden = true;
     this.topBar.update(v.match);
+    this.updateCountdown(dt, v.match.warmupLeft);
     this.capture.update(v.zone, v.team);
     this.hqSeconds = v.hqWarning;
     this.feedback.setWarning(

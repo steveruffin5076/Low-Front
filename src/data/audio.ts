@@ -22,6 +22,8 @@ export const AUDIO = {
     noteGap: 0.11,
     gain: 0.26,
   },
+  /** Countdown: a tick for each of the last seconds, then a long high "GO" note. */
+  countdownCue: { tick: 880, go: 1320, tickLength: 0.08, goLength: 0.45, gain: 0.25, ticksFrom: 3 },
   /** Resupply pickup: two quick rising notes. */
   resupplyCue: { notes: [660, 990], noteLength: 0.09, noteGap: 0.07, gain: 0.22 },
   masterVolume: 0.8,
@@ -44,6 +46,9 @@ export const AUDIO = {
   shots: {
     m4a1: { crackFreq: 2600, crackLength: 0.16, bodyFreq: 150, bodyLength: 0.2, gain: 0.85 },
     ak47: { crackFreq: 1800, crackLength: 0.2, bodyFreq: 105, bodyLength: 0.28, gain: 1.0 },
+    sr9: { crackFreq: 2200, crackLength: 0.11, bodyFreq: 170, bodyLength: 0.14, gain: 0.7 },
+    lr24: { crackFreq: 3000, crackLength: 0.24, bodyFreq: 85, bodyLength: 0.36, gain: 1.0 },
+    br12: { crackFreq: 1100, crackLength: 0.26, bodyFreq: 70, bodyLength: 0.34, gain: 1.0 },
     m1911: { crackFreq: 1400, crackLength: 0.14, bodyFreq: 90, bodyLength: 0.2, gain: 0.85 },
   } as Record<WeaponId, ShotSound>,
   impacts: {

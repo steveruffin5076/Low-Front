@@ -8,7 +8,7 @@ import type { Surface } from '../physics/collision';
  * Sounds are procedural: filtered noise bursts and short tones. Positional sounds use a
  * PannerNode relative to the listener (the camera).
  */
-export type ClickName = 'dryFire' | 'selector' | 'magOut' | 'magIn' | 'boltClose';
+export type ClickName = 'dryFire' | 'selector' | 'magOut' | 'magIn' | 'boltClose' | 'cycleBack';
 
 const CLICKS: Record<ClickName, { freq: number; length: number; gain: number }> = {
   dryFire: { freq: 2400, length: 0.03, gain: 0.35 },
@@ -16,6 +16,7 @@ const CLICKS: Record<ClickName, { freq: number; length: number; gain: number }> 
   magOut: { freq: 900, length: 0.05, gain: 0.3 },
   magIn: { freq: 1300, length: 0.05, gain: 0.4 },
   boltClose: { freq: 700, length: 0.07, gain: 0.45 },
+  cycleBack: { freq: 520, length: 0.08, gain: 0.4 },
 };
 
 const fwd = new THREE.Vector3();
@@ -105,6 +106,13 @@ export class AudioManager {
   flagCue(kind: 'captured' | 'lost' | 'neutralized'): void {
     const c = AUDIO.flagCues;
     c[kind].forEach((freq, i) => this.tone({ freq, endFreq: freq, length: c.noteLength, gain: c.gain, delay: i * c.noteGap }));
+  }
+
+  /** Pre-battle countdown: a tick, or the "GO" note at the start. */
+  countdownCue(go: boolean): void {
+    const c = AUDIO.countdownCue;
+    const freq = go ? c.go : c.tick;
+    this.tone({ freq, endFreq: freq, length: go ? c.goLength : c.tickLength, gain: c.gain, delay: 0 });
   }
 
   /** Picked up ammo and health at a crate. */

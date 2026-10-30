@@ -45,6 +45,7 @@ describe('ProfileStore', () => {
     profile.name = 'Ghost';
     profile.loadout.primary = 'ak47';
     profile.stats.kills = 12;
+    profile.team = 'red';
     store.save(profile);
     expect(store.load()).toEqual(profile);
   });
@@ -54,10 +55,12 @@ describe('ProfileStore', () => {
       name: 'x',
       stats: { kills: -3, deaths: 2.5, wins: 4, headshots: 'many' },
       loadout: { primary: 'm1911', secondary: 'bazooka' },
+      team: 'green',
     });
     const p = storeWith(raw).load();
     expect(p.name).toBe(defaultProfile().name);
     expect(p.stats).toEqual({ ...EMPTY_STATS, wins: 4 });
     expect(p.loadout).toEqual(defaultProfile().loadout);
+    expect(p.team).toBe('blue');
   });
 });

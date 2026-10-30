@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { WEAPON_IDS } from '../src/data/weapons';
+import { WEAPONS, WEAPON_IDS } from '../src/data/weapons';
 import { countTriangles } from '../src/weapons/models/ModelKit';
 import { ATTACHMENT_NAMES } from '../src/weapons/models/WeaponModel';
-import { OVERALL_LENGTH, REQUIRED_NODES, buildWeaponModel } from '../src/weapons/models/weaponModels';
+import { OVERALL_LENGTH, REQUIRED_NODES, TRI_BUDGET, buildWeaponModel } from '../src/weapons/models/weaponModels';
 
 function stats(root: THREE.Object3D): { size: THREE.Vector3; staticMeshes: number; materials: number } {
   const box = new THREE.Box3().setFromObject(root);
@@ -26,6 +26,16 @@ describe.each(WEAPON_IDS)('%s model', (id) => {
     for (const name of REQUIRED_NODES[id]) expect(fp.nodes[name], name).toBeDefined();
   });
 
+  it('has the moving parts its action data animates', () => {
+    const a = WEAPONS[id].action;
+    const needed: string[] = [a.cycleNode, 'trigger', 'magazine'];
+    if (a.hammer) needed.push('hammer');
+    if (a.dustCover) needed.push('dustCover');
+    if (a.emptyReload === 'boltRelease') needed.push('boltRelease');
+    if (a.emptyReload === 'slideStop') needed.push('slideStop');
+    for (const name of needed) expect(fp.nodes[name as keyof typeof fp.nodes], name).toBeDefined();
+  });
+
   it('has every attachment point in both versions', () => {
     for (const m of [fp, tp]) for (const name of ATTACHMENT_NAMES) expect(m.points[name], name).toBeDefined();
     expect(tp.nodes.magazine).toBeDefined();
@@ -45,8 +55,8 @@ describe.each(WEAPON_IDS)('%s model', (id) => {
   it('stays within the triangle budgets', () => {
     const fpTris = countTriangles(fp.root);
     const tpTris = countTriangles(tp.root);
-    expect(fpTris).toBeGreaterThanOrEqual(600);
-    expect(fpTris).toBeLessThanOrEqual(1500);
+    expect(fpTris).toBeGreaterThanOrEqual(TRI_BUDGET[id][0]);
+    expect(fpTris).toBeLessThanOrEqual(TRI_BUDGET[id][1]);
     expect(tpTris).toBeLessThan(300);
   });
 
@@ -67,9 +77,11 @@ describe.each(WEAPON_IDS)('%s model', (id) => {
 const IRON_SIGHTS = {
   m4a1: { height: 0.066, radius: 0.368 },
   ak47: { height: 0.0485, radius: 0.378 },
+  sr9: { height: 0.05, radius: 0.39 },
+  br12: { height: 0.04, radius: 0.64 },
 } as const;
 
-describe.each(['m4a1', 'ak47'] as const)('%s iron sights', (id) => {
+describe.each(['m4a1', 'ak47', 'sr9', 'br12'] as const)('%s iron sights', (id) => {
   const fp = buildWeaponModel(id, 'fp');
   fp.root.updateMatrixWorld(true);
   const eye = fp.points.sightAnchor.getWorldPosition(new THREE.Vector3());

@@ -1,0 +1,54 @@
+.scope-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+.scope-overlay.shown {
+  display: block;
+}
+/* A huge box-shadow blacks out everything around the round lens. */
+.scope-lens {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(86vh, 86vw);
+  height: min(86vh, 86vw);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 200vmax #050607, inset 0 0 6vmin 2vmin rgba(0, 0, 0, 0.85);
+}
+.scope-h,
+.scope-v {
+  position: absolute;
+  background: #0b0c0d;
+}
+.scope-h {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  /* Thick outer bars, thin near the center. */
+  background: linear-gradient(90deg, #0b0c0d 0 30%, transparent 30% 70%, #0b0c0d 70%), linear-gradient(#0b0c0d, #0b0c0d) center / 40% 1px no-repeat;
+  box-shadow: none;
+}
+.scope-v {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: linear-gradient(180deg, #0b0c0d 0 30%, transparent 30% 70%, #0b0c0d 70%), linear-gradient(#0b0c0d, #0b0c0d) center / 1px 40% no-repeat;
+}
+.scope-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #c8261c;
+}

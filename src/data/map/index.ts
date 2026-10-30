@@ -118,10 +118,8 @@ const streetPropsHalf: PropDef[] = [
 ];
 
 // --- HQs ---
-const blueSpawns: SpawnDef[] = [-24, -16, -8, 0, 8, 16, 24].flatMap((x) => [
-  { x, z: 160, yaw: 0 },
-  { x, z: 170, yaw: 0 },
-]);
+/** 32 points (4 rows of 8), so all 16 soldiers of a side start on their own spot. */
+const blueSpawns: SpawnDef[] = [-28, -20, -12, -4, 4, 12, 20, 28].flatMap((x) => [155, 161, 167, 173].map((z) => ({ x, z, yaw: 0 })));
 const hqBlueProps: PropDef[] = [
   ...[-52, -40, 40, 52].map((x) => p('sandbags', x, 150, Math.PI / 2)),
   p('container', -54, 166, 0),

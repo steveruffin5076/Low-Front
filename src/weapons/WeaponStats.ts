@@ -17,14 +17,15 @@ const norm = (v: number, min: number, max: number): number => clamp01((v - min) 
 export function statBars(w: WeaponDef): Record<StatBarName, number> {
   const a = STAT_BARS.accuracy;
   const m = STAT_BARS.mobility;
+  const recoilRate = Math.min(1, w.rpm / a.recoilRpm);
   const accuracyPenalty =
     w.spread.hipDeg * a.hipSpreadWeight +
-    w.recoil.verticalDeg * a.verticalRecoilWeight +
-    w.recoil.horizontalDeg * a.horizontalRecoilWeight;
+    w.spread.adsDeg * a.adsSpreadWeight +
+    (w.recoil.verticalDeg * a.verticalRecoilWeight + w.recoil.horizontalDeg * a.horizontalRecoilWeight) * recoilRate;
   const speed = norm(w.moveSpeedModifier, m.speedMin, m.speedMax);
   const handling = 1 - norm(w.adsTime, m.adsTimeMin, m.adsTimeMax);
   return {
-    damage: clamp01(w.damage.near / STAT_BARS.damageMax),
+    damage: clamp01((w.damage.near * w.pellets) / STAT_BARS.damageMax),
     fireRate: clamp01(w.rpm / STAT_BARS.fireRateMax),
     range: clamp01(w.falloff.end / STAT_BARS.rangeMax),
     accuracy: clamp01(1 - accuracyPenalty / a.worstPenalty),

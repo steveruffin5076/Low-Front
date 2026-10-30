@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Rect } from '../data/map/types';
 import { FPAnimator } from '../anim/FPAnimator';
 import { CameraFx } from '../anim/CameraFx';
 import { AudioManager } from '../audio/AudioManager';
@@ -20,6 +21,7 @@ import { Combat } from '../game/Combat';
 import { PlayerHitboxes } from '../entities/PlayerHitboxes';
 import type { BulletShooter } from '../weapons/Ballistics';
 import { RangeCombat, type KillerInfo, type TargetHit } from './RangeCombat';
+import { ScopeOverlay } from '../ui/hud/ScopeOverlay';
 import type { World } from './World';
 
 /** Pressed keys latched each frame until a fixed step consumes them. */
@@ -57,6 +59,11 @@ export class PlaySession {
   readonly camera = new THREE.PerspectiveCamera(MOVEMENT.baseFov, 1, 0.05, 400);
   readonly audio = new AudioManager();
   readonly hud: PlayerHud;
+  private readonly scope = new ScopeOverlay();
+  /** No firing (the pre-battle countdown). */
+  holdFire = false;
+  /** Keeps the player inside this area (the HQ during the countdown), or null. */
+  confine: Rect | null = null;
   /** Bullets, impacts and tracers for everyone in this world (bots fire into it too). */
   readonly combatSystem: Combat;
   /** The player as a bullet target. */
@@ -138,6 +145,8 @@ export class PlaySession {
 
   mount(parent: HTMLElement): void {
     parent.append(this.hud.element);
+    // Under the HUD widgets, so ammo, minimap and flags stay readable while scoped.
+    this.hud.element.prepend(this.scope.element);
   }
 
   /** Kills the player at once (out of bounds, enemy HQ, test key). */
@@ -185,6 +194,7 @@ export class PlaySession {
       jumpPressed: this.latched.jump,
     };
     this.player.fixedUpdate(dt, intent, this.weapons.active.def.moveSpeedModifier);
+    if (this.confine) this.keepInside(this.confine);
 
     const weaponInput: WeaponInput = {
       firePressed: this.latched.fire,
@@ -193,7 +203,7 @@ export class PlaySession {
       switchTo: this.latched.switchTo,
       fireModePressed: this.latched.fireMode,
       inspectPressed: this.latched.inspect,
-      canFire: !this.player.sprinting && this.animator.sprintAmount === 0,
+      canFire: !this.player.sprinting && this.animator.sprintAmount === 0 && !this.holdFire,
       sprinting: this.player.sprinting,
       ads,
     };
@@ -268,6 +278,7 @@ export class PlaySession {
       i.locked || this.paused,
     );
     this.hud.setBoundsWarning(this.fx.dead ? null : this.bounds.remaining);
+    this.scope.visible = !this.fx.dead && this.animator.scoped;
   }
 
   /** Builds the world's and the weapon layer's shaders ahead of play. */
@@ -278,7 +289,7 @@ export class PlaySession {
 
   render(renderer: Renderer): void {
     renderer.render(this.world.scene, this.camera);
-    if (!this.fx.dead) renderer.renderLayer(this.layer.scene, this.layer.camera);
+    if (!this.fx.dead && !this.animator.scoped) renderer.renderLayer(this.layer.scene, this.layer.camera);
   }
 
   dispose(): void {
@@ -293,7 +304,7 @@ export class PlaySession {
   private arm(loadout: Loadout): void {
     this.loadout = { ...loadout };
     this.weapons = new PlayerWeapons(loadout);
-    this.animator = new FPAnimator(this.layer, this.weapons, this.audio);
+    this.animator = new FPAnimator(this.layer, this.weapons, this.audio, this.options.identity?.team);
     this.animator.baseFov = this.baseFov;
     this.combat = new RangeCombat(
       this.physics,
@@ -328,15 +339,26 @@ export class PlaySession {
     this.combat.dispose();
   }
 
+  /** Pushes the player back inside `r` (with a small margin) when a step took them out. */
+  private keepInside(r: Rect): void {
+    const feet = this.player.motor.feet;
+    const m = 0.5;
+    const x = THREE.MathUtils.clamp(feet.x, r.x0 + m, r.x1 - m);
+    const z = THREE.MathUtils.clamp(feet.z, r.z0 + m, r.z1 - m);
+    if (x !== feet.x || z !== feet.z) this.player.motor.teleport(new THREE.Vector3(x, feet.y, z));
+  }
+
   /** ADS is blocked while sprinting, switching weapons and reloading. */
   private get adsAllowed(): boolean {
     const a = this.weapons.actionKind;
-    return !this.player.sprinting && a !== 'holster' && a !== 'draw' && a !== 'reload';
+    return !this.player.sprinting && a !== 'holster' && a !== 'draw' && a !== 'reload' && a !== 'shells';
   }
 
   private readInput(): void {
     const i = this.input;
-    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y, this.sensitivity));
+    // Through a scope the view turns slower, in step with the zoom.
+    const sens = this.animator.scoped ? (this.sensitivity * this.camera.fov) / this.baseFov : this.sensitivity;
+    if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y, sens));
     const l = this.latched;
     if (i.wasPressed(CONTROLS.crouch)) l.crouch = true;
     if (i.wasPressed(CONTROLS.jump)) l.jump = true;

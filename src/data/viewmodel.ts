@@ -33,6 +33,10 @@ export interface ViewmodelDef {
   pouch: V3;
   /** Selector angle (rad, around the node's X axis) per fire mode. */
   selector: { auto: number; semi: number };
+  /** Full ADS shows the scope view (CSS overlay) instead of the weapon. */
+  scope?: boolean;
+  /** Bolt actions: the handle knob relative to the bolt's pivot (weapon space), and how far the handle lifts (rad). */
+  bolt?: { knob: V3; lift: number };
 }
 
 export const VIEWMODEL: Record<WeaponId, ViewmodelDef> = {
@@ -61,6 +65,50 @@ export const VIEWMODEL: Record<WeaponId, ViewmodelDef> = {
     reloadPose: { pos: [-0.02, 0.07, -0.12], rot: [0.25, 0.6, 0] },
     pouch: [-0.12, -0.45, 0.1],
     selector: { auto: -0.22, semi: -0.42 },
+  },
+  sr9: {
+    hip: { pos: [0.12, -0.225, -0.3], rot: [0, 0.03, 0] },
+    sprint: { pos: [0.08, -0.29, -0.26], rot: [-0.35, 0.75, 0.35] },
+    adsFov: 60,
+    leftHand: 'handguard',
+    gripTilt: -0.3,
+    kick: { back: 0.025, up: 0.035, roll: 0.015 },
+    cycleTravel: 0.04,
+    magAxis: [0, -1, -0.2],
+    reloadPose: { pos: [-0.02, 0.07, -0.12], rot: [0.25, 0.6, 0] },
+    pouch: [-0.12, -0.45, 0.1],
+    selector: { semi: Math.PI / 2, auto: Math.PI },
+  },
+  br12: {
+    hip: { pos: [0.13, -0.235, -0.3], rot: [0, 0.03, 0] },
+    sprint: { pos: [0.08, -0.29, -0.26], rot: [-0.35, 0.75, 0.35] },
+    adsFov: 62,
+    leftHand: 'handguard',
+    gripTilt: -0.3,
+    kick: { back: 0.07, up: 0.12, roll: 0.04 },
+    // Pump stroke.
+    cycleTravel: 0.09,
+    magAxis: [0, -1, 0],
+    // Rolled left so the loading port underneath faces the camera.
+    reloadPose: { pos: [-0.04, 0.08, -0.08], rot: [0.2, 0.2, -1.0] },
+    pouch: [-0.12, -0.45, 0.1],
+    selector: { semi: 0, auto: 0 },
+  },
+  lr24: {
+    hip: { pos: [0.13, -0.235, -0.3], rot: [0, 0.03, 0] },
+    sprint: { pos: [0.08, -0.29, -0.26], rot: [-0.35, 0.75, 0.35] },
+    // 6x: a sixth of the base field of view.
+    adsFov: 12.5,
+    leftHand: 'handguard',
+    gripTilt: -0.3,
+    kick: { back: 0.08, up: 0.1, roll: 0.03 },
+    cycleTravel: 0.09,
+    magAxis: [0, -1, 0],
+    reloadPose: { pos: [-0.02, 0.07, -0.12], rot: [0.25, 0.6, 0] },
+    pouch: [-0.12, -0.45, 0.1],
+    selector: { semi: 0, auto: 0 },
+    scope: true,
+    bolt: { knob: [0.042, -0.012, 0.02], lift: 1.0 },
   },
   m1911: {
     hip: { pos: [0.1, -0.17, -0.4], rot: [0, 0.04, 0] },

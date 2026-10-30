@@ -35,13 +35,18 @@ export const UI_PALETTE = {
 export const WEAPON_PALETTE = {
   boltSteel: 0x8b9097,
   interior: 0x141518,
+  /** Shotgun shell hull. */
+  shellHull: 0x9b2b22,
+  /** Sniper rifle stock. */
+  stockGreen: 0x3e4a34,
 } as const;
 
 /** First-person arms and effects. */
 export const FP_PALETTE = {
   glove: 0x1b1c1f,
-  sleeve: PALETTE.blueTeam,
-  cuff: 0x24548f,
+  /** Sleeves and cuffs in the player's team color. */
+  sleeve: { blue: PALETTE.blueTeam, red: PALETTE.redTeam },
+  cuff: { blue: 0x24548f, red: 0x8f2c24 },
   brass: 0xd4a640,
   flashCore: 0xfff1b0,
   flashOuter: 0xffa733,

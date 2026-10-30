@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DIFFICULTIES, DIFFICULTY, type DifficultyPreset } from '../data/bots';
+import { BOTS, DIFFICULTIES, DIFFICULTY, type DifficultyPreset, type WeaponStyle } from '../data/bots';
 import { spreadDirection } from '../weapons/Spread';
 
 /**
@@ -18,6 +18,8 @@ export class BotAim {
   pause = 0;
   /** Reaction delay for the current target. */
   reaction = 0;
+  /** The held weapon's style (slower, single shots with a sniper). */
+  style: WeaponStyle = BOTS.styles.rifle;
   private readonly offset = new THREE.Vector3();
 
   constructor(
@@ -28,8 +30,8 @@ export class BotAim {
   /** Error cone half-angle in degrees right now. */
   get error(): number {
     const p = this.preset;
-    const k = Math.min(1, this.trackTime / p.aimSettle);
-    return THREE.MathUtils.lerp(p.aimError.start, p.aimError.min, k);
+    const k = Math.min(1, this.trackTime / (p.aimSettle * this.style.settleScale));
+    return THREE.MathUtils.lerp(p.aimError.start, p.aimError.min, k) * this.style.errorScale;
   }
 
   /** Call every frame with the target being engaged (null when none). */
@@ -40,7 +42,7 @@ export class BotAim {
       this.burstLeft = 0;
       this.pause = 0;
       const r = this.preset.reaction;
-      this.reaction = r.min + (r.max - r.min) * this.rand();
+      this.reaction = (r.min + (r.max - r.min) * this.rand()) * this.style.reactionScale;
       return;
     }
     if (targetId) this.trackTime += dt;
@@ -66,7 +68,7 @@ export class BotAim {
     if (this.burstLeft <= 0) this.startBurst();
     this.burstLeft--;
     if (this.burstLeft > 0) return false;
-    const p = this.preset.burstPause;
+    const p = this.style.burstPause ?? this.preset.burstPause;
     this.pause = p.min + (p.max - p.min) * this.rand();
     return true;
   }
@@ -77,7 +79,7 @@ export class BotAim {
   }
 
   private startBurst(): void {
-    const b = this.preset.burst;
+    const b = this.style.burst ?? this.preset.burst;
     this.burstLeft = Math.round(b.min + (b.max - b.min) * this.rand());
     this.head = this.rand() < this.preset.headChance;
   }
