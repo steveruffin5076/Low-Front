@@ -6,7 +6,7 @@ import type { WeaponSlot } from '../data/weapons';
 const T = BOTS.thresholds;
 const O = BOTS.objective;
 
-export type BotState = 'objective' | 'hold' | 'combat' | 'reload' | 'retreat' | 'search';
+export type BotState = 'objective' | 'hold' | 'combat' | 'reload' | 'retreat' | 'search' | 'resupply';
 export type Pace = 'sprint' | 'run' | 'walk';
 
 /** A flag as one bot sees it. */
@@ -45,6 +45,8 @@ export interface BotSenses {
   lastKnown: { position: THREE.Vector3; age: number } | null;
   /** The bot made no progress for the stuck time. */
   stuck: boolean;
+  /** An owned crate to go to: low on ammo and one is near (null otherwise). */
+  resupplyAt: THREE.Vector3 | null;
 }
 
 /** World questions the brain may ask (faked in tests). */
@@ -140,6 +142,7 @@ export class BotBrain {
       return this.combat(s, q);
     }
     this.coverSpot = null;
+    if (s.resupplyAt) return this.resupply(s);
     if (!s.reloading && s.canReload && s.magFraction < T.reloadFraction) return this.reload(s, q);
     if (s.lastKnown && s.time < this.searchUntil && s.lastKnown.age < T.searchTime) return this.search(s);
     return this.objective(s, q);
@@ -212,6 +215,16 @@ export class BotBrain {
     const c = q.cover(s.position, T.coverRange, s.lastKnown?.position ?? null);
     o.moveTo = c && c.pos.distanceTo(s.position) > 1 ? c.pos : null;
     o.crouch = o.moveTo === null;
+    return o;
+  }
+
+  /** Low on ammo with nothing in sight: run to the crate. */
+  private resupply(s: BotSenses): BotOrders {
+    const o = this.orders;
+    o.state = 'resupply';
+    o.moveTo = s.resupplyAt;
+    o.lookAt = null;
+    o.pace = 'run';
     return o;
   }
 

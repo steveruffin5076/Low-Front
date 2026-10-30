@@ -26,6 +26,7 @@ function senses(over: Partial<BotSenses> = {}): BotSenses {
     enemy: null,
     lastKnown: null,
     stuck: false,
+    resupplyAt: null,
     ...over,
   };
 }
@@ -112,6 +113,15 @@ describe('bot brain: fighting', () => {
     const later = b.decide({ ...at, time: 2 + BOTS.thresholds.coverHold.max + 0.1 }, queries(cover));
     expect(later.crouch).toBe(false);
     expect(later.moveTo).toBe(enemy.position);
+  });
+
+  it('runs to a crate when told to, but fights first if an enemy is in sight', () => {
+    const b = new BotBrain(noNoise);
+    const crate = V(5, 150);
+    const o = b.decide(senses({ resupplyAt: crate, magFraction: 0 }), queries());
+    expect(o.state).toBe('resupply');
+    expect(o.moveTo).toBe(crate);
+    expect(b.decide(senses({ resupplyAt: crate, enemy }), queries()).state).toBe('combat');
   });
 
   it('switches to the pistol with no primary ammo left, and stops trying to reload', () => {

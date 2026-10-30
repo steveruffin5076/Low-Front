@@ -9,12 +9,14 @@ import { BOTS } from '../data/bots';
 import { CONQUEST } from '../data/conquest';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
 import { WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
+import { RESUPPLY } from '../data/resupply';
 import { Bot } from '../entities/Bot';
 import { COLLISION, raycastSegment } from '../physics/collision';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { NavGrid } from '../world/NavGrid';
 import type { Combat } from './Combat';
 import type { ConquestMatch } from './ConquestMatch';
+import { ResupplySystem, resupplyKit, kitNeedsResupply, type Crate, type Resupplier } from './Resupply';
 import type { SpawnChoice, SpawnSystem } from './SpawnSystem';
 import { enemyOf } from './Tickets';
 
@@ -30,6 +32,8 @@ export interface BotManagerOptions {
   spawns: SpawnSystem;
   /** The player as something bots can see (null: no player). */
   player: SightTarget | null;
+  /** Resupply crates at the flags. */
+  crates: readonly Crate[];
   /** Bots per team (defaults from `BOTS`). */
   counts?: Record<TeamId, number>;
   rand?: () => number;
@@ -47,6 +51,9 @@ export class BotManager {
   readonly paths: PathService;
   readonly perception: Perception;
   readonly coverIndex: CoverIndex;
+  /** Crate rules, shared with the player's side (ConquestSession). */
+  readonly resupply: ResupplySystem;
+  private readonly resuppliers: Resupplier[] = [];
   time = 0;
   private readonly byId = new Map<string, Bot>();
   private readonly targets: SightTarget[] = [];
@@ -59,6 +66,7 @@ export class BotManager {
 
   constructor(private readonly o: BotManagerOptions) {
     this.rand = o.rand ?? Math.random;
+    this.resupply = new ResupplySystem(o.crates);
     this.flagPositions = o.match.zones.map((z) => new THREE.Vector3(z.flag.x, z.flag.y, z.flag.z));
     this.paths = new PathService(o.nav);
     this.coverIndex = new CoverIndex(o.cover);
@@ -80,6 +88,15 @@ export class BotManager {
         const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: 'm1911' }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
         o.scene.add(bot.soldier.model.root);
         this.bots.push(bot);
+        this.resuppliers.push({
+          id: bot.id,
+          team,
+          get alive() {
+            return bot.alive;
+          },
+          position: bot.position,
+          needsResupply: () => kitNeedsResupply({ weapons: bot.weapons, health: bot.soldier.health }),
+        });
         this.byId.set(bot.id, bot);
         o.match.add(bot);
         this.spawn(bot, { kind: 'hq' });
@@ -112,6 +129,10 @@ export class BotManager {
       }
       bot.fixedUpdate(dt);
     }
+    for (const r of this.resupply.update(this.time, this.o.match.owners(), this.resuppliers)) {
+      const bot = this.byId.get(r.id)!;
+      resupplyKit({ weapons: bot.weapons, health: bot.soldier.health });
+    }
   }
 
   update(dt: number, cameraPos: THREE.Vector3): void {
@@ -133,6 +154,7 @@ export class BotManager {
     const taken = this.bots.filter((b) => b !== bot && b.alive).map((b) => b.position);
     const p = this.o.spawns.point(bot.team, choice, taken, this.rand());
     bot.spawn(new THREE.Vector3(p.x, 0, p.z), p.yaw);
+    this.resupply.reset(bot.id);
   }
 
   /** Respawn at the HQ or the owned flag nearest the bot's objective. */
@@ -212,7 +234,16 @@ export class BotManager {
       enemy: seen ? { id: seen.id, position: seen.position, distance: seen.position.distanceTo(bot.position) } : null,
       lastKnown: latest ? { position: latest.position, age: this.time - Math.max(latest.lastSeen, latest.lastHeard) } : null,
       stuck: bot.stuck,
+      resupplyAt: this.resupplyTarget(bot),
     };
+  }
+
+  /** An owned crate nearby when the primary is out of ammo or down to its last magazine. */
+  private resupplyTarget(bot: Bot): THREE.Vector3 | null {
+    const p = bot.weapons.weapons.primary;
+    if (p.reserve >= p.def.magazine && p.mag > 0) return null;
+    if (this.resupply.cooldownLeft(bot.id, this.time) > 0) return null;
+    return this.resupply.nearestOwned(bot.position, bot.team, this.o.match.owners(), RESUPPLY.botRange)?.position ?? null;
   }
 
   /** Cover within `radius`, nearest first; with a threat, only cover that stands between us and it. */

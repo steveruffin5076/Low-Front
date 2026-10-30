@@ -48,6 +48,9 @@ export class MatchHud implements PlayerHud {
   private readonly fireMode = el('div', { class: 'wp-mode' });
   private readonly weaponPanel: HTMLElement;
   private readonly lockHint = el('div', { class: 'lock-hint', text: 'Click to play' });
+  /** Short notices such as "Resupplied", and how long the current one has left. */
+  private readonly notice = el('div', { class: 'hud-notice' });
+  private noticeTime = 0;
   private boundsSeconds: number | null = null;
   private hqSeconds: number | null = null;
   private scoreboardClock = 0;
@@ -74,7 +77,9 @@ export class MatchHud implements PlayerHud {
       this.largeMap.element,
       this.scoreboard.element,
       this.lockHint,
+      this.notice,
     ]);
+    this.notice.hidden = true;
   }
 
   addKill(k: KillFeedEntry): void {
@@ -111,7 +116,15 @@ export class MatchHud implements PlayerHud {
   }
 
   /** Per-frame match state (called by the Conquest session). */
+  /** Shows `text` under the crosshair for `seconds`. */
+  showNotice(text: string, seconds: number): void {
+    this.notice.textContent = text;
+    this.notice.hidden = false;
+    this.noticeTime = seconds;
+  }
+
   updateMatch(dt: number, v: MatchView): void {
+    if (this.noticeTime > 0 && (this.noticeTime -= dt) <= 0) this.notice.hidden = true;
     this.topBar.update(v.match);
     this.capture.update(v.zone, v.team);
     this.hqSeconds = v.hqWarning;

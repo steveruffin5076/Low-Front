@@ -5,7 +5,8 @@ import type { TeamId } from '../../data/map/types';
 export interface MapMarker {
   x: number;
   z: number;
-  kind: 'ally' | 'enemy';
+  /** A crate is one your team can use (owned flag). */
+  kind: 'ally' | 'enemy' | 'crate';
 }
 
 /** A flag on a map view: letter in a circle filled with the owner's color. */
@@ -36,6 +37,18 @@ export function drawFlag(g: CanvasRenderingContext2D, px: number, py: number, f:
 }
 
 export function drawDot(g: CanvasRenderingContext2D, px: number, py: number, m: MapMarker): void {
+  if (m.kind === 'crate') {
+    // Small white box with a green cross: a resupply crate.
+    g.fillStyle = '#f1f3f5';
+    g.fillRect(px - 4, py - 4, 8, 8);
+    g.strokeStyle = '#000';
+    g.lineWidth = 1;
+    g.strokeRect(px - 4, py - 4, 8, 8);
+    g.fillStyle = '#2f9e44';
+    g.fillRect(px - 3, py - 1, 6, 2);
+    g.fillRect(px - 1, py - 3, 2, 6);
+    return;
+  }
   g.beginPath();
   g.arc(px, py, 3.5, 0, Math.PI * 2);
   g.fillStyle = m.kind === 'ally' ? HUD.team.blue : HUD.team.red;

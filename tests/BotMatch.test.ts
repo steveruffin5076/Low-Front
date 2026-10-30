@@ -36,7 +36,7 @@ describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
       }
     }
     const msPerStep = (performance.now() - t0) / i;
-    console.log(`seed ${seed}: result ${JSON.stringify(m.match.result)} at ${(i / 60).toFixed(0)}s, kills ${kills}, flips ${flips}, reloads ${reloads}, longest stuck ${maxStuck.toFixed(1)}s, unsticks ${m.bots.bots.reduce((n, b) => n + b.unsticks, 0)}, ${msPerStep.toFixed(2)} ms per step`);
+    console.log(`seed ${seed}: result ${JSON.stringify(m.match.result)} at ${(i / 60).toFixed(0)}s, kills ${kills}, flips ${flips}, reloads ${reloads}, longest stuck ${maxStuck.toFixed(1)}s, unsticks ${m.bots.bots.reduce((n, b) => n + b.unsticks, 0)}, resupplies ${m.bots.resupply.uses}, ${msPerStep.toFixed(2)} ms per step`);
     expect(m.match.result).not.toBeNull();
     expect(m.match.result!.winner).not.toBeNull();
     expect(kills).toBeGreaterThan(20);
