@@ -41,8 +41,19 @@ export interface BotManagerOptions {
 
 const PRIMARIES = WEAPON_IDS.filter((id) => WEAPONS[id].slot === 'primary');
 
+/** A primary picked by `BOTS.primaryWeights` (`r` in 0–1). */
+export function pickPrimary(r: number): WeaponId {
+  const weight = (id: WeaponId): number => BOTS.primaryWeights[id] ?? 1;
+  let left = r * PRIMARIES.reduce((sum, id) => sum + weight(id), 0);
+  for (const id of PRIMARIES) {
+    left -= weight(id);
+    if (left < 0) return id;
+  }
+  return PRIMARIES[PRIMARIES.length - 1];
+}
+
 /**
- * Runs the bots (plan section 12): creates 15 Blue and 16 Red bots with random primaries,
+ * Runs the bots (plan section 12): creates 15 Blue and 16 Red bots with weighted random primaries,
  * spawns and respawns them, shares perception (with its raycast budget) and the path queue,
  * staggers their 10 Hz decisions, and answers the brain's world questions.
  */
@@ -87,7 +98,7 @@ export class BotManager {
     let n = 0;
     for (const team of ['blue', 'red'] as const) {
       for (let i = 0; i < counts[team]; i++, n++) {
-        const primary: WeaponId = PRIMARIES[Math.floor(this.rand() * PRIMARIES.length)];
+        const primary = pickPrimary(this.rand());
         const name = BOTS.names[n % BOTS.names.length];
         const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
         o.scene.add(bot.soldier.model.root);
@@ -229,6 +240,8 @@ export class BotManager {
       hp: bot.soldier.health.hp,
       magFraction: active.mag / (active.def.magazine + active.def.chamber),
       activeSlot: w.activeSlot,
+      weaponClass: active.def.class,
+      primaryClass: primary.def.class,
       primaryEmpty: primary.mag === 0,
       primaryOut: primary.mag === 0 && primary.reserve === 0,
       canReload: active.reserve > 0,

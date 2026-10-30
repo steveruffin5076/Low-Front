@@ -389,6 +389,7 @@ export class Bot implements Combatant, SightTarget {
     const w = this.weapons.active;
     const target = o.fireAt ? this.world.target(o.fireAt) : null;
     const visible = target !== null && target.alive && this.memory.known.has(target.id) && this.memory.isVisible(this.memory.known.get(target.id)!, this.now);
+    this.aim.style = BOTS.styles[w.def.class];
     this.aim.track(dt, visible ? target!.id : null);
     let fire = false;
     let press = false;

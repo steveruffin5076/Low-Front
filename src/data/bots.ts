@@ -1,3 +1,5 @@
+import type { WeaponClass, WeaponId } from './weapons';
+
 /** Bot AI settings (plan section 12). Times in seconds, distances in meters, angles in degrees. */
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -51,6 +53,28 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyPreset> = {
   },
 };
 
+/**
+ * How bots fight with each kind of weapon. `engageRange`: attackers in the open close in on an
+ * enemy farther than this. `advanceRange`: keep pushing the objective while the enemy is farther
+ * than this. Aim: reaction and settle times are multiplied; `burst` and `burstPause` replace the difficulty's.
+ */
+export interface WeaponStyle {
+  engageRange: number;
+  advanceRange: number;
+  reactionScale: number;
+  settleScale: number;
+  /** Multiplies the aim error cone (a scope lets a sniper aim much finer). */
+  errorScale: number;
+  burst?: { min: number; max: number };
+  burstPause?: { min: number; max: number };
+  /** Past this distance the weapon is no use: fight with the pistol instead (shotgun). */
+  maxRange?: number;
+  /** Skip cover and push in on the enemy (the shotgun needs to be close). */
+  rush?: boolean;
+  /** Stay put and crouch when fighting in the open (no strafing). */
+  holdStill: boolean;
+}
+
 /** Eye, chest and head heights over the feet, standing and crouched (sight lines and aim points). */
 export const BODY_POINTS = {
   eye: { stand: 1.62, crouch: 1.05 },
@@ -73,6 +97,29 @@ export const BOTS = {
     /** A seen enemy stays "known" this long after losing sight. */
     memory: 8,
   },
+  /**
+   * How often bots carry each primary (relative weights): rifles most, SMG and shotgun common,
+   * the sniper rare (1 in 16).
+   */
+  primaryWeights: { m4a1: 5, ak47: 5, sr9: 2.5, br12: 2.5, lr24: 1 } as Partial<Record<WeaponId, number>>,
+  styles: {
+    rifle: { engageRange: 20, advanceRange: 35, reactionScale: 1, settleScale: 1, errorScale: 1, holdStill: false },
+    pistol: { engageRange: 20, advanceRange: 35, reactionScale: 1, settleScale: 1, errorScale: 1, holdStill: false },
+    // Close-range weapons push in on enemies and stop pushing the objective sooner.
+    smg: { engageRange: 10, advanceRange: 25, reactionScale: 1, settleScale: 1, errorScale: 1, holdStill: false },
+    shotgun: { engageRange: 10, advanceRange: 30, reactionScale: 1, settleScale: 1, errorScale: 0.8, burst: { min: 1, max: 2 }, maxRange: 25, rush: true, holdStill: false },
+    // Snipers fight from range, take their time and fire single aimed shots, so they are not frustrating.
+    sniper: {
+      engageRange: 70,
+      advanceRange: 90,
+      reactionScale: 2.4,
+      settleScale: 1.6,
+      errorScale: 0.3,
+      burst: { min: 1, max: 1 },
+      burstPause: { min: 1.6, max: 2.6 },
+      holdStill: true,
+    },
+  } as Record<WeaponClass, WeaponStyle>,
   /** Where a bot's tracer starts: this far along the aim and this far below the eye (m). */
   muzzle: { forward: 0.6, down: 0.12 },
   /** A* searches started per frame across all bots, the heuristic weight (faster, slightly longer paths) and a cap on nodes expanded. */
@@ -86,14 +133,10 @@ export const BOTS = {
     retreatHp: 30,
     /** Search the last known enemy position for this long. */
     searchTime: 6,
-    /** In the open, keep advancing on the objective while the enemy is farther than this. */
-    advanceRange: 35,
     /** Take cover in combat if a cover point is this close. */
     coverRange: 8,
     /** Fight from one cover this long, then move on (no new cover for the max time). */
     coverHold: { min: 3, max: 7 },
-    /** Attackers in the open walk toward an enemy farther than this. */
-    engageRange: 20,
     /** Switch to the pistol when the primary is empty and the enemy is this close. */
     pistolRange: 15,
     /** No progress toward the next waypoint for this long counts as stuck. */

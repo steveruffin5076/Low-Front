@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BOTS } from '../data/bots';
 import type { FlagId, TeamId } from '../data/map/types';
-import type { WeaponSlot } from '../data/weapons';
+import type { WeaponClass, WeaponSlot } from '../data/weapons';
 
 const T = BOTS.thresholds;
 const O = BOTS.objective;
@@ -30,6 +30,9 @@ export interface BotSenses {
   magFraction: number;
   /** The active weapon and whether the primary has no rounds at all. */
   activeSlot: WeaponSlot;
+  /** Kind of weapon in hand: sets the fighting ranges (`BOTS.styles`). */
+  weaponClass: WeaponClass;
+  primaryClass: WeaponClass;
   primaryEmpty: boolean;
   /** The primary has no rounds left in the magazine or in reserve. */
   primaryOut: boolean;
@@ -157,16 +160,21 @@ export class BotBrain {
     o.lookAt = e.position;
     o.fireAt = e.id;
     o.pace = 'walk';
-    if (s.activeSlot === 'primary' && (s.primaryOut || (s.primaryEmpty && e.distance < T.pistolRange))) o.switchTo = 'secondary';
-    else if (s.activeSlot === 'secondary' && !s.primaryOut && !s.primaryEmpty && e.distance >= T.pistolRange) o.switchTo = 'primary';
+    // A short-range primary (shotgun) gives way to the pistol for far enemies; back when they come closer.
+    const reach = BOTS.styles[s.primaryClass].maxRange ?? Infinity;
+    const tooFar = e.distance > reach;
+    const inReach = e.distance < reach * 0.8;
+    if (s.activeSlot === 'primary' && (s.primaryOut || (s.primaryEmpty && e.distance < T.pistolRange) || tooFar)) o.switchTo = 'secondary';
+    else if (s.activeSlot === 'secondary' && !s.primaryOut && !s.primaryEmpty && (e.distance >= T.pistolRange || reach < Infinity) && inReach) o.switchTo = 'primary';
+    const style = BOTS.styles[s.weaponClass];
     // A far enemy on the way to the objective: keep pushing, shooting on the way.
-    if (!this.holding && this.approach && e.distance > T.advanceRange) {
+    if (!this.holding && this.approach && e.distance > style.advanceRange) {
       this.coverSpot = null;
       o.moveTo = this.approach;
       return o;
     }
     // Into cover close by and fight from it for a while (health comes back meanwhile).
-    if (!this.coverSpot && s.time >= this.coverBanUntil) {
+    if (!this.coverSpot && s.time >= this.coverBanUntil && !BOTS.styles[s.primaryClass].rush) {
       this.coverSpot = q.cover(s.position, T.coverRange, e.position)?.pos ?? null;
       const h = T.coverHold;
       this.coverUntil = s.time + h.min + (h.max - h.min) * this.rand();
@@ -182,7 +190,12 @@ export class BotBrain {
       return o;
     }
     // In the open: attackers close in, defenders and close fights strafe.
-    o.moveTo = !this.holding && e.distance > T.engageRange ? e.position : null;
+    o.moveTo = !this.holding && e.distance > style.engageRange ? e.position : null;
+    if (style.holdStill && !o.moveTo) {
+      o.strafe = 0;
+      o.crouch = true;
+      return o;
+    }
     if (s.time >= this.strafeUntil) {
       this.strafeUntil = s.time + 0.8 + this.rand() * 1.2;
       this.strafeDir = this.rand() < 0.5 ? -1 : 1;
