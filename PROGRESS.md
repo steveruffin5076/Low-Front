@@ -1,6 +1,15 @@
 # PROGRESS.md
 
-## Phase 10 — Builds + add-ons (done, waiting for review)
+## Fix after Phase 10 review: two rifles after changing the primary (done)
+
+Your report: after switching to another primary weapon, the old and the new rifle showed at the same time.
+- **Cause:** a loadout change builds a new first-person rig, and the old rig's cleanup freed its GPU memory but left it in the weapon scene, so the old rifle and arms kept drawing.
+- **Fix:** the old rig is now removed from the scene (`FPAnimator.dispose`).
+- **Checked:**
+  - deploy with the M4A1, die, pick the AK47, deploy: only the AK47 shows, and the weapon scene has the same 7 objects before and after;
+  - new test `tests/FPAnimator.test.ts` (fails without the fix); 220 tests pass.
+
+## Phase 10 — Builds + add-ons (done)
 
 ### What was done
 - **Windows desktop app** (Electron):

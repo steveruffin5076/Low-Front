@@ -156,10 +156,14 @@ export class FPAnimator {
     return THREE.MathUtils.lerp(this.baseFov, (v.vm.adsFov * this.baseFov) / MOVEMENT.baseFov, e);
   }
 
+  /** Frees the rig and takes it out of the weapon layer (a loadout change builds a new one). */
   dispose(): void {
     for (const v of this.visuals.values()) v.dispose();
     this.arms.dispose();
     this.effects.dispose();
+    this.weaponRoot.removeFromParent();
+    this.arms.root.removeFromParent();
+    this.effects.root.removeFromParent();
   }
 
   private addProcedural(f: FPFrame, e: number, s: number): void {
