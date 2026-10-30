@@ -130,7 +130,7 @@ describe('scoring', () => {
     expect(ps.score).toBe(CONQUEST.score.capture);
     // A headshot kill on an enemy inside our own flag: kill + headshot + defend.
     red.moveTo(c.x + 3, c.z);
-    m.reportDeath({ victimId: 'r', killerId: 'p', weapon: 'M4A1', headshot: true, distance: 20 });
+    m.reportDeath({ victimId: 'r', killerId: 'p', weapon: 'VX-4', headshot: true, distance: 20 });
     const s = CONQUEST.score;
     expect(ps.score).toBe(s.capture + s.kill + s.headshotBonus + s.defendBonus);
     expect(ps.kills).toBe(1);
@@ -229,8 +229,8 @@ describe('match summary and profile stats', () => {
     const player = new Dummy('p', 'blue', true, 'Tester');
     const reds = ['r1', 'r2', 'r3', 'r4'].map((id) => new Dummy(id, 'red'));
     const m = new ConquestMatch(VERDAN, [player, ...reds]);
-    for (const r of reds.slice(0, 3)) m.reportDeath({ victimId: r.id, killerId: 'p', weapon: 'AK47', headshot: r.id === 'r1', distance: 10 });
-    m.reportDeath({ victimId: 'p', killerId: 'r4', weapon: 'AK47', distance: 10 });
+    for (const r of reds.slice(0, 3)) m.reportDeath({ victimId: r.id, killerId: 'p', weapon: 'KR-7', headshot: r.id === 'r1', distance: 10 });
+    m.reportDeath({ victimId: 'p', killerId: 'r4', weapon: 'KR-7', distance: 10 });
     const s = summarize(m, { winner: 'blue', reason: 'tickets' }, 'p');
     expect(s.top.blue.map((r) => r.id)).toEqual(['p']);
     expect(s.top.red[0].id).toBe('r4');

@@ -1,4 +1,7 @@
-/** Weapon stats (plan section 7.1). Spread and recoil are tuned to the plan's descriptions. */
+/**
+ * Weapon stats (plan section 7.1). Spread and recoil are tuned to the plan's descriptions.
+ * Display names are fictional (no real firearm names); the ids are internal and stay stable for saves.
+ */
 
 export type WeaponId = 'm4a1' | 'ak47' | 'm1911';
 export type WeaponSlot = 'primary' | 'secondary';
@@ -73,7 +76,7 @@ export interface WeaponDef {
 export const WEAPONS: Record<WeaponId, WeaponDef> = {
   m4a1: {
     id: 'm4a1',
-    name: 'M4A1',
+    name: 'VX-4',
     slot: 'primary',
     class: 'rifle',
     action: { cycleNode: 'bolt', locksOnEmpty: true, trigger: 'pivot', hammer: false, dustCover: true, emptyReload: 'boltRelease', manual: false },
@@ -98,7 +101,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   },
   ak47: {
     id: 'ak47',
-    name: 'AK47',
+    name: 'KR-7',
     slot: 'primary',
     class: 'rifle',
     action: { cycleNode: 'chargingHandle', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'rack', manual: false },
@@ -123,7 +126,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   },
   m1911: {
     id: 'm1911',
-    name: 'M1911',
+    name: 'P-11',
     slot: 'secondary',
     class: 'pistol',
     action: { cycleNode: 'slide', locksOnEmpty: true, trigger: 'slide', hammer: true, dustCover: false, emptyReload: 'slideStop', manual: false },

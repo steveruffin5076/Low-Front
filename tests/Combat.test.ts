@@ -44,7 +44,7 @@ describe('shared combat', () => {
     expect(hits[0].target.combatantId).toBe('enemy-far');
     expect(hits[0].damage).toBeGreaterThan(0);
     expect(taken[0].attackerId).toBe('me');
-    expect(taken[0].weapon).toBe('M4A1');
+    expect(taken[0].weapon).toBe(WEAPONS.m4a1.name);
   });
 
   it('stops on a teammate but does no damage', () => {
