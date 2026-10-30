@@ -65,6 +65,8 @@ export class FPAnimator {
   private readonly swayY = new Spring(M.sway.frequency);
   private readonly jump = new Spring(M.jump.frequency);
   private pendingShots: { visual: WeaponVisual }[] = [];
+  /** Shell-loading clips hold their last pose until the next shell (game logic may run behind the frame). */
+  private holdAction = false;
   /** Re-lock the bolt/slide if an empty reload is cancelled before it closes. */
   private relockOnCancel = false;
 
@@ -107,6 +109,7 @@ export class FPAnimator {
       v.dustCoverOpen = false;
     }
     this.action = null;
+    this.holdAction = false;
     this.fire = null;
     this.fading = [];
     this.adsBlend = 0;
@@ -238,17 +241,20 @@ export class FPAnimator {
 
   private play(slot: 'action' | 'fire', clip: Clip): void {
     const old = this[slot];
+    if (slot === 'action') this.holdAction = false;
     if (old && !old.done) this.fade(old);
     this[slot] = new ClipPlayer(clip);
   }
 
   /** Replaces a clip with no blend: for clips that start where the previous one ends. */
-  private swap(slot: 'action' | 'fire', clip: Clip): void {
+  private swap(slot: 'action' | 'fire', clip: Clip, hold = false): void {
+    if (slot === 'action') this.holdAction = hold;
     this[slot] = new ClipPlayer(clip);
   }
 
   private stop(slot: 'action' | 'fire'): void {
     const p = this[slot];
+    if (slot === 'action') this.holdAction = false;
     if (p) this.fade(p);
     this[slot] = null;
   }
@@ -261,7 +267,7 @@ export class FPAnimator {
     const onEvent = (name: string): void => this.onClipEvent(name);
     this.action?.update(dt, onEvent);
     this.fire?.update(dt, onEvent);
-    if (this.action?.done) this.action = null;
+    if (this.action?.done && !this.holdAction) this.action = null;
     if (this.fire?.done) this.fire = null;
     for (const p of this.fading) p.weight -= dt / FADE_TIME;
     this.fading = this.fading.filter((p) => p.weight > 0);
@@ -313,6 +319,7 @@ export class FPAnimator {
       this.arms.setLeftStyle(this.current.vm.leftHand);
       this.fading = [];
       this.fire = null;
+      this.holdAction = false;
       this.action = new ClipPlayer(clips.drawClip(duration));
     });
     ev.on('holsterStart', ({ duration }) => this.play('action', clips.holsterClip(duration)));
@@ -332,6 +339,7 @@ export class FPAnimator {
       const v = this.visuals.get(weapon)!;
       if (weapon.def.reloadMode === 'shell') {
         this.play('action', clips.shellStartClip(v.ctx));
+        this.holdAction = true;
         return;
       }
       const locked = v.locked;
@@ -341,7 +349,7 @@ export class FPAnimator {
     });
     ev.on('shellIn', ({ weapon, more }) => {
       const v = this.visuals.get(weapon)!;
-      this.swap('action', more ? clips.shellInsertClip(v.ctx) : clips.shellEndClip(v.ctx));
+      this.swap('action', more ? clips.shellInsertClip(v.ctx) : clips.shellEndClip(v.ctx), more);
     });
     ev.on('reloadEnd', () => {
       // Firing stopped a shell reload part way: blend back to the hip.

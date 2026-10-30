@@ -1,4 +1,4 @@
-import { Assembly, box, boxFromTo, cyl, cylZ, profile, section, type V2, type V3 } from './ModelKit';
+import { Assembly, box, boxFromTo, circle, cyl, cylZ, profile, section, type V2, type V3 } from './ModelKit';
 import type { AttachmentName, WeaponLod, WeaponModel } from './WeaponModel';
 import { WM } from './weaponMaterials';
 
@@ -14,10 +14,12 @@ const BARREL_R = 0.0115;
 /** Magazine tube under the barrel, and the pump that slides on it. */
 const TUBE = { y: 0.03, radius: 0.011, front: -0.5 };
 const PUMP = { zRear: -0.2, zFront: -0.37 };
-/** Vent rib on the barrel, with a bead at the muzzle: the sight line runs along the receiver top. */
+/** Vent rib on the barrel. Sights 40 mm over the bore: ghost ring on the receiver, post at the muzzle. */
 const RIB_TOP = BORE_Y + BARREL_R + 0.005;
-const SIGHT_Y = 0.084;
-const BEAD_Z = MUZZLE_Z + 0.015;
+const SIGHT_Y = BORE_Y + 0.04;
+const FRONT_POST_Z = MUZZLE_Z + 0.015;
+const REAR_Z = 0.035;
+const APERTURE = 0.0035;
 /** Loading port under the receiver. */
 const PORT = { zRear: -0.02, zFront: -0.11 };
 const STOCK_END = 0.37;
@@ -26,7 +28,7 @@ const SHELL = { radius: 0.0105, length: 0.068 };
 const POINTS: Record<AttachmentName, V3> = {
   muzzle: [0, BORE_Y, MUZZLE_Z],
   ejectionPort: [0.018, 0.058, -0.06],
-  sightAnchor: [0, SIGHT_Y, RECEIVER.zRear + 0.2],
+  sightAnchor: [0, SIGHT_Y, REAR_Z + 0.12],
   rightHandGrip: [0, -0.045, 0.04],
   leftHandGrip: [0, 0.012, -0.29],
   magWell: [0, RECEIVER.yBottom, (PORT.zRear + PORT.zFront) / 2],
@@ -40,8 +42,8 @@ const STOCK_PROFILE: V2[] = [
 const PUMP_PROFILE: V2[] = [
   [PUMP.zRear, 0.05], [PUMP.zFront, 0.05], [PUMP.zFront, 0.012], [PUMP.zFront + 0.01, 0.006], [PUMP.zRear - 0.01, 0.006], [PUMP.zRear, 0.012],
 ];
-/** Receiver top, rounded, with the shallow sighting groove on the rear. */
-const RECEIVER_TOP: V2[] = [[-0.017, 0.072], [0.017, 0.072], [0.017, 0.078], [0.01, SIGHT_Y - 0.002], [-0.01, SIGHT_Y - 0.002], [-0.017, 0.078]];
+/** Receiver top, rounded. */
+const RECEIVER_TOP: V2[] = [[-0.017, 0.072], [0.017, 0.072], [0.017, 0.078], [0.01, RECEIVER.yTop], [-0.01, RECEIVER.yTop], [-0.017, 0.078]];
 
 export function buildBR12(lod: WeaponLod): WeaponModel {
   const asm = new Assembly(`br12-${lod}`);
@@ -64,14 +66,25 @@ function buildDetailed(asm: Assembly): void {
   asm.add(interior, boxFromTo([-0.012, r.yBottom - 0.0005, PORT.zFront], [0.012, r.yBottom, PORT.zRear]));
   for (const z of [-0.12, 0.04]) asm.add(metal, cyl(0.0022, 0.037, { axis: 'x', pos: [0, 0.024, z], segments: 6 }));
 
-  // Barrel with vent rib and a brass bead; magazine tube with its cap and the barrel clamp.
+  // Barrel with vent rib; magazine tube with its cap and the barrel clamp.
   asm.add(metal, cylZ(BARREL_R, r.zFront, MUZZLE_Z, BORE_Y, 0, 10));
   asm.add(interior, cylZ(0.0095, MUZZLE_Z - 0.0005, MUZZLE_Z + 0.004, BORE_Y, 0, 8));
   asm.add(metal, boxFromTo([-0.004, BORE_Y + BARREL_R - 0.001, MUZZLE_Z + 0.005], [0.004, RIB_TOP, r.zFront]));
   for (let z = r.zFront - 0.03; z > MUZZLE_Z + 0.03; z -= 0.045) {
     asm.add(metal, boxFromTo([-0.0025, BORE_Y + BARREL_R - 0.001, z - 0.004], [0.0025, RIB_TOP, z + 0.004]));
   }
-  asm.add(WM.brass(), cyl(0.0022, SIGHT_Y - RIB_TOP, { axis: 'y', pos: [0, (SIGHT_Y + RIB_TOP) / 2, BEAD_Z], segments: 6 }));
+
+  // Front post between two ears, with a brass insert on top.
+  const fz = FRONT_POST_Z;
+  asm.add(metal, boxFromTo([-0.006, RIB_TOP - 0.002, fz - 0.01], [0.006, RIB_TOP + 0.006, fz + 0.01]));
+  asm.add(metal, boxFromTo([-0.0012, RIB_TOP, fz - 0.004], [0.0012, SIGHT_Y - 0.002, fz + 0.004]));
+  asm.add(WM.brass(), boxFromTo([-0.0012, SIGHT_Y - 0.002, fz - 0.003], [0.0012, SIGHT_Y, fz + 0.003]));
+  for (const x of [-0.0065, 0.0065]) asm.add(metal, boxFromTo([x - 0.0015, RIB_TOP, fz - 0.006], [x + 0.0015, SIGHT_Y + 0.003, fz + 0.006]));
+
+  // Ghost ring rear sight on a base, with protective ears.
+  asm.add(metal, boxFromTo([-0.012, r.yTop, REAR_Z - 0.015], [0.012, SIGHT_Y - 0.009, REAR_Z + 0.01]));
+  asm.add(metal, section(circle(0, SIGHT_Y, 0.009, 10), REAR_Z - 0.0025, REAR_Z + 0.0025, [circle(0, SIGHT_Y, APERTURE, 10).reverse()]));
+  for (const x of [-0.0125, 0.0125]) asm.add(metal, boxFromTo([x - 0.002, r.yTop, REAR_Z - 0.008], [x + 0.002, SIGHT_Y + 0.006, REAR_Z + 0.008]));
   asm.add(metal, cylZ(TUBE.radius, r.zFront, TUBE.front, TUBE.y, 0, 8));
   asm.add(metal, cylZ(TUBE.radius + 0.002, TUBE.front, TUBE.front - 0.025, TUBE.y, 0, 8));
   asm.add(metal, boxFromTo([-0.008, TUBE.y, TUBE.front + 0.005], [0.008, BORE_Y, TUBE.front + 0.02]));
@@ -107,10 +120,11 @@ function buildSimple(asm: Assembly): void {
   const metal = WM.metal();
   const polymer = WM.polymer();
   const r = RECEIVER;
-  asm.add(metal, boxFromTo([-r.halfWidth, r.yBottom, r.zFront], [r.halfWidth, SIGHT_Y - 0.002, r.zRear]));
+  asm.add(metal, boxFromTo([-r.halfWidth, r.yBottom, r.zFront], [r.halfWidth, r.yTop, r.zRear]));
+  asm.add(metal, boxFromTo([-0.01, r.yTop, REAR_Z - 0.01], [0.01, SIGHT_Y + 0.006, REAR_Z + 0.01]));
   asm.add(metal, cylZ(BARREL_R, r.zFront, MUZZLE_Z, BORE_Y, 0, 6), cylZ(TUBE.radius, r.zFront, TUBE.front, TUBE.y, 0, 5));
   asm.add(polymer, profile(STOCK_PROFILE, 0.036), profile(GRIP_PROFILE, 0.028));
-  asm.add(metal, boxFromTo([-0.003, BORE_Y, BEAD_Z - 0.003], [0.003, SIGHT_Y, BEAD_Z + 0.003]));
+  asm.add(metal, boxFromTo([-0.003, BORE_Y, FRONT_POST_Z - 0.006], [0.003, SIGHT_Y, FRONT_POST_Z + 0.006]));
   asm.node('pump', [0, TUBE.y, (PUMP.zRear + PUMP.zFront) / 2]).add(polymer, profile(PUMP_PROFILE, 0.046));
   const mw = POINTS.magWell;
   asm.node('magazine', mw).add(WM.shellHull(), cylZ(SHELL.radius, mw[2] - SHELL.length / 2, mw[2] + SHELL.length / 2, r.yBottom + SHELL.radius + 0.002, 0, 5));
