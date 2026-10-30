@@ -1,5 +1,80 @@
 # PROGRESS.md
 
+## Phase 10 — Builds + add-ons (done, waiting for review)
+
+### What was done
+- **Windows desktop app** (Electron):
+  - `npm run pc` runs it.
+  - `npm run build:pc` builds the installer `LowFront-Setup-1.0.0.exe`. You choose the install folder, and it adds Start menu and desktop shortcuts.
+  - The game is served from `app://game/`, a fixed address inside the app. Your profile and settings are kept in the app's own data folder and survive updates.
+  - **On laptops with two graphics chips, the app uses the faster one** (for every player, no Windows setting needed).
+  - Starts maximized with no menu bar, and F11 toggles fullscreen. Only one copy runs at a time.
+  - **Quit Game closes the app.**
+  - The app icon is drawn by `scripts/icon.mjs`.
+- **Windows build on GitHub:** the new workflow "Build Windows app" (`.github/workflows/build-pc.yml`) builds the installer on a Windows machine on every push to `main` and to Claude's working branches. Download it from the run's **Artifacts**. The Pages deploy skips downloading Electron.
+- **Graphics preset** (Pause Menu → Graphics), applied immediately and saved:
+  - High: full resolution, 2048 shadows (the default);
+  - Medium: 85% resolution, 1024 shadows;
+  - Low: 70% resolution, no sun shadows.
+- **Resupply crates**:
+  - One crate near each flag. If your team owns the flag, standing at it gives full ammo and full health.
+  - Then no crate works for you for 20 s. If nothing is missing, using a crate doesn't start the 20 s wait.
+  - The stripe shows the owner's color; your team's crates show on the minimap and large map; you get a "Resupplied" notice and sound.
+  - **Bots use them too:** with no enemy in sight and their rifle empty or on its last magazine, they run to the nearest owned crate within 60 m.
+- **Web graphics tip:** when the browser runs the game on built-in graphics (Intel UHD/Iris, AMD Radeon/Vega built-in chips, or software rendering), the main menu names the chip and explains how to switch the browser to the graphics card. Close it once with × and it doesn't come back. Not shown in the desktop app.
+- Tests: 219 unit tests, including:
+  - crate rules (owner, reach, cooldown, refill and heal, nearest crate for bots);
+  - the bot resupply state;
+  - graphics preset saving and old saves;
+  - built-in GPU detection.
+
+### Checked results
+- **Desktop app** (Linux build under a virtual display; the Windows build is the same app):
+  - it starts on the main menu at `app://game/` with the quit bridge, and without the GPU tip;
+  - it plays a match with 31 bots;
+  - **Quit Game exits the app (exit code 0)**;
+  - the profile name, FOV 90 and the Medium preset survive a restart.
+- **Windows installer:** built by GitHub Actions on Windows (103 MB artifact). It can't be built in this Linux container, because the installer step needs Wine.
+- **Web production build** (`vite preview`, headless Chromium):
+  - three menu → match → End Screen → menu loops;
+  - textures, DOM and audio contexts return to the same counts;
+  - geometries settle at a small fixed cache of soldier models;
+  - no console errors.
+- **Graphics preset** at 1280×720:
+
+  | Preset | Render buffer | Draw calls |
+  |---|---|---|
+  | Low | 896×503 | 99 |
+  | Medium | 1088×612 | 131 |
+  | High | 1280×720 | 131 |
+
+- **Crates for the player:** health 30 → 100, ammo 2/0 → 31/120, a 20 s cooldown starts, and the notice shows.
+- **Full bot matches:**
+
+  | Seed | Bot resupplies | Result | Longest stall |
+  |---|---|---|---|
+  | 7 | 74 | Red wins on tickets at 17:44 | 4.0 s |
+  | 11 | 59 | Red wins on tickets at 16:56 | 4.0 s |
+
+### How to test
+1. **Windows app**:
+   1. On GitHub, open Actions → "Build Windows app" → the latest run → Artifacts → download `LowFront-Setup-windows`.
+   2. Unzip it and run `LowFront-Setup-1.0.0.exe`. Windows may warn that the app is unsigned: choose More info → Run anyway.
+   3. Start Low Front from the desktop shortcut. Press F3: the first line should name your **NVIDIA GeForce RTX 3050**.
+   4. Play a full match, check your FPS, then press Esc → Quit to Main Menu → Quit Game. The app should close.
+   5. Start it again: your name and settings should still be there.
+2. **Web**:
+   1. Open https://steveruffin5076.github.io/Low-Front/ in Chrome, Edge and Firefox.
+   2. In each: play a match, open the Pause Menu, change Graphics, finish or quit the match.
+   3. Quit Game on the web closes the tab, or shows "You can close this tab".
+3. **Crates**: capture a flag and look for the green crate with the white cross near it. Walk onto it when low on ammo or health.
+4. `npm test` (219 tests); `npm run test:match` (about 3 minutes per seed).
+
+### Known issues
+- The installer is unsigned, so Windows SmartScreen warns on first run. Signing needs a paid code-signing certificate.
+- You can walk through a crate (it has no collision box, so bots never get stuck on it).
+- Edge, Firefox, and the real Windows installer were not run here; they are your check.
+
 ## Fix after Phase 9 review: your gameplay video (done)
 
 From your 60 s recording on an RTX 3050 laptop (1920×1080, 100% scaling):
