@@ -1,5 +1,70 @@
 # PROGRESS.md
 
+## Phase 11 — New weapons, fictional names, team choice, pre-battle countdown (done)
+
+### What was done
+- **No real gun names.** Every weapon has a short fictional code, everywhere a player can see it (HUD, kill feed, loadout cards, Deploy Screen, End Screen, viewers):
+  - VX-4 (was M4A1), KR-7 (was AK47), P-11 (was M1911);
+  - new: SR-9, BR-12, LR-24.
+  - Internal ids stay the same, so old saves still work. A test rejects real gun names.
+- **Weapon code cleanup (W0):** the animations and effects read the weapon's data (action, pellets, reload type, shell size) instead of checking weapon names, and the weapon card bars use a scale that fits all guns.
+- **SR-9 submachine gun:** 800 RPM, 24 → 16 damage, 30+1 rounds, quick aim (0.18 s), full move speed.
+- **BR-12 pump shotgun:**
+  - 9 pellets of 12 → 5 damage (full damage to 10 m, lowest from 25 m), 6+1 shells;
+  - after each shot the left hand works the pump and the empty shell flies out;
+  - loads **one shell at a time**: firing stops the reload and keeps the shells already loaded; sprinting or switching also stops it;
+  - ghost ring rear sight and a front post.
+- **LR-24 bolt-action sniper rifle:**
+  - 88 → 70 damage (a headshot kills), 5+1 rounds;
+  - the right hand works the bolt after every shot (lift, back, case out, forward, down);
+  - **6× scope:** when fully aimed, a scope view replaces the gun (black surround, crosshair) and the mouse turns slower in step with the zoom;
+  - slow to aim (0.55 s), very inaccurate from the hip.
+- **Bots use the new guns:**
+  - picks by weight: rifles most, SR-9 and BR-12 common, LR-24 about 1 bot in 16;
+  - shotgun bots push in on enemies and use the pistol at long range; SMG bots also like close fights;
+  - sniper bots hold still and crouch, take longer to fire, and fire single precise shots with a pause between them.
+- **Join a team:** Deploy on the profile screen now opens "Join a team", with Blue and Red. You take one bot's place on that side (15 bots + you against 16). Your choice is saved and marked "Last played". Everything follows your team:
+  - sleeve color, map dots, flag sounds, the HQ on the Deploy Screen, the enemy-HQ warning;
+  - the End Screen adds "Victory" or "Defeat: you fought for Red/Blue".
+- **20 s countdown before the battle:**
+  - a "Battle starts in 20" banner, ticks for the last 3 seconds, then "GO!";
+  - you can walk inside your HQ but cannot fire or leave it; bots stand at their spawn points;
+  - the clock, tickets and flags start after "GO".
+- **No stacked spawns:** each HQ has 32 spawn points (4 rows of 8, all on walkable ground). Spawns skip points where someone stands, including the player.
+- The bot match test now also prints kills by weapon and how many bots carry each gun.
+- Tests: 272 unit tests (new ones for names, shell reload and pellets, bolt action and scope, bot weapon styles, team save, the countdown and spawns).
+
+### Checked results
+- **Bot matches** (`npm run test:match`, seeds 7 and 11): both play to a winner (1153 s and 1174 s), longest stuck 4.0 s, about 2.2 ms per step. Kills by weapon:
+
+  | Seed | VX-4 | KR-7 | SR-9 | BR-12 | LR-24 | P-11 |
+  |---|---|---|---|---|---|---|
+  | 7 | 270 | 190 | 53 | 21 | 11 | 28 |
+  | 11 | 125 | 302 | 72 | 22 | 5 | 54 |
+
+  Per bot, rifles get the most kills: most fights on this map happen around 40 m.
+- **Browser (headless Chromium):**
+  - each new gun: hip, aimed (SR-9 sights, BR-12 ghost ring, LR-24 scope view), pump and bolt strokes with the case flying out, shell-by-shell reload (2 → 7, one shell at a time);
+  - team screen at 1280×720 and phone width;
+  - joining Red: 15 red and 16 blue bots, red sleeves, red map dots, the red HQ on the Deploy Screen, "Victory: you fought for Red", Red saved in the profile;
+  - countdown on both teams: at the start, every soldier is at least 6 m from the next; firing does nothing; a step out of the HQ is pulled back; bots don't move; after "GO" the clock runs, bots move and firing works;
+  - no console errors.
+
+### How to test
+1. `npm run dev`, open the printed URL. Play vs Bots → pick a new gun → Deploy.
+2. "Join a team": pick Red. Check the red sleeves and the countdown banner. Try to shoot and to walk out of the HQ during the countdown.
+3. After "GO", play. Try:
+   - BR-12: reload with R, then fire part way through the reload;
+   - LR-24: hold right mouse for the scope.
+4. Die, and check the Deploy Screen shows the red HQ. At the end, the End Screen shows Victory or Defeat for Red.
+5. `npm test`, `npm run typecheck`, `npm run build`; `BOT_MATCH_SEEDS=7,11 npm run test:match` (about 5 minutes).
+
+### Known issues
+- On this mid-range map, shotgun and sniper bots score fewer kills than rifle bots (see the table).
+- The scope view is a flat overlay: there is no lens zoom distortion and no scope glint for enemies.
+- The weapon pack you sent was not used, as you asked.
+- The headless test browser runs slowly, so animation screenshots were taken with game time slowed down; in a normal browser at 60 FPS the timing is as designed.
+
 ## Fix after Phase 10 review: two rifles after changing the primary (done)
 
 Your report: after switching to another primary weapon, the old and the new rifle showed at the same time.
