@@ -4,7 +4,8 @@ name: Build Windows app
 # Download it from the run's "Artifacts" section.
 on:
   push:
-    branches: [main]
+    # main, and Claude's working branches so an installer is ready for review before merge.
+    branches: [main, 'claude/**']
   workflow_dispatch:
 
 permissions:
