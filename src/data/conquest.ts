@@ -23,8 +23,8 @@ export const CONQUEST = {
     enemyWarning: 5,
   },
   /**
-   * Countdown before the battle: everyone spawns at their HQ and may move inside it, but nobody
-   * can fire or leave; the clock, tickets and flags start after it. "GO" shows this long.
+   * Countdown before the battle: everyone stands at their HQ spawn point (looking around only),
+   * nobody can fire; the clock, tickets and flags start after it. "GO" shows this long.
    */
   warmup: 20,
   goBanner: 1.5,
