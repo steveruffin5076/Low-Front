@@ -241,7 +241,9 @@ export class PlaySession {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
     }
-    this.layer.setFov(fov);
+    // The weapon and arms always draw at the FOV they were built for (only the ADS zoom
+    // carries over), so a wide FOV setting does not stretch them.
+    this.layer.setFov((fov * MOVEMENT.baseFov) / this.baseFov);
 
     const w = this.weapons.active;
     this.hud.update(
@@ -294,7 +296,7 @@ export class PlaySession {
       this.weapons,
       this.audio,
       this.camera,
-      (out) => this.animator.muzzleWorld(this.camera, out),
+      (out) => this.animator.muzzleWorld(this.camera, this.layer.camera.fov, out),
       {
         onHitTarget: (hit) => {
           this.hud.showHitMarker(hit.kill);
