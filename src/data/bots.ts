@@ -98,6 +98,8 @@ export const BOTS = {
     pistolRange: 15,
     /** No progress toward the next waypoint for this long counts as stuck. */
     stuckTime: 2,
+    /** Still stuck this long after the recoveries: move onto the nearest walkable cell. */
+    unstickTime: 4,
     /** Waypoint reached within this distance (horizontal). */
     waypointRadius: 0.6,
     /** Walk instead of sprint this close to the objective or a known enemy. */

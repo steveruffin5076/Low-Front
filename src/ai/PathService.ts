@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { BOTS } from '../data/bots';
 import type { NavGrid } from '../world/NavGrid';
 import { clearLine, smoothPath } from '../world/NavPaths';
@@ -40,6 +40,23 @@ export class PathService {
     // A spot off the walkable floor (on a car, a crate) becomes its cell on the floor.
     const end = this.nav.position(b);
     return [from.clone(), Math.abs(end.y - to.y) > 0.5 ? end : to.clone()];
+  }
+
+  /**
+   * Off walkable ground (pushed into a wall corner, say): the center of the nearest walkable
+   * cell, to step onto before following any path. Null when `from` is already walkable.
+   */
+  exit(from: THREE.Vector3): THREE.Vector3 | null {
+    const here = this.nav.node(from.x, from.y, from.z);
+    if (here !== null && this.nav.walkable(here)) return null;
+    const n = this.nav.nearestWalkable(from, 2);
+    return n === null ? null : this.nav.position(n);
+  }
+
+  /** A walkable cell center about 1.5 m from `from` in direction `angle` (radians), or null. */
+  nearbyWalkable(from: THREE.Vector3, angle: number): THREE.Vector3 | null {
+    const n = this.nav.nearestWalkable(new THREE.Vector3(from.x + Math.cos(angle) * 1.5, from.y, from.z + Math.sin(angle) * 1.5), 2);
+    return n === null ? null : this.nav.position(n);
   }
 
   request(from: THREE.Vector3, to: THREE.Vector3, done: PathRequest['done'], raw = false): PathRequest {

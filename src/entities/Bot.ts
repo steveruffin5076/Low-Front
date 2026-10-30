@@ -77,6 +77,8 @@ export class Bot implements Combatant, SightTarget {
   /** Seconds wanting to move without getting 1 m from where that started, and its maximum this life. */
   stuckFor = 0;
   maxStuck = 0;
+  /** Times this bot was moved out of a spot it could not leave (for tests). */
+  unsticks = 0;
   private readonly stuckAnchor = new THREE.Vector3();
   /** Match time, for visibility checks (set by the manager each step). */
   now = 0;
@@ -280,6 +282,7 @@ export class Bot implements Combatant, SightTarget {
         // Sliding along a wall can look like progress; not getting 1 m away cannot.
         const every = T.stuckTime * 0.75;
         if (this.stuckFor >= T.stuckTime && Math.floor(this.stuckFor / every) !== Math.floor((this.stuckFor - dt) / every)) this.recover();
+        if (this.stuckFor >= T.unstickTime) this.unstick();
       }
     } else {
       this.stuckAnchor.copy(feet);
@@ -304,16 +307,18 @@ export class Bot implements Combatant, SightTarget {
     this.bestDistance = Infinity;
     if (this.request) this.request.cancelled = true;
     this.request = null;
+    // Searches and straight lines start from walkable ground: get back onto it first.
+    const exit = this.world.paths.exit(this.position);
     // A clear straight line needs no search.
     const direct = raw ? null : this.world.paths.direct(this.position, to);
     if (direct) {
-      this.path = [direct[1]];
+      this.path = exit ? [exit, direct[1]] : [direct[1]];
       this.pathIndex = 0;
       return;
     }
     // Keep to the old path (to about the same place) until the new one arrives, or head straight there.
-    if (!near || raw || this.pathIndex >= this.path.length) {
-      this.path = [this.destination];
+    if (!near || raw || exit || this.pathIndex >= this.path.length) {
+      this.path = exit ? [exit, this.destination] : [this.destination];
       this.pathIndex = 0;
     }
     this.request = this.world.paths.request(
@@ -323,7 +328,8 @@ export class Bot implements Combatant, SightTarget {
         this.request = null;
         if (!points || points.length < 2) return;
         this.path = points;
-        this.pathIndex = 1;
+        // The first point is the start cell: skip it unless we still have to step onto it.
+        this.pathIndex = this.world.paths.exit(this.position) ? 0 : 1;
         this.bestDistance = Infinity;
       },
       raw,
@@ -349,6 +355,21 @@ export class Bot implements Combatant, SightTarget {
       return;
     }
     if (this.stallTime >= T.stuckTime) this.recover();
+  }
+
+  /**
+   * Last resort, still stuck after stepping aside and repathing (wedged in a small corner the
+   * nav grid marks unwalkable): move onto the nearest walkable cell, at most 2 m away.
+   */
+  private unstick(): void {
+    const feet = this.position;
+    const to = this.world.paths.exit(feet) ?? this.world.paths.nearbyWalkable(feet, Math.random() * Math.PI * 2);
+    this.stuckFor = 0;
+    this.stuckAnchor.copy(feet);
+    if (!to) return;
+    this.unsticks++;
+    this.controller.motor.teleport(to);
+    if (this.destination) this.setDestination(this.destination, true);
   }
 
   /** Stuck: tell the brain, step aside and repath along cell centers. */
