@@ -44,6 +44,31 @@ export class Renderer {
     this.gl.autoClear = true;
   }
 
+  /**
+   * Compiles every shader `scene` needs now, hidden objects included (effect pools, the other
+   * weapon), so the first firefight does not stall while the GPU driver builds them.
+   */
+  warmUp(scene: THREE.Scene, camera: THREE.Camera): void {
+    const hidden: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    this.gl.compile(scene, camera);
+    for (const o of hidden) o.visible = false;
+  }
+
+  /** The graphics chip the browser renders with (laptops with two GPUs may pick the slower one). */
+  get gpuName(): string {
+    const gl = this.gl.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    // "ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Laptop GPU (0x...) Direct3D11 ...)" -> the chip name.
+    return name.match(/ANGLE \([^,]*, (.*?)\s*(?:\(0x|Direct3D|, |\)$)/)?.[1] ?? name;
+  }
+
   clear(): void {
     this.gl.clear();
   }

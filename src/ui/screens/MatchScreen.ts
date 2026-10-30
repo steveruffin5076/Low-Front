@@ -91,6 +91,7 @@ export class MatchScreen implements State {
     this.root = el('div', { class: 'screen match-screen' }, this.range ? [button('Main Menu', () => this.ctx.changeScreen('mainMenu'), 'btn btn-corner')] : []);
     this.ctx.ui.append(this.root);
     (this.range ?? this.conquest)?.mount(this.root);
+    this.session?.warmUp(this.ctx.renderer);
   }
 
   exit(): void {

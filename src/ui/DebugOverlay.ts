@@ -10,6 +10,8 @@ export interface DebugStats {
   renderMs: number;
   /** Sounds playing now. */
   voices: number;
+  /** Graphics chip in use. */
+  gpu: string;
 }
 
 /** F3 overlay: FPS, frame time, CPU split, draw calls, triangles, bot count, physics time, sound voices. */
@@ -51,6 +53,7 @@ export class DebugOverlay {
       const fps = this.frames / this.elapsed;
       const avgMs = (this.elapsed / this.frames) * 1000;
       this.el.textContent = [
+        `GPU        ${stats.gpu}`,
         `FPS        ${fps.toFixed(0)}`,
         `Frame      ${avgMs.toFixed(2)} ms (max ${(this.worstFrame * 1000).toFixed(1)})`,
         `CPU sim    ${(this.sim / this.frames).toFixed(2)} ms`,

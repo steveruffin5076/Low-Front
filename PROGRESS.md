@@ -1,6 +1,19 @@
 # PROGRESS.md
 
-## Phase 9 — Polish and Performance (done, waiting for review)
+## Fix after Phase 9 review: your gameplay video (done)
+
+From your 60 s recording on an RTX 3050 laptop (1920×1080, 100% scaling):
+- **What F3 showed:** 51–73 FPS with 40 ms spikes. The game's own CPU work was only about 6 ms per frame (2.4–3.9 ms simulation, 2.2–3.4 ms render), so the time goes to the graphics chip. The laptop also has an Intel UHD chip, and browsers often run on it.
+- **F3 now shows the graphics chip** in use (for example "NVIDIA GeForce RTX 3050 Laptop GPU" or "Intel(R) UHD Graphics").
+- **Shaders are built when the match loads**, hidden effects and the second weapon included, so the first firefight does not stall. All 17 programs exist before play, and fighting, reloading and switching weapons add none.
+- **Interiors are slightly brighter:** the sky fill is 0.9 (was 0.8), with a lighter ground color.
+- **To use the RTX 3050:**
+  1. Open Windows Settings → System → Display → Graphics.
+  2. Add your browser (Chrome or Edge), open Options, choose "High performance" (NVIDIA), and restart the browser.
+  3. F3 should then show the NVIDIA chip.
+  4. Memory was 95% full in the recording; closing other apps should help with the spikes.
+
+## Phase 9 — Polish and Performance (done)
 
 ### What was done
 - **Measurement**:

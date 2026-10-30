@@ -15,7 +15,7 @@ export const LIGHTING = {
     shadowExtent: 40,
     shadowFar: 220,
   },
-  hemi: { sky: 0xc4dcff, ground: 0x7a7266, intensity: 0.8 },
+  hemi: { sky: 0xc4dcff, ground: 0x8a8174, intensity: 0.9 },
   sky: { top: 0x3f8fdc, horizon: 0xd3e8f5, radius: 380 },
   fog: { color: 0xd3e8f5, near: 110, far: 380 },
   /** First-person weapon and arms (their own scene): sky fill, a warm key and a cool rim that traces the edges of the dark rifle. Positions are in camera space. */

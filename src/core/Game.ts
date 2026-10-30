@@ -32,6 +32,8 @@ export class Game {
   /** CPU time this frame: fixed steps (simulation) and the last render call. */
   private simMs = 0;
   private renderMs = 0;
+  /** Read once: the driver string never changes. */
+  private gpuName = '';
 
   constructor(canvas: HTMLCanvasElement, ui: HTMLElement) {
     this.ctx = {
@@ -46,6 +48,7 @@ export class Game {
       changeScreen: (screen) => this.changeScreen(screen),
     };
     this.debug = new DebugOverlay(ui);
+    this.gpuName = this.ctx.renderer.gpuName;
     this.match = new MatchScreen(this.ctx);
     this.screens
       .add('mainMenu', new MainMenu(this.ctx))
@@ -93,6 +96,7 @@ export class Game {
       simMs: this.simMs,
       renderMs: this.renderMs,
       voices: this.match.session?.audio.voices ?? 0,
+      gpu: this.gpuName,
     });
     this.simMs = 0;
     input.endFrame();
