@@ -230,7 +230,8 @@ export class FPAnimator {
   private spawnShotEffects(v: WeaponVisual): void {
     if (v !== this.current) return;
     this.effects.muzzleFlash(v.model.points.muzzle, v.weapon.def.slot === 'secondary' ? 0.7 : 1);
-    this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
+    // A manual action throws the case out when it is worked, not on the shot.
+    if (!v.weapon.def.action.manual) this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
   }
 
   // --- Clips ---
@@ -238,6 +239,11 @@ export class FPAnimator {
   private play(slot: 'action' | 'fire', clip: Clip): void {
     const old = this[slot];
     if (old && !old.done) this.fade(old);
+    this[slot] = new ClipPlayer(clip);
+  }
+
+  /** Replaces a clip with no blend: for clips that start where the previous one ends. */
+  private swap(slot: 'action' | 'fire', clip: Clip): void {
     this[slot] = new ClipPlayer(clip);
   }
 
@@ -293,6 +299,10 @@ export class FPAnimator {
     if (name === 'click') this.audio.play(this.action?.clip.name === 'fireMode' ? 'selector' : 'dryFire');
     if (name === 'magOut') this.audio.play('magOut');
     if (name === 'magIn') this.audio.play('magIn');
+    if (name === 'cycleBack') {
+      this.audio.play('cycleBack');
+      this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
+    }
   }
 
   private listen(weapons: PlayerWeapons): void {
@@ -320,10 +330,23 @@ export class FPAnimator {
     ev.on('dryFire', ({ weapon }) => this.play('fire', clips.dryFireClip(this.visuals.get(weapon)!.ctx)));
     ev.on('reloadStart', ({ weapon, kind }) => {
       const v = this.visuals.get(weapon)!;
+      if (weapon.def.reloadMode === 'shell') {
+        this.play('action', clips.shellStartClip(v.ctx));
+        return;
+      }
       const locked = v.locked;
       this.relockOnCancel = locked;
       v.locked = false;
       this.play('action', clips.reloadClip(v.ctx, kind, locked));
+    });
+    ev.on('shellIn', ({ weapon, more }) => {
+      const v = this.visuals.get(weapon)!;
+      this.swap('action', more ? clips.shellInsertClip(v.ctx) : clips.shellEndClip(v.ctx));
+    });
+    ev.on('reloadEnd', () => {
+      // Firing stopped a shell reload part way: blend back to the hip.
+      const name = this.action?.clip.name;
+      if (name === 'shellStart' || name === 'shellInsert') this.stop('action');
     });
     ev.on('reloadCancel', ({ weapon }) => {
       this.stop('action');

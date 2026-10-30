@@ -10,6 +10,8 @@ export interface WeaponEvents {
   reloadSeated: { weapon: WeaponState };
   reloadEnd: { weapon: WeaponState };
   reloadCancel: { weapon: WeaponState };
+  /** Shell-by-shell reload: one shell went in; `more` says whether another follows. */
+  shellIn: { weapon: WeaponState; more: boolean };
   holsterStart: { weapon: WeaponState; duration: number };
   drawStart: { weapon: WeaponState; duration: number };
   fireModeChanged: { weapon: WeaponState; mode: FireMode; duration: number };
@@ -34,6 +36,7 @@ export interface WeaponInput {
 type Action =
   | { kind: 'ready' }
   | { kind: 'reload'; type: ReloadKind; time: number; duration: number; seatAt: number; seated: boolean }
+  | { kind: 'shells'; time: number; next: number; endAt: number }
   | { kind: 'holster'; time: number; duration: number; next: WeaponSlot }
   | { kind: 'draw'; time: number; duration: number }
   | { kind: 'inspect'; time: number; duration: number }
@@ -88,8 +91,13 @@ export class PlayerWeapons {
       this.events.emit('holsterStart', { weapon, duration });
       return;
     }
-    if (a.kind === 'reload' && !a.seated && input.sprinting) {
-      this.cancelCurrent();
+    if ((a.kind === 'reload' && !a.seated) || a.kind === 'shells') {
+      if (input.sprinting) this.cancelCurrent();
+    }
+    // Firing stops a shell reload; the shells already loaded stay.
+    if (a.kind === 'shells' && input.firePressed && weapon.mag > 0) {
+      this.action = { kind: 'ready' };
+      this.events.emit('reloadEnd', { weapon });
     }
     if (a.kind === 'inspect' && (input.firePressed || input.ads || input.reloadPressed || input.sprinting)) {
       this.cancelCurrent();
@@ -98,6 +106,14 @@ export class PlayerWeapons {
     this.advance(dt);
     if (this.action.kind !== 'ready') return;
 
+    if (input.reloadPressed && weapon.canReload && !input.sprinting && weapon.def.shellReload) {
+      const sr = weapon.def.shellReload;
+      const duration = sr.start + weapon.shellsToLoad * sr.perShell + sr.end;
+      const next = sr.start + sr.perShell;
+      this.begin({ kind: 'shells', time: 0, next, endAt: Infinity });
+      this.events.emit('reloadStart', { weapon, kind: weapon.reloadKind, duration, seatAt: next });
+      return;
+    }
     if (input.reloadPressed && weapon.canReload && !input.sprinting) {
       const type = weapon.reloadKind;
       const duration = weapon.reloadDuration(type);
@@ -133,6 +149,10 @@ export class PlayerWeapons {
       this.active.applyReload(a.type);
       this.events.emit('reloadSeated', { weapon: this.active });
     }
+    if (a.kind === 'shells') {
+      this.advanceShells(a);
+      return;
+    }
     if (a.time < a.duration) return;
 
     switch (a.kind) {
@@ -155,6 +175,22 @@ export class PlayerWeapons {
     }
   }
 
+  private advanceShells(a: Extract<Action, { kind: 'shells' }>): void {
+    const weapon = this.active;
+    const sr = weapon.def.shellReload!;
+    if (a.time >= a.next && a.endAt === Infinity) {
+      weapon.insertShell();
+      const more = weapon.canReload;
+      if (more) a.next += sr.perShell;
+      else a.endAt = a.time + sr.end;
+      this.events.emit('shellIn', { weapon, more });
+    }
+    if (a.time >= a.endAt) {
+      this.action = { kind: 'ready' };
+      this.events.emit('reloadEnd', { weapon });
+    }
+  }
+
   /** Ends a reload whose magazine is already seated. */
   private finishReload(a: Extract<Action, { kind: 'reload' }>): void {
     if (!a.seated) throw new Error('Reload finished before the magazine was seated');
@@ -164,7 +200,7 @@ export class PlayerWeapons {
 
   private cancelCurrent(): void {
     const a = this.action;
-    if (a.kind === 'reload') this.events.emit('reloadCancel', { weapon: this.active });
+    if (a.kind === 'reload' || a.kind === 'shells') this.events.emit('reloadCancel', { weapon: this.active });
     if (a.kind === 'inspect') this.events.emit('inspectEnd', { weapon: this.active });
     this.action = { kind: 'ready' };
   }

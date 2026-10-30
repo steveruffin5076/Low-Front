@@ -35,6 +35,8 @@ export const UI_PALETTE = {
 export const WEAPON_PALETTE = {
   boltSteel: 0x8b9097,
   interior: 0x141518,
+  /** Shotgun shell hull. */
+  shellHull: 0x9b2b22,
 } as const;
 
 /** First-person arms and effects. */

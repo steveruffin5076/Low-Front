@@ -13,7 +13,8 @@ export type NodeName =
   | 'selector'
   | 'dustCover'
   | 'boltRelease'
-  | 'slideStop';
+  | 'slideStop'
+  | 'pump';
 
 /** Empty Object3D markers. */
 export type AttachmentName = 'muzzle' | 'ejectionPort' | 'sightAnchor' | 'rightHandGrip' | 'leftHandGrip' | 'magWell';

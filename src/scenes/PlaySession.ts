@@ -331,7 +331,7 @@ export class PlaySession {
   /** ADS is blocked while sprinting, switching weapons and reloading. */
   private get adsAllowed(): boolean {
     const a = this.weapons.actionKind;
-    return !this.player.sprinting && a !== 'holster' && a !== 'draw' && a !== 'reload';
+    return !this.player.sprinting && a !== 'holster' && a !== 'draw' && a !== 'reload' && a !== 'shells';
   }
 
   private readInput(): void {

@@ -75,6 +75,21 @@ export const VIEWMODEL: Record<WeaponId, ViewmodelDef> = {
     pouch: [-0.12, -0.45, 0.1],
     selector: { semi: Math.PI / 2, auto: Math.PI },
   },
+  br12: {
+    hip: { pos: [0.13, -0.235, -0.3], rot: [0, 0.03, 0] },
+    sprint: { pos: [0.08, -0.29, -0.26], rot: [-0.35, 0.75, 0.35] },
+    adsFov: 62,
+    leftHand: 'handguard',
+    gripTilt: -0.3,
+    kick: { back: 0.07, up: 0.12, roll: 0.04 },
+    // Pump stroke.
+    cycleTravel: 0.09,
+    magAxis: [0, -1, 0],
+    // Rolled left so the loading port underneath faces the camera.
+    reloadPose: { pos: [-0.04, 0.08, -0.08], rot: [0.2, 0.2, -1.0] },
+    pouch: [-0.12, -0.45, 0.1],
+    selector: { semi: 0, auto: 0 },
+  },
   m1911: {
     hip: { pos: [0.1, -0.17, -0.4], rot: [0, 0.04, 0] },
     sprint: { pos: [0.1, -0.3, -0.3], rot: [-0.9, 0.2, 0.1] },

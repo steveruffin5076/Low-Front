@@ -36,6 +36,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const dir = new THREE.Vector3();
 const aimDir = new THREE.Vector3();
 const shotDir = new THREE.Vector3();
+const pelletDir = new THREE.Vector3();
 const muzzleOffset = new THREE.Vector3();
 
 /** What the bot needs from the world around it. */
@@ -434,7 +435,10 @@ export class Bot implements Combatant, SightTarget {
     muzzleOffset.y -= BOTS.muzzle.down;
     const tracer = Math.random() < 1 / BALLISTICS.tracerEvery;
     // Ballistics copies what it needs, and the sound only reads its position.
-    this.world.combat.ballistics.fire(this.eye, shotDir, def, tracer, muzzleOffset, this.shooter);
+    for (let i = 0; i < def.pellets; i++) {
+      const d = def.pellets > 1 ? spreadDirection(shotDir, def.pelletSpreadDeg, pelletDir) : shotDir;
+      this.world.combat.ballistics.fire(this.eye, d, def, tracer && i === 0, muzzleOffset, this.shooter);
+    }
     this.world.audio.gunshot(def.id, this.eye);
   }
 

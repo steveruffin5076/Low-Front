@@ -75,8 +75,12 @@ export class BotManager {
       cover: (from, radius, threat) => this.cover(from, radius, threat),
       zoneSpot: (flag) => this.zoneSpot(flag),
     };
+    let lastShot: { shooter: unknown; time: number } = { shooter: null, time: -1 };
     o.combat.ballistics.events.on('fired', ({ shooter, origin }) => {
       if (!shooter?.team) return;
+      // A shotgun fires several pellets at once: one shot to hear.
+      if (lastShot.shooter === shooter && lastShot.time === this.time) return;
+      lastShot = { shooter, time: this.time };
       this.perception.gunshot(this.time, { id: shooter.id, team: shooter.team, position: origin }, this.bots);
     });
     const counts = o.counts ?? { blue: BOTS.blue, red: BOTS.red };
@@ -228,7 +232,7 @@ export class BotManager {
       primaryEmpty: primary.mag === 0,
       primaryOut: primary.mag === 0 && primary.reserve === 0,
       canReload: active.reserve > 0,
-      reloading: w.actionKind === 'reload',
+      reloading: w.actionKind === 'reload' || w.actionKind === 'shells',
       flags,
       teammatesGoing: mine,
       enemy: seen ? { id: seen.id, position: seen.position, distance: seen.position.distanceTo(bot.position) } : null,

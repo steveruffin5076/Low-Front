@@ -22,6 +22,7 @@ const FAR_WEAPON: Record<WeaponId, { size: [number, number, number]; pos: [numbe
   m4a1: { size: [0.05, 0.1, 0.84], pos: [0, 0.06, -0.15] },
   ak47: { size: [0.05, 0.1, 0.88], pos: [0, 0.05, -0.17] },
   sr9: { size: [0.05, 0.1, 0.68], pos: [0, 0.05, -0.12] },
+  br12: { size: [0.05, 0.1, 0.99], pos: [0, 0.05, -0.12] },
   m1911: { size: [0.035, 0.12, 0.21], pos: [0, 0.03, -0.07] },
 };
 

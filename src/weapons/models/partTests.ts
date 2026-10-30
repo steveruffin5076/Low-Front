@@ -60,6 +60,11 @@ export const PART_TESTS: Record<WeaponId, readonly PartTest[]> = {
     { label: 'Selector', duration: 1.2, nodes: ['selector'], apply: (n, t) => void (n.selector!.rotation.x = (Math.PI / 2) * hold(t)) },
     { label: 'Magazine out', duration: 1.5, nodes: ['magazine'], apply: (n, t) => void (n.magazine!.position.y -= 0.25 * hold(t)) },
   ],
+  br12: [
+    { label: 'Pump', duration: 0.8, nodes: ['pump'], apply: (n, t) => void (n.pump!.position.z += 0.09 * pulse(t)) },
+    { label: 'Trigger', duration: 0.5, nodes: ['trigger'], apply: (n, t) => void (n.trigger!.rotation.x = -0.35 * pulse(t)) },
+    { label: 'Shell in', duration: 1.2, nodes: ['magazine'], apply: (n, t) => void (n.magazine!.position.y -= 0.03 * hold(t)) },
+  ],
   m1911: [
     {
       label: 'Slide cycle',

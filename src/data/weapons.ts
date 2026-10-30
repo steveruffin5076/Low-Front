@@ -3,13 +3,15 @@
  * Display names are fictional (no real firearm names); the ids are internal and stay stable for saves.
  */
 
-export type WeaponId = 'm4a1' | 'ak47' | 'sr9' | 'm1911';
+export type WeaponId = 'm4a1' | 'ak47' | 'sr9' | 'br12' | 'm1911';
 export type WeaponSlot = 'primary' | 'secondary';
 export type FireMode = 'auto' | 'semi';
 /** Role on the battlefield: drives bot use and the weapon card. */
 export type WeaponClass = 'rifle' | 'smg' | 'shotgun' | 'sniper' | 'pistol';
 /** The part that moves back and forward with each shot. */
 export type CycleNode = 'bolt' | 'chargingHandle' | 'slide' | 'pump';
+/** Swap a whole magazine, or load shells one at a time (can be stopped by firing). */
+export type ReloadMode = 'magazine' | 'shell';
 
 /** How the weapon cycles and reloads; first-person animation and rules read this, not the id. */
 export interface ActionDef {
@@ -35,6 +37,11 @@ export interface WeaponDef {
   action: ActionDef;
   /** Projectiles per shot (shotguns fire several pellets; damage is per pellet). */
   pellets: number;
+  /** Extra cone (deg) each pellet scatters around the aimed shot; 0 for single bullets. */
+  pelletSpreadDeg: number;
+  reloadMode: ReloadMode;
+  /** Shell loading times (s) for `reloadMode: 'shell'`: lead-in, each shell, lead-out. */
+  shellReload?: { start: number; perShell: number; end: number };
   /** Spent casing size: radius and length (m). */
   casing: readonly [number, number];
   fireModes: readonly FireMode[];
@@ -81,6 +88,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     class: 'rifle',
     action: { cycleNode: 'bolt', locksOnEmpty: true, trigger: 'pivot', hammer: false, dustCover: true, emptyReload: 'boltRelease', manual: false },
     pellets: 1,
+    pelletSpreadDeg: 0,
+    reloadMode: 'magazine',
     casing: [0.0048, 0.045],
     fireModes: ['auto', 'semi'],
     rpm: 750,
@@ -106,6 +115,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     class: 'rifle',
     action: { cycleNode: 'chargingHandle', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'rack', manual: false },
     pellets: 1,
+    pelletSpreadDeg: 0,
+    reloadMode: 'magazine',
     casing: [0.0056, 0.039],
     fireModes: ['auto', 'semi'],
     rpm: 600,
@@ -131,6 +142,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     class: 'smg',
     action: { cycleNode: 'bolt', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'rack', manual: false },
     pellets: 1,
+    pelletSpreadDeg: 0,
+    reloadMode: 'magazine',
     casing: [0.0045, 0.019],
     fireModes: ['auto', 'semi'],
     rpm: 800,
@@ -149,6 +162,35 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     // Light, fast and controllable: wins the first moments of a room fight, fades past 30 m.
     recoil: { verticalDeg: 0.28, horizontalDeg: 0.1, pattern: [0.3, -0.4, 0.5, -0.2, 0.4], random: 0.5, recoveryDelay: 0.1, recoveryDegPerSec: 12 },
   },
+  br12: {
+    id: 'br12',
+    name: 'BR-12',
+    slot: 'primary',
+    class: 'shotgun',
+    action: { cycleNode: 'pump', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'rack', manual: true },
+    pellets: 9,
+    pelletSpreadDeg: 2.6,
+    reloadMode: 'shell',
+    shellReload: { start: 0.4, perShell: 0.5, end: 0.35 },
+    casing: [0.0105, 0.068],
+    fireModes: ['semi'],
+    rpm: 70,
+    damage: { near: 12, far: 4 },
+    falloff: { start: 8, end: 22 },
+    headshotMultiplier: 1.5,
+    limbMultiplier: 0.75,
+    magazine: 6,
+    chamber: 1,
+    startingReserve: 28,
+    muzzleVelocity: 400,
+    // Shown on cards and used by third-person timing; the real time depends on shells loaded.
+    reload: { tactical: 2.25, empty: 3.75 },
+    adsTime: 0.3,
+    moveSpeedModifier: 0.95,
+    spread: { hipDeg: 1.6, adsDeg: 0.6 },
+    // One big shove per shot; the pump stroke gives time to recover.
+    recoil: { verticalDeg: 2.6, horizontalDeg: 0.5, pattern: [0.4, -0.4], random: 0.6, recoveryDelay: 0.1, recoveryDegPerSec: 14 },
+  },
   m1911: {
     id: 'm1911',
     name: 'P-11',
@@ -156,6 +198,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     class: 'pistol',
     action: { cycleNode: 'slide', locksOnEmpty: true, trigger: 'slide', hammer: true, dustCover: false, emptyReload: 'slideStop', manual: false },
     pellets: 1,
+    pelletSpreadDeg: 0,
+    reloadMode: 'magazine',
     casing: [0.006, 0.023],
     fireModes: ['semi'],
     rpm: 400,

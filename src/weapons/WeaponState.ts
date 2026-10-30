@@ -70,6 +70,18 @@ export class WeaponState {
     this.reserve -= take;
   }
 
+  /** Loads one shell (shell-by-shell reloads). The first shell into an empty gun goes straight into the chamber. */
+  insertShell(): void {
+    if (!this.canReload) return;
+    this.mag++;
+    this.reserve--;
+  }
+
+  /** Shells the next shell-by-shell reload will load. */
+  get shellsToLoad(): number {
+    return Math.min(this.def.magazine + this.def.chamber - this.mag, this.reserve);
+  }
+
   /** Full magazine and starting reserve, e.g. on respawn. */
   refill(): void {
     this.mag = this.def.magazine + this.def.chamber;
