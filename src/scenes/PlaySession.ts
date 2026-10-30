@@ -270,6 +270,12 @@ export class PlaySession {
     this.hud.setBoundsWarning(this.fx.dead ? null : this.bounds.remaining);
   }
 
+  /** Builds the world's and the weapon layer's shaders ahead of play. */
+  warmUp(renderer: Renderer): void {
+    renderer.warmUp(this.world.scene, this.camera);
+    renderer.warmUp(this.layer.scene, this.layer.camera);
+  }
+
   render(renderer: Renderer): void {
     renderer.render(this.world.scene, this.camera);
     if (!this.fx.dead) renderer.renderLayer(this.layer.scene, this.layer.camera);
