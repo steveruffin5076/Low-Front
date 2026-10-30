@@ -1,3 +1,4 @@
+import { HUD } from '../../data/hud';
 import type { TeamId } from '../../data/map/types';
 import type { CaptureZone } from '../../game/CaptureZone';
 import type { ConquestMatch, KillFeedEntry } from '../../game/ConquestMatch';
@@ -58,7 +59,12 @@ export class MatchHud implements PlayerHud {
     this.weaponPanel = el('div', { class: 'weapon-panel' }, [this.weaponName, this.ammo, this.fireMode]);
     this.largeMap.element.hidden = true;
     this.scoreboard.element.hidden = true;
+    // Under everything else in the HUD: only the 3D view gets the vignette.
+    const vignette = el('div', { class: 'vignette' });
+    vignette.style.setProperty('--vignette-strength', String(HUD.vignette.strength));
+    vignette.style.setProperty('--vignette-start', `${HUD.vignette.start * 100}%`);
     this.element = el('div', { class: 'match-hud' }, [
+      vignette,
       ...this.feedback.parts,
       this.topBar.element,
       this.minimap.element,

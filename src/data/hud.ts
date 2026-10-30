@@ -31,4 +31,6 @@ export const HUD = {
   largeMap: { size: 620 },
   flagMarker: { radius: 9, font: 'bold 11px system-ui, sans-serif' },
   killFeed: { time: 6, max: 5 },
+  /** Subtle vignette (plan section 6): corner darkness 0–1, and where the darkening starts (fraction of the half-diagonal). */
+  vignette: { strength: 0.32, start: 0.55 },
 } as const;

@@ -7,6 +7,12 @@
   color: var(--text);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
+/* Subtle vignette over the 3D view (a CSS overlay: no post-processing pass). */
+.match-hud .vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent var(--vignette-start), rgba(0, 0, 0, var(--vignette-strength)) 100%);
+}
 .match-hud .health-bar {
   left: 18px;
   bottom: 20px;
