@@ -421,3 +421,33 @@ body {
   pointer-events: none;
 }
 
+
+/* Web build on built-in graphics: tip at the bottom of the main menu. */
+.gpu-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(760px, 92vw);
+  padding: 10px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.gpu-tip-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
