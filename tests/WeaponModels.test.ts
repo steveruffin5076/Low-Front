@@ -77,9 +77,10 @@ describe.each(WEAPON_IDS)('%s model', (id) => {
 const IRON_SIGHTS = {
   m4a1: { height: 0.066, radius: 0.368 },
   ak47: { height: 0.0485, radius: 0.378 },
+  sr9: { height: 0.05, radius: 0.39 },
 } as const;
 
-describe.each(['m4a1', 'ak47'] as const)('%s iron sights', (id) => {
+describe.each(['m4a1', 'ak47', 'sr9'] as const)('%s iron sights', (id) => {
   const fp = buildWeaponModel(id, 'fp');
   fp.root.updateMatrixWorld(true);
   const eye = fp.points.sightAnchor.getWorldPosition(new THREE.Vector3());

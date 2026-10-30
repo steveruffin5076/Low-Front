@@ -3,7 +3,7 @@
  * Display names are fictional (no real firearm names); the ids are internal and stay stable for saves.
  */
 
-export type WeaponId = 'm4a1' | 'ak47' | 'm1911';
+export type WeaponId = 'm4a1' | 'ak47' | 'sr9' | 'm1911';
 export type WeaponSlot = 'primary' | 'secondary';
 export type FireMode = 'auto' | 'semi';
 /** Role on the battlefield: drives bot use and the weapon card. */
@@ -123,6 +123,31 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     spread: { hipDeg: 2.4, adsDeg: 0.15 },
     // High vertical, medium horizontal, drifting right.
     recoil: { verticalDeg: 0.6, horizontalDeg: 0.3, pattern: [0.5, 0.8, 1.0, -0.6, 0.9, -0.8, 0.7], random: 0.6, recoveryDelay: 0.12, recoveryDegPerSec: 9 },
+  },
+  sr9: {
+    id: 'sr9',
+    name: 'SR-9',
+    slot: 'primary',
+    class: 'smg',
+    action: { cycleNode: 'bolt', locksOnEmpty: false, trigger: 'pivot', hammer: false, dustCover: false, emptyReload: 'rack', manual: false },
+    pellets: 1,
+    casing: [0.0045, 0.019],
+    fireModes: ['auto', 'semi'],
+    rpm: 800,
+    damage: { near: 24, far: 16 },
+    falloff: { start: 12, end: 35 },
+    headshotMultiplier: 2.0,
+    limbMultiplier: 0.75,
+    magazine: 30,
+    chamber: 1,
+    startingReserve: 150,
+    muzzleVelocity: 400,
+    reload: { tactical: 2.0, empty: 2.6 },
+    adsTime: 0.18,
+    moveSpeedModifier: 1.0,
+    spread: { hipDeg: 1.9, adsDeg: 0.16 },
+    // Light, fast and controllable: wins the first moments of a room fight, fades past 30 m.
+    recoil: { verticalDeg: 0.28, horizontalDeg: 0.1, pattern: [0.3, -0.4, 0.5, -0.2, 0.4], random: 0.5, recoveryDelay: 0.1, recoveryDegPerSec: 12 },
   },
   m1911: {
     id: 'm1911',
