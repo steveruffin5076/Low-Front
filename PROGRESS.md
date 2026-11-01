@@ -28,7 +28,7 @@
   - the End Screen adds "Victory" or "Defeat: you fought for Red/Blue".
 - **20 s countdown before the battle:**
   - a "Battle starts in 20" banner, ticks for the last 3 seconds, then "GO!";
-  - you can walk inside your HQ but cannot fire or leave it; bots stand at their spawn points;
+  - you stand still at your spawn point (you can look around) and cannot fire; bots stand at their spawn points too;
   - the clock, tickets and flags start after "GO".
 - **No stacked spawns:** each HQ has 32 spawn points (4 rows of 8, all on walkable ground). Spawns skip points where someone stands, including the player.
 - The bot match test now also prints kills by weapon and how many bots carry each gun.
@@ -47,17 +47,20 @@
   - each new gun: hip, aimed (SR-9 sights, BR-12 ghost ring, LR-24 scope view), pump and bolt strokes with the case flying out, shell-by-shell reload (2 → 7, one shell at a time);
   - team screen at 1280×720 and phone width;
   - joining Red: 15 red and 16 blue bots, red sleeves, red map dots, the red HQ on the Deploy Screen, "Victory: you fought for Red", Red saved in the profile;
-  - countdown on both teams: at the start, every soldier is at least 6 m from the next; firing does nothing; a step out of the HQ is pulled back; bots don't move; after "GO" the clock runs, bots move and firing works;
+  - countdown on both teams: at the start, every soldier is at least 6 m from the next; walking, sprinting and jumping do nothing; firing does nothing; bots don't move; after "GO" the clock runs, bots move and firing works;
   - no console errors.
 
 ### How to test
 1. `npm run dev`, open the printed URL. Play vs Bots → pick a new gun → Deploy.
-2. "Join a team": pick Red. Check the red sleeves and the countdown banner. Try to shoot and to walk out of the HQ during the countdown.
+2. "Join a team": pick Red. Check the red sleeves and the countdown banner. During the countdown, try to walk and to shoot: neither works, looking around does.
 3. After "GO", play. Try:
    - BR-12: reload with R, then fire part way through the reload;
    - LR-24: hold right mouse for the scope.
 4. Die, and check the Deploy Screen shows the red HQ. At the end, the End Screen shows Victory or Defeat for Red.
 5. `npm test`, `npm run typecheck`, `npm run build`; `BOT_MATCH_SEEDS=7,11 npm run test:match` (about 5 minutes).
+
+### Fix after review
+- **You could still walk during the countdown.** Now you stand still at your spawn point until "GO" (looking around still works).
 
 ### Known issues
 - On this mid-range map, shotgun and sniper bots score fewer kills than rifle bots (see the table).

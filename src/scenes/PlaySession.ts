@@ -62,6 +62,8 @@ export class PlaySession {
   private readonly scope = new ScopeOverlay();
   /** No firing (the pre-battle countdown). */
   holdFire = false;
+  /** No walking, sprinting or jumping (the pre-battle countdown); looking around still works. */
+  holdMove = false;
   /** Keeps the player inside this area (the HQ during the countdown), or null. */
   confine: Rect | null = null;
   /** Bullets, impacts and tracers for everyone in this world (bots fire into it too). */
@@ -182,16 +184,17 @@ export class PlaySession {
     const i = this.input;
     const fireHeld = i.locked && i.isMouseDown(MOUSE.fire);
     const ads = this.adsAllowed && i.locked && i.isMouseDown(MOUSE.ads);
+    const still = this.holdMove;
     const intent: PlayerIntent = {
-      strafe: this.axis(CONTROLS.right, CONTROLS.left),
-      forward: this.axis(CONTROLS.forward, CONTROLS.back),
-      sprint: i.isDown(CONTROLS.sprint),
+      strafe: still ? 0 : this.axis(CONTROLS.right, CONTROLS.left),
+      forward: still ? 0 : this.axis(CONTROLS.forward, CONTROLS.back),
+      sprint: !still && i.isDown(CONTROLS.sprint),
       ads,
       firing: fireHeld,
       leanLeft: i.isDown(CONTROLS.leanLeft),
       leanRight: i.isDown(CONTROLS.leanRight),
       crouchPressed: this.latched.crouch,
-      jumpPressed: this.latched.jump,
+      jumpPressed: !still && this.latched.jump,
     };
     this.player.fixedUpdate(dt, intent, this.weapons.active.def.moveSpeedModifier);
     if (this.confine) this.keepInside(this.confine);

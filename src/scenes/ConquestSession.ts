@@ -223,11 +223,12 @@ export class ConquestSession {
     this.updateWarmup();
   }
 
-  /** During the countdown the player stays in the HQ and cannot fire; a tick sounds for the last seconds. */
+  /** During the countdown the player stands still at the spawn point and cannot fire; a tick sounds for the last seconds. */
   private updateWarmup(): void {
     const left = this.match.warmupLeft;
     const warm = left > 0;
     this.session.holdFire = warm;
+    this.session.holdMove = warm;
     this.session.confine = warm ? VERDAN.hqs.find((h) => h.team === this.team)!.rect : null;
     const second = Math.ceil(left);
     if (warm && second !== this.countdownSecond && second <= AUDIO.countdownCue.ticksFrom) this.session.audio.countdownCue(false);
