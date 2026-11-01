@@ -1,5 +1,9 @@
 import { Game } from './core/Game';
 import { debugFlag, debugMode } from './core/debugFlags';
+import { fetchModelReader, loadModelLibrary } from './weapons/models/modelLibrary';
+
+// Blender-built models (public/models/) load before anything that builds a weapon.
+await loadModelLibrary(fetchModelReader('./'));
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ui = document.getElementById('ui') as HTMLElement;

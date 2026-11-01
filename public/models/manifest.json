@@ -1,0 +1,10 @@
+{
+  "guns/vx4_fp": {
+    "file": "guns/vx4_fp.glb",
+    "triangles": 2168
+  },
+  "guns/vx4_tp": {
+    "file": "guns/vx4_tp.glb",
+    "triangles": 200
+  }
+}
