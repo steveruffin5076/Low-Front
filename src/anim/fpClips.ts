@@ -10,6 +10,7 @@ import { ClipBuilder, type Clip } from './Timeline';
  * - `node.<name>.pos` / `node.<name>.rot`: offsets added to a moving part's rest pose.
  * - `mag.visible`: 0 hides the magazine.
  * - `leftHand.blend` / `leftHand.pos` (and `rightHand.*`): hand target in weapon space, blended with the grip.
+ * - `arms.pos`: offset of the whole arm rig (shoulders), so the arms go down with the weapon.
  * Events: `magOut`, `magIn`, `magSeated`, `slideClose`, `lock`.
  */
 export interface ClipContext {
@@ -125,9 +126,11 @@ export function dryFireClip(c: ClipContext): Clip {
   return b.event(0.05, 'click').build();
 }
 
+/** Lowering the weapon: the arms go down with it, so the hands stay on the weapon. */
 export function holsterClip(duration: number): Clip {
   return new ClipBuilder('holster', duration)
     .key('weapon.pos', 0, ZERO3).key('weapon.pos', duration, M.holster.pos, 'in')
+    .key('arms.pos', 0, ZERO3).key('arms.pos', duration, M.holster.pos, 'in')
     .key('weapon.rot', 0, ZERO3).key('weapon.rot', duration, M.holster.rot, 'in')
     .build();
 }
@@ -135,6 +138,7 @@ export function holsterClip(duration: number): Clip {
 export function drawClip(duration: number): Clip {
   return new ClipBuilder('draw', duration)
     .key('weapon.pos', 0, M.holster.pos).key('weapon.pos', duration, ZERO3, 'out')
+    .key('arms.pos', 0, M.holster.pos).key('arms.pos', duration, ZERO3, 'out')
     .key('weapon.rot', 0, M.holster.rot).key('weapon.rot', duration, ZERO3, 'out')
     .build();
 }

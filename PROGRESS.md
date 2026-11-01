@@ -1,5 +1,12 @@
 # PROGRESS.md
 
+## Fix after review: no hands on the weapon while switching (done)
+
+Your video: when switching weapons, the gun going down and the new gun coming up showed without hands.
+- **Cause:** the holster and draw animations moved only the weapon. The arms stayed fixed at the shoulders and couldn't reach the lowered weapon, so the gun floated alone.
+- **Fix:** the whole arm rig now moves down and up with the weapon (a new `arms.pos` animation channel moves the shoulders), so the hands stay on the gun as it leaves and comes back.
+- **Checked:** slowed-down screenshots of VX-4 → P-11 → VX-4. The arms and gun now move together; before, the gun showed with no arms. All tests pass.
+
 ## Change after review: match setup first, then team, then profile (done)
 
 Your request: after Play vs Bots, pick the map and settings, then the team, then the profile and loadout; remove "Blue Team".

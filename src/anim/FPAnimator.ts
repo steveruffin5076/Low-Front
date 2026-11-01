@@ -37,6 +37,7 @@ const tmpMat = new THREE.Matrix4();
 const rightFrame = new THREE.Matrix4();
 const leftFrame = new THREE.Matrix4();
 const ONE = new THREE.Vector3(1, 1, 1);
+const armsOffset = new THREE.Vector3();
 
 /**
  * Drives the first-person weapon and arms (plan section 8.1): stance blends (hip, ADS, sprint),
@@ -222,7 +223,8 @@ export class FPAnimator {
     const world = this.weaponRoot.matrixWorld;
     this.handFrame(world, v.rightGrip, v.handRotation.right, 'rightHand', rightFrame);
     this.handFrame(world, v.leftGrip, v.handRotation.left, 'leftHand', leftFrame);
-    this.arms.update(rightFrame, leftFrame);
+    const a = this.channels.get('arms.pos');
+    this.arms.update(rightFrame, leftFrame, a ? armsOffset.set(a[0], a[1], a[2]) : armsOffset.set(0, 0, 0));
   }
 
   /** Grip frame, blended toward the clip's keyed hand position when a clip moves the hand. */
