@@ -158,7 +158,7 @@ export class PlaySession {
 
   /** Back to life at `at` facing `yaw`; a different loadout rebuilds the weapons. */
   respawn(at: THREE.Vector3, yaw: number, loadout?: Loadout): void {
-    if (loadout && (loadout.primary !== this.loadout.primary || loadout.secondary !== this.loadout.secondary)) {
+    if (loadout && !sameLoadout(loadout, this.loadout)) {
       this.disarm();
       this.arm(loadout);
     }
@@ -380,4 +380,10 @@ export class PlaySession {
   private axis(pos: string, neg: string): number {
     return (this.input.isDown(pos) ? 1 : 0) - (this.input.isDown(neg) ? 1 : 0);
   }
+}
+
+/** Same weapons and the same attachments on them (a gunsmith change needs new weapons too). */
+export function sameLoadout(a: Loadout, b: Loadout): boolean {
+  const build = (l: Loadout, id: Loadout['primary']): string => JSON.stringify(Object.entries(l.builds?.[id] ?? {}).sort());
+  return a.primary === b.primary && a.secondary === b.secondary && build(a, a.primary) === build(b, b.primary) && build(a, a.secondary) === build(b, b.secondary);
 }

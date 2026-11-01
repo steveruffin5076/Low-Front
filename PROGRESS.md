@@ -1,5 +1,15 @@
 # PROGRESS.md
 
+## Fix after Phase 12 review: attachments missing in the match (done)
+
+Your report: attachments fitted in the gunsmith, but the gun in the match was still the default one.
+- **Cause:** after a death, the Deploy Screen rebuilt your weapons only when you picked a different gun. Changing only the attachments of the same VX-4 kept the old build.
+- **Fix:** a change of attachments now counts as a new loadout, so you respawn with the new build.
+- **Checked:**
+  - die with a bare VX-4, add a red dot and suppressor on the Deploy Screen, deploy: both are on the gun;
+  - the desktop app (first deploy): parts fitted in the gunsmith are on the gun in your hands;
+  - new unit test; 283 tests pass.
+
 ## Phase 12 — Blender models and the gunsmith (done)
 
 ### What was done
