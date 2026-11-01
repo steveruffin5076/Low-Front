@@ -1,5 +1,70 @@
 # PROGRESS.md
 
+## Phase 12 — Blender models and the gunsmith (done)
+
+### What was done
+- **Blender model pipeline** (`tools/blender/`):
+  - Models are built by scripts with Blender's Python module (`bpy` 5.2.3), with no Blender window needed. `kit.py` has the shapes (boxes with chamfers, cylinders, side profiles, rings) and uses the game's coordinates.
+  - `npm run models` rebuilds every model into `public/models/*.glb` plus a `manifest.json`. `npm run models -- --preview` also renders a side and a 3/4 picture of each into `tools/blender/previews/`.
+  - The first run creates `tools/blender/.venv` and installs Blender there; `BLENDER_PYTHON` can point to another Python.
+  - The `.glb` files are committed, so the game, GitHub Pages and the Windows app don't need Blender.
+- **The game loads the models at startup**; tests load them too. A Blender weapon keeps the same moving parts and points as before, so all animations still work. It adds named mounts for the optic, muzzle, underbarrel and magazine.
+  - If the model files can't load, the game still starts with the built-in weapons (no attachments).
+- **VX-4 rebuilt in Blender** with more detail:
+  - free-float handguard with slots and short rails;
+  - chamfered receivers, pins, a brass deflector, a cheek riser and a sling loop;
+  - 2,168 triangles in first person (was about 1,200), 200 for bots.
+  - Same size, sights and hand positions as before.
+- **8 attachments**, built in Blender around the VX-4's mounts:
+
+  | Slot | Part | What it does |
+  |---|---|---|
+  | Optic | Red Dot | 1.4× view; the dot lines up with the front sight post |
+  | Optic | Holo Sight | 1.5× view, wide window with a ring reticle |
+  | Optic | 3× Scope | 3× zoom with the scope view; slower to aim |
+  | Muzzle | Suppressor | quiet shots, small flash; bots hear you from 35% as far; less range |
+  | Muzzle | Compensator | 30% less side recoil; wider hip fire |
+  | Underbarrel | Vertical Grip | 18% less vertical recoil; slightly slower to aim |
+  | Underbarrel | Angled Grip | 10% faster to aim, a bit less side recoil |
+  | Magazine | Extended Mag | 40 rounds; slower reload and aim |
+
+  Every build's combined changes have limits (for example, aim time stays within 0.8–1.45× the base gun).
+- **Gunsmith screen:** a "Gunsmith" button under the VX-4 in the loadout panel, on both the profile and Deploy screens.
+  - It shows the gun turning with its parts on, and one row per slot: open a row to pick None or a part.
+  - Each part shows what it changes as green or red chips; the stat bars show the change from the bare gun.
+  - Changes save at once, per gun, in the profile. Unknown or wrong-slot parts in a save are dropped.
+- **In the match:**
+  - an optic folds the iron sight down and moves your eye to its window;
+  - a muzzle part replaces the flash hider (shots come from its end);
+  - a grip moves your left hand onto it;
+  - the extended magazine replaces the magazine, and reloads still animate.
+  - Weapon cards, the profile soldier and other soldiers (third person) show the parts too.
+- **Bots** carrying the VX-4 get one of 6 preset builds (red dot, holo with grip, suppressor, 3× scope, extended magazine…).
+- Tests: 282 unit tests (new ones for stats and limits, invalid builds, every part's model, the red-dot sight line, suppressor muzzle, grip hand, extended magazine, saved builds).
+
+### Checked results
+- `npm run build` OK. Bot match (seed 7): winner after 1,125 s, longest stuck 4.0 s, 2.0 ms per step; every gun scores kills (VX-4 206, KR-7 180, SR-9 46, LR-24 32, BR-12 27, P-11 25).
+- **Browser** (production build, headless Chromium):
+  - gunsmith screen with chips and stat changes;
+  - builds saved;
+  - red dot + suppressor + vertical grip + extended magazine: 41 rounds, suppressed, aim time 0.30 s, the dot sits on the front post;
+  - 3× scope: scope view when fully aimed;
+  - holo + suppressor + angled grip: no console errors;
+  - with the model files blocked, the match still starts.
+- GitHub after merging PR #14: "Deploy to GitHub Pages" and "Build Windows app" both succeeded.
+
+### How to test
+1. `npm run dev`, Play vs Bots, pick the VX-4, click **Gunsmith**.
+2. Open each slot and pick parts. Watch the gun change and the stat bars move. Click Done.
+3. Deploy, join a team. Aim with each optic (right mouse); try the suppressor (quieter shots) and the 3× scope.
+4. Optional: `npm run models -- vx4 --preview` and open the pictures in `tools/blender/previews/`, or open `public/models/guns/vx4_fp.glb` in Blender.
+
+### Known issues
+- Only the VX-4 is built in Blender so far, so only it takes attachments. The other five guns still use the code-built models.
+- The left hand uses the same pose on a grip as on the handguard.
+- The scope view is the same flat overlay as the LR-24's.
+- If the model files fail to load, the Gunsmith button still shows; parts then change the stats but don't show on the gun.
+
 ## Phase 11 — New weapons, fictional names, team choice, pre-battle countdown (done)
 
 ### What was done

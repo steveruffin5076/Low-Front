@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ATTACHMENTS, GUNSMITH, type WeaponBuild } from '../../data/attachments';
 import { applyGameMaterials } from './glbWeapon';
-import { instantiate } from './modelLibrary';
+import { hasModel, instantiate } from './modelLibrary';
 import type { WeaponModel } from './WeaponModel';
 
 const tmp = new THREE.Vector3();
@@ -26,7 +26,7 @@ export function fitAttachments(model: WeaponModel, build: WeaponBuild): void {
   for (const [slot, id] of Object.entries(build) as [keyof WeaponBuild, string][]) {
     const def = ATTACHMENTS[id as keyof typeof ATTACHMENTS];
     const mount = mounts[slot];
-    if (!def || !mount) continue;
+    if (!def || !mount || !hasModel(`attachments/${id}`)) continue;
     const att = instantiate(`attachments/${id}`);
     applyGameMaterials(att);
     att.name = `att-${id}`;

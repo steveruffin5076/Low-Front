@@ -2,8 +2,13 @@ import { Game } from './core/Game';
 import { debugFlag, debugMode } from './core/debugFlags';
 import { fetchModelReader, loadModelLibrary } from './weapons/models/modelLibrary';
 
-// Blender-built models (public/models/) load before anything that builds a weapon.
-await loadModelLibrary(fetchModelReader('./'));
+// Blender-built models (public/models/) load before anything that builds a weapon. If they
+// cannot load, the game still starts with the code-built weapons (no attachments).
+try {
+  await loadModelLibrary(fetchModelReader('./'));
+} catch (err) {
+  console.warn('Weapon models did not load; using the built-in ones.', err);
+}
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ui = document.getElementById('ui') as HTMLElement;
