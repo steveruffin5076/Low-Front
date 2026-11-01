@@ -174,6 +174,115 @@ body {
   white-space: nowrap;
 }
 
+.setup-screen {
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 14, 20, 0.55);
+}
+.setup-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(320px, 620px);
+  justify-content: center;
+  align-content: center;
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+}
+.setup-map {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.setup-map.selected {
+  border-color: var(--mustard);
+}
+.setup-map-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+}
+.setup-map-name {
+  margin-top: 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+.setup-map-blurb {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.setup-row {
+  margin-bottom: 16px;
+}
+.setup-label {
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.setup-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.setup-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.setup-choice:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.setup-choice.selected {
+  border-color: var(--mustard);
+  background: rgba(233, 196, 106, 0.1);
+}
+.setup-choice-name {
+  font-weight: 800;
+}
+.setup-choice-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.setup-summary {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--mustard);
+}
+@media (max-width: 760px) {
+  .setup-body {
+    grid-template-columns: 1fr;
+    align-content: start;
+  }
+  .setup-body .panel {
+    overflow: visible;
+  }
+  .setup-map-image {
+    width: 160px;
+    height: 160px;
+    margin: 0 auto;
+  }
+}
+
 /* ---------- Join a team ---------- */
 .team-screen {
   display: flex;
@@ -330,19 +439,6 @@ body {
   min-height: 16px;
   font-size: 12px;
   color: var(--red);
-}
-.team-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  font-weight: 600;
-}
-.team-chip {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: var(--blue);
 }
 .stats-list {
   display: grid;

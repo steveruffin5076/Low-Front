@@ -57,7 +57,9 @@ export interface MatchEvents {
 export class ConquestMatch {
   readonly events = new EventBus<MatchEvents>();
   readonly zones: CaptureZone[];
-  readonly tickets = new Tickets();
+  readonly tickets: Tickets;
+  /** Seconds the match may last. */
+  readonly timeLimit: number;
   readonly stats = new Map<string, CombatantStats>();
   elapsed = 0;
   /** Seconds of pre-battle countdown left (0: the battle is on). */
@@ -66,7 +68,9 @@ export class ConquestMatch {
   private readonly combatants = new Map<string, Combatant>();
   private readonly occupants: ZoneOccupant[] = [];
 
-  constructor(map: MapData, combatants: readonly Combatant[] = []) {
+  constructor(map: MapData, combatants: readonly Combatant[] = [], rules: { tickets: number; timeLimit: number } = { tickets: CONQUEST.startingTickets, timeLimit: CONQUEST.timeLimit }) {
+    this.tickets = new Tickets(rules.tickets);
+    this.timeLimit = rules.timeLimit;
     this.zones = map.flags.map((f) => new CaptureZone(f));
     for (const c of combatants) this.add(c);
   }
@@ -86,7 +90,7 @@ export class ConquestMatch {
   }
 
   get timeLeft(): number {
-    return Math.max(0, CONQUEST.timeLimit - this.elapsed);
+    return Math.max(0, this.timeLimit - this.elapsed);
   }
 
   owners(): Record<FlagId, TeamId | null> {
@@ -167,7 +171,7 @@ export class ConquestMatch {
   }
 
   private checkEnd(): void {
-    const result = matchResult(this.tickets.count, this.elapsed);
+    const result = matchResult(this.tickets.count, this.elapsed, this.timeLimit);
     if (!result) return;
     this.result = result;
     this.events.emit('ended', result);

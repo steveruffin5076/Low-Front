@@ -5,7 +5,7 @@ import type { PathRequest, PathService } from '../ai/PathService';
 import { BotMemory, type SightTarget } from '../ai/Perception';
 import type { AudioManager } from '../audio/AudioManager';
 import { BALLISTICS } from '../data/ballistics';
-import { BODY_POINTS, BOTS } from '../data/bots';
+import { BODY_POINTS, BOTS, DIFFICULTIES, DIFFICULTY, type DifficultyPreset } from '../data/bots';
 import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { Combat } from '../game/Combat';
@@ -61,7 +61,7 @@ export class Bot implements Combatant, SightTarget {
   readonly weapons: PlayerWeapons;
   readonly soldier: Soldier;
   readonly brain = new BotBrain();
-  readonly aim = new BotAim();
+  readonly aim: BotAim;
   readonly memory: BotMemory;
   readonly eye = new THREE.Vector3();
   readonly chest = new THREE.Vector3();
@@ -106,7 +106,10 @@ export class Bot implements Combatant, SightTarget {
     private readonly world: BotWorld,
     spawn: THREE.Vector3,
     decisionOffset: number,
+    /** Aim and reaction settings (the match's bot difficulty). */
+    skill: DifficultyPreset = DIFFICULTIES[DIFFICULTY],
   ) {
+    this.aim = new BotAim(skill);
     this.controller = new PlayerController(world.physics, spawn, COLLISION.bot);
     this.weapons = new PlayerWeapons(loadout);
     this.soldier = new Soldier(world.physics, team, loadout, name, false);

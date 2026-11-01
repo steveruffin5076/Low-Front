@@ -2,7 +2,7 @@ import { PROFILE } from '../../data/player';
 import { kdRatio, validateName, type PlayerStats } from '../../save/ProfileStore';
 import { el } from '../dom';
 
-/** Left panel: editable player name, team, local stats. */
+/** Left panel: editable player name and local stats. */
 export class ProfilePanel {
   readonly element: HTMLElement;
 
@@ -44,7 +44,6 @@ export class ProfilePanel {
       input,
       el('p', { class: 'field-hint', text: `${PROFILE.nameMinLength}–${PROFILE.nameMaxLength} characters` }),
       error,
-      el('div', { class: 'team-row' }, [el('span', { class: 'team-chip' }), el('span', { text: PROFILE.teamLabel })]),
       el('h3', { class: 'panel-subtitle', text: 'Stats' }),
       el(
         'dl',

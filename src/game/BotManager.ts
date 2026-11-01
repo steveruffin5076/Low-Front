@@ -5,7 +5,7 @@ import type { CoverPoint } from '../ai/CoverPoints';
 import { PathService } from '../ai/PathService';
 import { Perception, type SightTarget } from '../ai/Perception';
 import type { AudioManager } from '../audio/AudioManager';
-import { BOTS } from '../data/bots';
+import { BOTS, DIFFICULTIES, DIFFICULTY, type Difficulty } from '../data/bots';
 import { CONQUEST } from '../data/conquest';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
 import { COMPATIBLE, GUNSMITH } from '../data/attachments';
@@ -38,6 +38,8 @@ export interface BotManagerOptions {
   crates: readonly Crate[];
   /** Bots per team (defaults from `BOTS`). */
   counts?: Record<TeamId, number>;
+  /** Bot skill (default: `DIFFICULTY`). */
+  difficulty?: Difficulty;
   rand?: () => number;
 }
 
@@ -103,7 +105,7 @@ export class BotManager {
         const primary = pickPrimary(this.rand());
         const builds = COMPATIBLE[primary] ? { [primary]: validBuild(primary, BOTS.builds[Math.floor(this.rand() * BOTS.builds.length)]) } : undefined;
         const name = BOTS.names[n % BOTS.names.length];
-        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary, builds }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
+        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary, builds }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate, DIFFICULTIES[o.difficulty ?? DIFFICULTY]);
         o.scene.add(bot.soldier.model.root);
         this.bots.push(bot);
         this.resuppliers.push({
