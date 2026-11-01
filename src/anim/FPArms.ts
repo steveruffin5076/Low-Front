@@ -69,6 +69,8 @@ class Arm {
   private readonly elbow = new THREE.Vector3();
   private readonly wrist = new THREE.Vector3();
   private readonly reached = new THREE.Vector3();
+  private readonly movedShoulder = new THREE.Vector3();
+  private readonly movedPole = new THREE.Vector3();
   private readonly shoulder: THREE.Vector3;
   private readonly pole: THREE.Vector3;
 
@@ -96,13 +98,15 @@ class Arm {
     this.wristLocal.set(...def.wrist);
   }
 
-  /** Places the hand at `frame` and solves the arm so the forearm meets the wrist. */
-  solve(frame: THREE.Matrix4): void {
+  /** Places the hand at `frame` and solves the arm so the forearm meets the wrist. `offset` moves the shoulder (holster, draw). */
+  solve(frame: THREE.Matrix4, offset: THREE.Vector3): void {
+    const shoulder = this.movedShoulder.copy(this.shoulder).add(offset);
+    const pole = this.movedPole.copy(this.pole).add(offset);
     frame.decompose(this.hand.position, this.hand.quaternion, this.hand.scale);
     this.hand.updateMatrix();
     this.wrist.copy(this.wristLocal).applyMatrix4(this.hand.matrix);
-    solveTwoBone(this.shoulder, this.wrist, this.pole, M.upperArm, M.forearm, this.elbow, this.reached);
-    this.upper.position.copy(this.shoulder);
+    solveTwoBone(shoulder, this.wrist, pole, M.upperArm, M.forearm, this.elbow, this.reached);
+    this.upper.position.copy(shoulder);
     this.upper.lookAt(this.elbow);
     this.lower.position.copy(this.elbow);
     this.lower.lookAt(this.reached);
@@ -114,6 +118,8 @@ function limb(r0: number, r1: number, length: number, mat: THREE.Material, start
   const geo = new THREE.CylinderGeometry(r1, r0, length, SEGMENTS).rotateX(Math.PI / 2).translate(0, 0, start + length / 2);
   return new THREE.Mesh(geo, mat);
 }
+
+const NO_OFFSET = new THREE.Vector3();
 
 /** Low-poly first-person arms: team-color sleeves, black gloves, IK to hand frames. */
 export class FPArms {
@@ -132,9 +138,10 @@ export class FPArms {
     this.left.setStyle(style);
   }
 
-  update(rightFrame: THREE.Matrix4, leftFrame: THREE.Matrix4): void {
-    this.right.solve(rightFrame);
-    this.left.solve(leftFrame);
+  /** `shoulderOffset` moves both shoulders, so the arms can follow the weapon down (holster, draw). */
+  update(rightFrame: THREE.Matrix4, leftFrame: THREE.Matrix4, shoulderOffset: THREE.Vector3 = NO_OFFSET): void {
+    this.right.solve(rightFrame, shoulderOffset);
+    this.left.solve(leftFrame, shoulderOffset);
   }
 
   dispose(): void {
