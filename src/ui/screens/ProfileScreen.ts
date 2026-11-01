@@ -18,10 +18,11 @@ export class ProfileScreen implements State {
 
   enter(): void {
     this.profile = this.ctx.profiles.load();
-    this.soldier = new SoldierPreview(this.profile.loadout.primary);
+    const l = this.profile.loadout;
+    this.soldier = new SoldierPreview(l.primary, l.builds?.[l.primary]);
     this.loadout = new LoadoutPanel(this.profile.loadout, (loadout) => {
       this.profile.loadout = loadout;
-      this.soldier?.setWeapon(loadout.primary);
+      this.soldier?.setWeapon(loadout.primary, loadout.builds?.[loadout.primary]);
       this.save();
     });
     const profilePanel = new ProfilePanel(this.profile.name, this.profile.stats, (name) => {
@@ -42,7 +43,7 @@ export class ProfileScreen implements State {
 
   exit(): void {
     this.soldier?.dispose();
-    this.loadout?.dispose();
+    this.loadout?.close();
     this.root?.remove();
     this.root = null;
     this.soldier = null;

@@ -8,7 +8,8 @@ import type { AudioManager } from '../audio/AudioManager';
 import { BOTS } from '../data/bots';
 import { CONQUEST } from '../data/conquest';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
-import { GUNSMITH } from '../data/attachments';
+import { COMPATIBLE, GUNSMITH } from '../data/attachments';
+import { validBuild } from '../weapons/Gunsmith';
 import { DEFAULT_LOADOUT, WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
 import { RESUPPLY } from '../data/resupply';
 import { Bot } from '../entities/Bot';
@@ -100,8 +101,9 @@ export class BotManager {
     for (const team of ['blue', 'red'] as const) {
       for (let i = 0; i < counts[team]; i++, n++) {
         const primary = pickPrimary(this.rand());
+        const builds = COMPATIBLE[primary] ? { [primary]: validBuild(primary, BOTS.builds[Math.floor(this.rand() * BOTS.builds.length)]) } : undefined;
         const name = BOTS.names[n % BOTS.names.length];
-        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
+        const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary, builds }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate);
         o.scene.add(bot.soldier.model.root);
         this.bots.push(bot);
         this.resuppliers.push({

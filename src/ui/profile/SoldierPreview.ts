@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PREVIEW } from '../../data/menu';
+import type { WeaponBuild } from '../../data/attachments';
 import { DEFAULT_LOADOUT, type WeaponId } from '../../data/weapons';
 import { IDLE_INPUT, SoldierAnimator } from '../../anim/SoldierAnimator';
 import { SoldierModel } from '../../entities/soldier/SoldierModel';
@@ -23,9 +24,9 @@ export class SoldierPreview {
   private yaw = Math.PI;
   private dragX: number | null = null;
 
-  constructor(weapon: WeaponId) {
+  constructor(weapon: WeaponId, build?: WeaponBuild) {
     addPreviewLights(this.scene);
-    this.setWeapon(weapon);
+    this.setWeapon(weapon, build);
     this.camera.position.set(0, CFG.cameraHeight, CFG.cameraDistance);
     this.camera.lookAt(0, CFG.lookHeight, 0);
 
@@ -41,9 +42,9 @@ export class SoldierPreview {
   }
 
   /** The player's soldier (Blue team) holding the selected primary. */
-  setWeapon(id: WeaponId): void {
+  setWeapon(id: WeaponId, build?: WeaponBuild): void {
     if (this.soldier) this.soldier.dispose();
-    this.soldier = new SoldierModel('blue', { primary: id, secondary: DEFAULT_LOADOUT.secondary });
+    this.soldier = new SoldierModel('blue', { primary: id, secondary: DEFAULT_LOADOUT.secondary, builds: build ? { [id]: build } : undefined });
     this.rig = new SoldierRig(this.soldier);
     this.scene.add(this.soldier.root);
   }

@@ -1,3 +1,4 @@
+import type { WeaponBuild } from './attachments';
 import type { WeaponClass, WeaponId } from './weapons';
 
 /** Bot AI settings (plan section 12). Times in seconds, distances in meters, angles in degrees. */
@@ -120,6 +121,18 @@ export const BOTS = {
       holdStill: true,
     },
   } as Record<WeaponClass, WeaponStyle>,
+  /**
+   * Gunsmith builds bots pick from (for weapons that take attachments): a few fixed sets keep
+   * the number of different soldier models small.
+   */
+  builds: [
+    {},
+    { optic: 'reddot' },
+    { optic: 'holo', underbarrel: 'vgrip' },
+    { optic: 'reddot', muzzle: 'suppressor' },
+    { optic: 'scope3x', muzzle: 'compensator', underbarrel: 'vgrip' },
+    { optic: 'holo', underbarrel: 'agrip', magazine: 'extmag' },
+  ] as readonly WeaponBuild[],
   /** Where a bot's tracer starts: this far along the aim and this far below the eye (m). */
   muzzle: { forward: 0.6, down: 0.12 },
   /** A* searches started per frame across all bots, the heuristic weight (faster, slightly longer paths) and a cap on nodes expanded. */

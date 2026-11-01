@@ -87,7 +87,7 @@ export class DeployScreen {
   }
 
   dispose(): void {
-    this.loadoutPanel.dispose();
+    this.loadoutPanel.close();
     this.element.remove();
   }
 
