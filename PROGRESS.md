@@ -1,5 +1,25 @@
 # PROGRESS.md
 
+## Change after review: match setup first, then team, then profile (done)
+
+Your request: after Play vs Bots, pick the map and settings, then the team, then the profile and loadout; remove "Blue Team".
+- **New order:** Main Menu → **Match setup** → **Join a team** → **Player Profile & Loadout** → Deploy → match. Back goes one step back each time.
+- **Match setup screen:**
+  - Map: Verdan District, shown as a card with its map picture (the only map for now).
+  - Mode: Conquest.
+  - Bot skill: Easy, Normal or Hard (reaction time, aim, bursts).
+  - Team size: 4 vs 4 (150 tickets), 8 vs 8 (250 tickets) or 16 vs 16 (400 tickets). Smaller matches get fewer tickets, so they still end in good time. You take one bot's place on your side.
+  - Time limit: 10, 15 or 25 minutes.
+  - A summary line shows the result, e.g. "8 vs 8 (you + 7 bots on your side) · 250 tickets each · 10 minutes".
+  - Choices are saved in the profile and offered again next time.
+- The team screen shows the chosen team size.
+- The "Blue Team" label is removed from the profile panel (your team is now picked on the team screen).
+- **Checked:**
+  - 8 vs 8, Hard, 10 min, join Red: the match has 7 red and 8 blue bots, 250 tickets each, 10:00 on the clock, and Hard aim;
+  - screens at 1280×720 and phone width;
+  - no console errors;
+  - 287 tests pass (new: setup rules, saved setup, time limit, invalid saves).
+
 ## Fix after Phase 12 review: attachments missing in the match (done)
 
 Your report: attachments fitted in the gunsmith, but the gun in the match was still the default one.

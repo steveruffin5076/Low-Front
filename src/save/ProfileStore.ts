@@ -2,6 +2,7 @@ import { PROFILE } from '../data/player';
 import { DEFAULT_LOADOUT, WEAPONS, type Loadout, type WeaponId, type WeaponSlot } from '../data/weapons';
 import type { WeaponBuild } from '../data/attachments';
 import type { TeamId } from '../data/map/types';
+import { DEFAULT_SETUP, validSetup, type MatchSetup } from '../data/matchSetup';
 import { validBuild } from '../weapons/Gunsmith';
 import type { KeyValueStore } from './Storage';
 
@@ -20,6 +21,8 @@ export interface Profile {
   loadout: Loadout;
   /** The team joined last time, picked again by default on the team screen. */
   team: TeamId;
+  /** The last match setup (map, bot skill, team size, time limit). */
+  setup: MatchSetup;
 }
 
 export const EMPTY_STATS: PlayerStats = { matchesPlayed: 0, wins: 0, losses: 0, kills: 0, deaths: 0, headshots: 0 };
@@ -54,7 +57,7 @@ export function applyMatch(
 }
 
 export function defaultProfile(): Profile {
-  return { name: PROFILE.defaultName, stats: { ...EMPTY_STATS }, loadout: { ...DEFAULT_LOADOUT }, team: 'blue' };
+  return { name: PROFILE.defaultName, stats: { ...EMPTY_STATS }, loadout: { ...DEFAULT_LOADOUT }, team: 'blue', setup: { ...DEFAULT_SETUP } };
 }
 
 /** Loads and saves the profile as JSON. Bad or missing fields fall back to defaults. */
@@ -97,6 +100,7 @@ export class ProfileStore {
       }
     }
     if (data.team === 'blue' || data.team === 'red') profile.team = data.team;
+    profile.setup = validSetup(data.setup);
     return profile;
   }
 

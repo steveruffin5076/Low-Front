@@ -18,9 +18,13 @@ export function bleedInterval(flags: number): number | null {
  * enemy by 1 every 4 s, all 5 flags every 2 s. Counts never go below zero.
  */
 export class Tickets {
-  readonly count: Record<TeamId, number> = { blue: CONQUEST.startingTickets, red: CONQUEST.startingTickets };
+  readonly count: Record<TeamId, number>;
   /** Time accumulated toward the next bled ticket, per bleeding team. */
   private readonly bleedClock: Record<TeamId, number> = { blue: 0, red: 0 };
+
+  constructor(starting: number = CONQUEST.startingTickets) {
+    this.count = { blue: starting, red: starting };
+  }
 
   death(team: TeamId): void {
     this.count[team] = Math.max(0, this.count[team] - CONQUEST.deathTicketCost);

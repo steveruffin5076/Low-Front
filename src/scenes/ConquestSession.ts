@@ -5,7 +5,8 @@ import { VERDAN } from '../data/map';
 import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { SightTarget } from '../ai/Perception';
-import { BODY_POINTS, BOTS } from '../data/bots';
+import { BODY_POINTS } from '../data/bots';
+import { DEFAULT_SETUP, matchRules, type MatchSetup } from '../data/matchSetup';
 import { GRAPHICS } from '../data/graphics';
 import { RESUPPLY } from '../data/resupply';
 import { AUDIO } from '../data/audio';
@@ -78,8 +79,10 @@ export class ConquestSession {
     readonly world: CityMap,
     /** The side the player joined; it has one bot fewer. */
     readonly team: TeamId = 'blue',
+    /** Bot skill, team size and time limit chosen on the Match setup screen. */
+    readonly setup: MatchSetup = DEFAULT_SETUP,
   ) {
-    this.match = new ConquestMatch(VERDAN);
+    this.match = new ConquestMatch(VERDAN, [], matchRules(setup));
     this.hud = new MatchHud(this.match, this.mapImage);
     this.session = new PlaySession(physics, input, loadout, world, {
       autoRespawn: false,
@@ -123,7 +126,8 @@ export class ConquestSession {
       map: VERDAN,
       spawns: this.spawns,
       player: this.playerTarget(),
-      counts: { [team]: BOTS.playerSide, [enemyOf(team)]: BOTS.otherSide } as Record<TeamId, number>,
+      counts: { [team]: setup.teamSize - 1, [enemyOf(team)]: setup.teamSize } as Record<TeamId, number>,
+      difficulty: setup.difficulty,
     });
 
     // Deaths by bullet are reported from the combat hit (with the killer); the rest here.

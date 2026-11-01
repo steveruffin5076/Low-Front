@@ -18,7 +18,7 @@ export class MainMenu implements State {
         el('h1', { class: 'game-title', text: MENU.title }),
         el('p', { class: 'game-subtitle', text: MENU.subtitle }),
         el('div', { class: 'menu-buttons' }, [
-          button('Play vs Bots', () => this.ctx.changeScreen('profile'), 'btn btn-menu btn-primary'),
+          button('Play vs Bots', () => this.ctx.changeScreen('setup'), 'btn btn-menu btn-primary'),
           button('Quit Game', () => this.confirmQuit(), 'btn btn-menu'),
         ]),
       ]),
