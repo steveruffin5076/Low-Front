@@ -5,6 +5,8 @@ import { buildLR24 } from './LR24Model';
 import { buildM1911 } from './M1911Model';
 import { buildM4A1 } from './M4A1Model';
 import { buildSR9 } from './SR9Model';
+import type { WeaponBuild } from '../../data/attachments';
+import { fitAttachments } from './fitAttachments';
 import { weaponFromGlb } from './glbWeapon';
 import { hasModel } from './modelLibrary';
 import type { NodeName, WeaponLod, WeaponModel } from './WeaponModel';
@@ -44,8 +46,13 @@ export const OVERALL_LENGTH: Record<WeaponId, number> = { m4a1: 0.84, ak47: 0.88
 /** Weapons whose model comes from Blender (`public/models/guns/<key>_fp|tp.glb`); the rest are built in code. */
 export const BLENDER_MODELS: Partial<Record<WeaponId, string>> = { m4a1: 'vx4' };
 
-export function buildWeaponModel(id: WeaponId, lod: WeaponLod): WeaponModel {
+/** A weapon model, with the attachments of `build` fitted (Blender models only have mounts). */
+export function buildWeaponModel(id: WeaponId, lod: WeaponLod, build?: WeaponBuild): WeaponModel {
   const key = BLENDER_MODELS[id];
-  if (key && hasModel(`guns/${key}_${lod}`)) return weaponFromGlb(key, lod);
+  if (key && hasModel(`guns/${key}_${lod}`)) {
+    const model = weaponFromGlb(key, lod);
+    if (build) fitAttachments(model, build);
+    return model;
+  }
   return BUILDERS[id](lod);
 }

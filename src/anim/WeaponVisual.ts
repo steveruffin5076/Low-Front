@@ -3,6 +3,7 @@ import { VIEWMODEL, type ViewmodelDef } from '../data/viewmodel';
 import { approach } from '../entities/PlayerMovement';
 import { disposeObject } from '../render/dispose';
 import type { WeaponModel, NodeName } from '../weapons/models/WeaponModel';
+import { opticOf } from '../weapons/Gunsmith';
 import { buildWeaponModel } from '../weapons/models/weaponModels';
 import type { WeaponState } from '../weapons/WeaponState';
 import { cycleNode, type ClipContext } from './fpClips';
@@ -41,8 +42,11 @@ export class WeaponVisual {
 
   constructor(readonly weapon: WeaponState) {
     const id = weapon.def.id;
-    this.vm = VIEWMODEL[id];
-    this.model = buildWeaponModel(id, 'fp');
+    const build = weapon.def.build ?? {};
+    // An optic sets the aimed field of view, and a scope shows the scope view at full aim.
+    const optic = opticOf(build)?.optic;
+    this.vm = optic ? { ...VIEWMODEL[id], adsFov: optic.adsFov, scope: optic.scope } : VIEWMODEL[id];
+    this.model = buildWeaponModel(id, 'fp', build);
     for (const [name, node] of Object.entries(this.model.nodes) as [NodeName, THREE.Object3D][]) {
       this.rest.set(name, { pos: node.position.clone(), rot: node.rotation.clone() });
     }

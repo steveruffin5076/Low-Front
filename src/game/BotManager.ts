@@ -8,6 +8,7 @@ import type { AudioManager } from '../audio/AudioManager';
 import { BOTS } from '../data/bots';
 import { CONQUEST } from '../data/conquest';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
+import { GUNSMITH } from '../data/attachments';
 import { DEFAULT_LOADOUT, WEAPON_IDS, WEAPONS, type WeaponId } from '../data/weapons';
 import { RESUPPLY } from '../data/resupply';
 import { Bot } from '../entities/Bot';
@@ -87,12 +88,12 @@ export class BotManager {
       zoneSpot: (flag) => this.zoneSpot(flag),
     };
     let lastShot: { shooter: unknown; time: number } = { shooter: null, time: -1 };
-    o.combat.ballistics.events.on('fired', ({ shooter, origin }) => {
+    o.combat.ballistics.events.on('fired', ({ shooter, origin, def }) => {
       if (!shooter?.team) return;
       // A shotgun fires several pellets at once: one shot to hear.
       if (lastShot.shooter === shooter && lastShot.time === this.time) return;
       lastShot = { shooter, time: this.time };
-      this.perception.gunshot(this.time, { id: shooter.id, team: shooter.team, position: origin }, this.bots);
+      this.perception.gunshot(this.time, { id: shooter.id, team: shooter.team, position: origin }, this.bots, def.suppressed ? GUNSMITH.suppressed.hearing : 1);
     });
     const counts = o.counts ?? { blue: BOTS.playerSide, red: BOTS.otherSide };
     let n = 0;

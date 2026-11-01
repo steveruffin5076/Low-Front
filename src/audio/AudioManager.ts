@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GUNSMITH } from '../data/attachments';
 import { AUDIO } from '../data/audio';
 import type { WeaponId } from '../data/weapons';
 import type { Surface } from '../physics/collision';
@@ -63,13 +64,14 @@ export class AudioManager {
   }
 
   /** The player's own shot (`at` omitted) or another soldier's shot at a position. */
-  gunshot(id: WeaponId, at?: THREE.Vector3): void {
+  /** A shot; `at` makes it positional (other soldiers). A suppressed shot is quieter and duller. */
+  gunshot(id: WeaponId, at?: THREE.Vector3, suppressed = false): void {
     const s = AUDIO.shots[id];
     const distant = at !== undefined && at.distanceTo(this.listenerPos) > AUDIO.distantShotDistance;
     const out = this.output(at);
     if (!out) return;
-    const lowpass = distant ? AUDIO.distantLowpass : 12000;
-    const gain = at ? s.gain * AUDIO.mix.otherShots : s.gain;
+    const lowpass = distant || suppressed ? AUDIO.distantLowpass : 12000;
+    const gain = (at ? s.gain * AUDIO.mix.otherShots : s.gain) * (suppressed ? GUNSMITH.suppressed.gain : 1);
     this.burst({ freq: s.crackFreq, q: 0.7, length: s.crackLength * (distant ? 1.8 : 1), gain, type: 'bandpass', lowpass }, out);
     this.tone({ freq: s.bodyFreq, endFreq: s.bodyFreq * 0.45, length: s.bodyLength, gain: gain * 0.9 }, out);
   }

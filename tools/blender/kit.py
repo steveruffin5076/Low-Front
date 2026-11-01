@@ -63,21 +63,21 @@ class Part:
             self.materials.append(material)
         return self.materials.index(material)
 
-    def _tag(self, start, material):
-        self.bm.faces.ensure_lookup_table()
+    def _tag(self, before, material):
+        """Gives `material` to every face added since `_begin` (bmesh may reuse freed slots, so compare sets)."""
         idx = self._mat_index(material)
-        for f in self.bm.faces[start:]:
-            f.material_index = idx
+        for f in self.bm.faces:
+            if f not in before:
+                f.material_index = idx
 
     def _begin(self):
-        self.bm.faces.ensure_lookup_table()
-        return len(self.bm.faces)
+        return set(self.bm.faces)
 
     # --- Primitives (all in game space) ---
 
     def box(self, material, lo, hi, bevel=0.0):
         """Axis-aligned box between corners `lo` and `hi`; `bevel` chamfers its edges."""
-        start = self._begin()
+        before = self._begin()
         size = [hi[i] - lo[i] for i in range(3)]
         center = [(hi[i] + lo[i]) / 2 for i in range(3)]
         m = Matrix.Translation(center) @ Matrix.Diagonal((*size, 1))
@@ -85,21 +85,21 @@ class Part:
         if bevel > 0:
             edges = list({e for v in res["verts"] for e in v.link_edges})
             bmesh.ops.bevel(self.bm, geom=edges, offset=min(bevel, min(size) * 0.45), segments=1, affect="EDGES", profile=0.5)
-        self._tag(start, material)
+        self._tag(before, material)
         return self
 
     def box_at(self, material, size, pos, rot=(0.0, 0.0, 0.0)):
         """Box of `size` centered on `pos`, rotated by Euler XYZ `rot` (radians)."""
-        start = self._begin()
+        before = self._begin()
         r = Matrix.Rotation(rot[2], 4, "Z") @ Matrix.Rotation(rot[1], 4, "Y") @ Matrix.Rotation(rot[0], 4, "X")
         m = Matrix.Translation(pos) @ r @ Matrix.Diagonal((*size, 1))
         bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
-        self._tag(start, material)
+        self._tag(before, material)
         return self
 
     def cyl(self, material, radius, length, pos, axis="z", segments=8, radius_end=None, rot_offset=0.0):
         """Cylinder (or cone) centered on `pos` along an axis. `radius_end` is the radius at the + end."""
-        start = self._begin()
+        before = self._begin()
         r2 = radius if radius_end is None else radius_end
         # create_cone builds along its local Z, radius1 at -Z, radius2 at +Z.
         if axis == "z":
@@ -110,7 +110,7 @@ class Part:
             align = Matrix.Rotation(-math.pi / 2, 4, "X")
         m = Matrix.Translation(pos) @ align @ Matrix.Rotation(rot_offset + math.pi / segments, 4, "Z")
         bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segments, radius1=radius, radius2=r2, depth=length, matrix=m)
-        self._tag(start, material)
+        self._tag(before, material)
         return self
 
     def cyl_z(self, material, radius, z0, z1, y, x=0.0, segments=8, radius_end=None):
@@ -120,32 +120,32 @@ class Part:
 
     def profile(self, material, points, thickness, center_x=0.0):
         """Side profile: (z, y) points seen from the right, extruded along X."""
-        start = self._begin()
+        before = self._begin()
         half = thickness / 2
         verts = [self.bm.verts.new((center_x - half, y, z)) for z, y in points]
         face = self.bm.faces.new(verts)
         res = bmesh.ops.extrude_face_region(self.bm, geom=[face])
         moved = [g for g in res["geom"] if isinstance(g, bmesh.types.BMVert)]
         bmesh.ops.translate(self.bm, vec=(thickness, 0, 0), verts=moved)
-        bmesh.ops.recalc_face_normals(self.bm, faces=list(self.bm.faces)[start:])
-        self._tag(start, material)
+        bmesh.ops.recalc_face_normals(self.bm, faces=[f for f in self.bm.faces if f not in before])
+        self._tag(before, material)
         return self
 
     def section(self, material, points, z0, z1):
         """Cross-section: (x, y) points seen from the muzzle, extruded along Z from z0 to z1."""
-        start = self._begin()
+        before = self._begin()
         verts = [self.bm.verts.new((x, y, z0)) for x, y in points]
         face = self.bm.faces.new(verts)
         res = bmesh.ops.extrude_face_region(self.bm, geom=[face])
         moved = [g for g in res["geom"] if isinstance(g, bmesh.types.BMVert)]
         bmesh.ops.translate(self.bm, vec=(0, 0, z1 - z0), verts=moved)
-        bmesh.ops.recalc_face_normals(self.bm, faces=list(self.bm.faces)[start:])
-        self._tag(start, material)
+        bmesh.ops.recalc_face_normals(self.bm, faces=[f for f in self.bm.faces if f not in before])
+        self._tag(before, material)
         return self
 
     def ring(self, material, center, outer, inner, z0, z1, segments=12):
         """Tube along Z (a sight hood or a ring mount): outer and inner radius."""
-        start = self._begin()
+        before = self._begin()
         cx, cy = center
         rings = []
         for z in (z0, z1):
@@ -160,8 +160,8 @@ class Part:
             self.bm.faces.new((i0[k], i1[k], i1[j], i0[j]))
             self.bm.faces.new((o0[k], i0[k], i0[j], o0[j]))
             self.bm.faces.new((o1[k], o1[j], i1[j], i1[k]))
-        bmesh.ops.recalc_face_normals(self.bm, faces=list(self.bm.faces)[start:])
-        self._tag(start, material)
+        bmesh.ops.recalc_face_normals(self.bm, faces=[f for f in self.bm.faces if f not in before])
+        self._tag(before, material)
         return self
 
     def triangles(self):

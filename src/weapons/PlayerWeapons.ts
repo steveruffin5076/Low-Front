@@ -1,6 +1,7 @@
 import { EventBus } from '../core/EventBus';
 import { WEAPONS, type FireMode, type Loadout, type WeaponSlot } from '../data/weapons';
 import { WEAPON_TIMING } from '../data/weaponTiming';
+import { fitWeapon } from './Gunsmith';
 import { WeaponState, type ReloadKind } from './WeaponState';
 
 export interface WeaponEvents {
@@ -54,7 +55,8 @@ export class PlayerWeapons {
   private action: Action = { kind: 'ready' };
 
   constructor(loadout: Loadout) {
-    this.weapons = { primary: new WeaponState(WEAPONS[loadout.primary]), secondary: new WeaponState(WEAPONS[loadout.secondary]) };
+    const fitted = (id: Loadout['primary']): WeaponState => new WeaponState(fitWeapon(WEAPONS[id], loadout.builds?.[id]));
+    this.weapons = { primary: fitted(loadout.primary), secondary: fitted(loadout.secondary) };
   }
 
   get activeSlot(): WeaponSlot {

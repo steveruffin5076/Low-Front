@@ -1,6 +1,8 @@
 import { PROFILE } from '../data/player';
 import { DEFAULT_LOADOUT, WEAPONS, type Loadout, type WeaponId, type WeaponSlot } from '../data/weapons';
+import type { WeaponBuild } from '../data/attachments';
 import type { TeamId } from '../data/map/types';
+import { validBuild } from '../weapons/Gunsmith';
 import type { KeyValueStore } from './Storage';
 
 export interface PlayerStats {
@@ -85,6 +87,14 @@ export class ProfileStore {
     if (isObject(data.loadout)) {
       profile.loadout.primary = weaponFor('primary', data.loadout.primary) ?? profile.loadout.primary;
       profile.loadout.secondary = weaponFor('secondary', data.loadout.secondary) ?? profile.loadout.secondary;
+      const builds = data.loadout.builds;
+      if (isObject(builds)) {
+        for (const id of Object.keys(builds)) {
+          if (!(id in WEAPONS) || !isObject(builds[id])) continue;
+          const b = validBuild(id as WeaponId, builds[id] as WeaponBuild);
+          if (Object.keys(b).length) (profile.loadout.builds ??= {})[id as WeaponId] = b;
+        }
+      }
     }
     if (data.team === 'blue' || data.team === 'red') profile.team = data.team;
     return profile;
