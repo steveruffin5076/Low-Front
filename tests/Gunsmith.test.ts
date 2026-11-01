@@ -95,3 +95,13 @@ describe('gunsmith saves', () => {
     expect(store.load().loadout.builds).toBeUndefined();
   });
 });
+
+describe('respawn with a new build', () => {
+  it('counts an attachment change on the same weapon as a new loadout', async () => {
+    const { sameLoadout } = await import('../src/scenes/PlaySession');
+    const bare = { primary: 'm4a1' as const, secondary: 'm1911' as const };
+    expect(sameLoadout(bare, { ...bare })).toBe(true);
+    expect(sameLoadout(bare, { ...bare, builds: { m4a1: { optic: 'reddot' } } })).toBe(false);
+    expect(sameLoadout({ ...bare, builds: { m4a1: { optic: 'reddot', muzzle: 'suppressor' } } }, { ...bare, builds: { m4a1: { muzzle: 'suppressor', optic: 'reddot' } } })).toBe(true);
+  });
+});
