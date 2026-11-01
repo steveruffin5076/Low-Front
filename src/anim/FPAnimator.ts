@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { AudioManager } from '../audio/AudioManager';
+import { GUNSMITH } from '../data/attachments';
 import { MOVEMENT } from '../data/player';
 import type { Team } from '../data/soldier';
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
@@ -240,7 +241,8 @@ export class FPAnimator {
 
   private spawnShotEffects(v: WeaponVisual): void {
     if (v !== this.current) return;
-    this.effects.muzzleFlash(v.model.points.muzzle, v.weapon.def.slot === 'secondary' ? 0.7 : 1);
+    const flash = (v.weapon.def.slot === 'secondary' ? 0.7 : 1) * (v.weapon.def.suppressed ? GUNSMITH.suppressed.flash : 1);
+    this.effects.muzzleFlash(v.model.points.muzzle, flash);
     // A manual action throws the case out when it is worked, not on the shot.
     if (!v.weapon.def.action.manual) this.effects.ejectShell(v.weapon.def.id, v.model.points.ejectionPort);
   }

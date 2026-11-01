@@ -4,3 +4,6 @@ dist/
 .DS_Store
 release/
 build/
+tools/blender/.venv/
+tools/blender/previews/
+__pycache__/

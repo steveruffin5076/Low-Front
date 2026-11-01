@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:match": "BOT_MATCH=1 vitest run tests/BotMatch.test.ts --silent=false",
     "pc": "npm run build && electron .",
-    "build:pc": "node scripts/icon.mjs && npm run build && electron-builder --win nsis --x64"
+    "build:pc": "node scripts/icon.mjs && npm run build && electron-builder --win nsis --x64",
+    "models": "sh tools/blender/run.sh"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

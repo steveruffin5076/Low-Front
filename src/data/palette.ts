@@ -37,6 +37,11 @@ export const WEAPON_PALETTE = {
   interior: 0x141518,
   /** Shotgun shell hull. */
   shellHull: 0x9b2b22,
+  /** Flat dark earth parts (grips, suppressor). */
+  tan: 0x8a7556,
+  /** Optic lenses and the red-dot reticle. */
+  glass: 0x1e3c46,
+  dot: 0xff2a1a,
   /** Sniper rifle stock. */
   stockGreen: 0x3e4a34,
 } as const;

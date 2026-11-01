@@ -1,3 +1,5 @@
+import type { WeaponBuild } from './attachments';
+
 /**
  * Weapon stats (plan section 7.1). Spread and recoil are tuned to the plan's descriptions.
  * Display names are fictional (no real firearm names); the ids are internal and stay stable for saves.
@@ -31,6 +33,10 @@ export interface ActionDef {
 
 export interface WeaponDef {
   id: WeaponId;
+  /** Gunsmith attachments fitted (see `fitWeapon`); none on the base stats. */
+  build?: WeaponBuild;
+  /** A suppressor is fitted: quieter, smaller flash, heard from less far. */
+  suppressed?: boolean;
   name: string;
   slot: WeaponSlot;
   class: WeaponClass;
@@ -253,6 +259,8 @@ export const WEAPON_IDS = Object.keys(WEAPONS) as WeaponId[];
 export interface Loadout {
   primary: WeaponId;
   secondary: WeaponId;
+  /** Gunsmith builds per weapon (kept when switching weapons, used when that weapon is picked). */
+  builds?: Partial<Record<WeaponId, WeaponBuild>>;
 }
 
 export const DEFAULT_LOADOUT: Loadout = { primary: 'm4a1', secondary: 'm1911' };

@@ -69,7 +69,7 @@ export class RangeCombat {
   ) {
     const sink = { fire: (...a: Parameters<Combat['ballistics']['fire']>) => combat.ballistics.fire(a[0], a[1], a[2], a[3], a[4], shooter) };
     this.shooting = new PlayerShooting(sink, weapons, player, () => camera.position.clone(), muzzle);
-    weapons.events.on('fired', ({ weapon }) => audio.gunshot(weapon.def.id));
+    weapons.events.on('fired', ({ weapon }) => audio.gunshot(weapon.def.id, undefined, weapon.def.suppressed));
     this.unsubscribe.push(
       combat.events.on('hit', (h) => {
         if (h.shooter !== shooter || h.friendly) return;

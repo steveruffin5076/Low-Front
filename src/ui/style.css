@@ -489,6 +489,149 @@ body {
   font-weight: 700;
 }
 
+.stat-track {
+  position: relative;
+}
+.stat-delta {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+.stat-delta.up {
+  background: #6cc46c;
+}
+.stat-delta.down {
+  background: #e06055;
+}
+
+/* ---------- Gunsmith ---------- */
+.gs-open {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gunsmith {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(6, 9, 13, 0.72);
+}
+.gs-panel {
+  width: min(1100px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 18px;
+  box-sizing: border-box;
+}
+.gs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gs-head .panel-title {
+  margin: 0;
+}
+.gs-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 18px;
+  margin-top: 14px;
+}
+.gs-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gs-canvas {
+  display: block;
+  width: 100%;
+  height: clamp(180px, 34vh, 340px);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.07), transparent 70%);
+  border-radius: 8px;
+}
+.gs-slots {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gs-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.gs-part {
+  padding: 10px 12px;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.gs-part:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.gs-part.selected {
+  border-color: var(--mustard);
+}
+.gs-part-name {
+  font-weight: 800;
+}
+.gs-part-blurb {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.gs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.gs-chip {
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+}
+.gs-chip.good {
+  color: #9be59b;
+  background: rgba(108, 196, 108, 0.15);
+}
+.gs-chip.bad {
+  color: #f0a39b;
+  background: rgba(224, 96, 85, 0.15);
+}
+@media (max-width: 760px) {
+  .gunsmith {
+    padding: 8px;
+  }
+  .gs-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .gs-slots {
+    overflow: visible;
+  }
+}
+
 /* ---------- Debug overlay ---------- */
 .debug-overlay {
   position: absolute;

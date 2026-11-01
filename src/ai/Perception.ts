@@ -160,11 +160,11 @@ export class Perception {
     }
   }
 
-  /** A gunshot: enemies of the shooter within hearing range learn where it came from. */
-  gunshot(time: number, shooter: { id: string; team: TeamId; position: THREE.Vector3 }, listeners: readonly Observer[]): void {
+  /** A gunshot: enemies of the shooter within hearing range (times `range`, less for a suppressed shot) learn where it came from. */
+  gunshot(time: number, shooter: { id: string; team: TeamId; position: THREE.Vector3 }, listeners: readonly Observer[], range = 1): void {
     for (const l of listeners) {
       if (!l.alive || l.team === shooter.team) continue;
-      if (l.eye.distanceTo(shooter.position) <= P.hearingRange) l.memory.heard(shooter.id, shooter.position, time);
+      if (l.eye.distanceTo(shooter.position) <= P.hearingRange * range) l.memory.heard(shooter.id, shooter.position, time);
     }
   }
 }

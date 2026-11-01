@@ -440,7 +440,7 @@ export class Bot implements Combatant, SightTarget {
       const d = def.pellets > 1 ? spreadDirection(shotDir, def.pelletSpreadDeg, pelletDir) : shotDir;
       this.world.combat.ballistics.fire(this.eye, d, def, tracer && i === 0, muzzleOffset, this.shooter);
     }
-    this.world.audio.gunshot(def.id, this.eye);
+    this.world.audio.gunshot(def.id, this.eye, def.suppressed);
   }
 
   private updatePoints(): void {

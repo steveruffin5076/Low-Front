@@ -44,7 +44,7 @@ export interface BulletHit {
 export interface BallisticsEvents {
   hit: BulletHit;
   /** A shot was fired (bots hear it). */
-  fired: { shooter: BulletShooter | null; origin: THREE.Vector3 };
+  fired: { shooter: BulletShooter | null; origin: THREE.Vector3; def: WeaponDef };
 }
 
 const p = [0, 0, 0];
@@ -98,7 +98,7 @@ export class Ballistics {
     b.def = def;
     b.tracer = tracer;
     b.muzzleOffset.copy(muzzleOffset);
-    this.events.emit('fired', { shooter, origin: b.origin });
+    this.events.emit('fired', { shooter, origin: b.origin, def });
   }
 
   fixedUpdate(dt: number): void {

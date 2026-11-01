@@ -10,6 +10,7 @@ import {
   type Team,
 } from '../../data/soldier';
 import type { Loadout, WeaponId } from '../../data/weapons';
+import type { WeaponBuild } from '../../data/attachments';
 import { box, paint } from '../../weapons/models/ModelKit';
 import { buildWeaponModel } from '../../weapons/models/weaponModels';
 
@@ -70,19 +71,25 @@ function colorOf(team: Team, c: PartColor): number {
   return c === 'uniform' || c === 'trousers' || c === 'helmet' ? TEAM_COLORS[team][c] : GEAR_COLORS[c];
 }
 
+/** False when the object or a parent is hidden (a flash hider replaced by a muzzle attachment). */
+function visibleInTree(o: THREE.Object3D): boolean {
+  for (let p: THREE.Object3D | null = o; p; p = p.parent) if (!p.visible) return false;
+  return true;
+}
+
 /** Weapon geometry in its bone's frame: the weapon root on `bone`, the magazine on `magBone`. */
-function weaponGeometry(id: WeaponId, lod: SoldierLod, bone: BoneName, magBone: BoneName): THREE.BufferGeometry[] {
+function weaponGeometry(id: WeaponId, lod: SoldierLod, bone: BoneName, magBone: BoneName, build?: WeaponBuild): THREE.BufferGeometry[] {
   if (lod === 'far') {
     const f = FAR_WEAPON[id];
     return [skinned(box(f.size, { pos: f.pos }), GEAR_COLORS.dark, bone)];
   }
-  const model = buildWeaponModel(id, 'tp');
+  const model = buildWeaponModel(id, 'tp', build);
   model.root.updateMatrixWorld(true);
   const mag = model.nodes.magazine;
   const out: THREE.BufferGeometry[] = [];
   model.root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
+    if (!mesh.isMesh || !visibleInTree(mesh)) return;
     let onMag = false;
     for (let p: THREE.Object3D | null = mesh; p; p = p.parent) if (p === mag) onMag = true;
     const color = (mesh.material as THREE.MeshStandardMaterial).color.getHex();
@@ -93,7 +100,8 @@ function weaponGeometry(id: WeaponId, lod: SoldierLod, bone: BoneName, magBone: 
 
 /** Merged, skinned geometry for one team, loadout and level of detail. Cached and shared. */
 export function soldierGeometry(team: Team, loadout: Loadout, lod: SoldierLod): THREE.BufferGeometry {
-  const key = `${team}|${loadout.primary}|${loadout.secondary}|${lod}`;
+  const build = loadout.builds?.[loadout.primary];
+  const key = `${team}|${loadout.primary}|${loadout.secondary}|${lod}|${Object.values(build ?? {}).sort().join('.')}`;
   const cached = geometryCache.get(key);
   if (cached) return cached;
   const rest = restPositions();
@@ -103,7 +111,7 @@ export function soldierGeometry(team: Team, loadout: Loadout, lod: SoldierLod): 
     const at = rest.get(p.bone)!;
     parts.push(skinned(box(p.size, { pos: [p.pos[0] + at.x, p.pos[1] + at.y, p.pos[2] + at.z] }), colorOf(team, p.color), p.bone));
   }
-  parts.push(...weaponGeometry(loadout.primary, lod, 'primary', 'primaryMag'));
+  parts.push(...weaponGeometry(loadout.primary, lod, 'primary', 'primaryMag', build));
   parts.push(...weaponGeometry(loadout.secondary, lod, 'secondary', 'secondaryMag'));
   const merged = mergeGeometries(parts);
   if (!merged) throw new Error('Could not merge soldier geometry');
