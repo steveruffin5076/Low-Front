@@ -3,6 +3,14 @@
     "file": "attachments/agrip.glb",
     "triangles": 32
   },
+  "attachments/bipod": {
+    "file": "attachments/bipod.glb",
+    "triangles": 120
+  },
+  "attachments/choke": {
+    "file": "attachments/choke.glb",
+    "triangles": 152
+  },
   "attachments/compensator": {
     "file": "attachments/compensator.glb",
     "triangles": 172
@@ -11,9 +19,29 @@
     "file": "attachments/extmag.glb",
     "triangles": 104
   },
+  "attachments/extmag_kr7": {
+    "file": "attachments/extmag_kr7.glb",
+    "triangles": 60
+  },
+  "attachments/extmag_lr24": {
+    "file": "attachments/extmag_lr24.glb",
+    "triangles": 44
+  },
+  "attachments/extmag_p11": {
+    "file": "attachments/extmag_p11.glb",
+    "triangles": 24
+  },
+  "attachments/extmag_sr9": {
+    "file": "attachments/extmag_sr9.glb",
+    "triangles": 20
+  },
   "attachments/holo": {
     "file": "attachments/holo.glb",
     "triangles": 336
+  },
+  "attachments/minidot": {
+    "file": "attachments/minidot.glb",
+    "triangles": 116
   },
   "attachments/reddot": {
     "file": "attachments/reddot.glb",
@@ -27,9 +55,65 @@
     "file": "attachments/suppressor.glb",
     "triangles": 196
   },
+  "attachments/suppressor_p11": {
+    "file": "attachments/suppressor_p11.glb",
+    "triangles": 196
+  },
+  "attachments/tubeext": {
+    "file": "attachments/tubeext.glb",
+    "triangles": 196
+  },
   "attachments/vgrip": {
     "file": "attachments/vgrip.glb",
     "triangles": 224
+  },
+  "gear/knife": {
+    "file": "gear/knife.glb",
+    "triangles": 212
+  },
+  "gear/smoke": {
+    "file": "gear/smoke.glb",
+    "triangles": 152
+  },
+  "guns/br12_fp": {
+    "file": "guns/br12_fp.glb",
+    "triangles": 1028
+  },
+  "guns/br12_tp": {
+    "file": "guns/br12_tp.glb",
+    "triangles": 152
+  },
+  "guns/kr7_fp": {
+    "file": "guns/kr7_fp.glb",
+    "triangles": 1104
+  },
+  "guns/kr7_tp": {
+    "file": "guns/kr7_tp.glb",
+    "triangles": 216
+  },
+  "guns/lr24_fp": {
+    "file": "guns/lr24_fp.glb",
+    "triangles": 880
+  },
+  "guns/lr24_tp": {
+    "file": "guns/lr24_tp.glb",
+    "triangles": 156
+  },
+  "guns/p11_fp": {
+    "file": "guns/p11_fp.glb",
+    "triangles": 816
+  },
+  "guns/p11_tp": {
+    "file": "guns/p11_tp.glb",
+    "triangles": 100
+  },
+  "guns/sr9_fp": {
+    "file": "guns/sr9_fp.glb",
+    "triangles": 1016
+  },
+  "guns/sr9_tp": {
+    "file": "guns/sr9_tp.glb",
+    "triangles": 184
   },
   "guns/vx4_fp": {
     "file": "guns/vx4_fp.glb",

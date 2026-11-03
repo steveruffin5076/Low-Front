@@ -9,15 +9,21 @@ export function spawnLabel(c: SpawnChoice): string {
 }
 
 /**
- * Spawn options and spawn points (plan section 10.5): HQ always; each flag the team owns, using
- * its 6 spawn points. A point is skipped while someone stands on it.
+ * Spawn options and spawn points (plan section 10.5): HQ always; each flag the team owns (unless
+ * an enemy is close to it), using its 6 spawn points. A point is skipped while someone stands on it.
  */
 export class SpawnSystem {
   constructor(private readonly map: MapData) {}
 
-  options(team: TeamId, owners: Record<FlagId, TeamId | null>): SpawnChoice[] {
+  /** `enemies`: positions of living enemies; a flag with one within `spawnBlockRadius` is not offered. */
+  options(team: TeamId, owners: Record<FlagId, TeamId | null>, enemies: readonly { x: number; z: number }[] = []): SpawnChoice[] {
     const out: SpawnChoice[] = [{ kind: 'hq' }];
-    for (const f of this.map.flags) if (owners[f.id] === team) out.push({ kind: 'flag', flag: f.id });
+    const r = CONQUEST.spawnBlockRadius;
+    for (const f of this.map.flags) {
+      if (owners[f.id] !== team) continue;
+      if (enemies.some((e) => Math.hypot(e.x - f.x, e.z - f.z) < r)) continue;
+      out.push({ kind: 'flag', flag: f.id });
+    }
     return out;
   }
 

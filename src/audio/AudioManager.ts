@@ -9,7 +9,7 @@ import type { Surface } from '../physics/collision';
  * Sounds are procedural: filtered noise bursts and short tones. Positional sounds use a
  * PannerNode relative to the listener (the camera).
  */
-export type ClickName = 'dryFire' | 'selector' | 'magOut' | 'magIn' | 'boltClose' | 'cycleBack';
+export type ClickName = 'dryFire' | 'selector' | 'magOut' | 'magIn' | 'boltClose' | 'cycleBack' | 'swing' | 'throw';
 
 const CLICKS: Record<ClickName, { freq: number; length: number; gain: number }> = {
   dryFire: { freq: 2400, length: 0.03, gain: 0.35 },
@@ -18,6 +18,8 @@ const CLICKS: Record<ClickName, { freq: number; length: number; gain: number }> 
   magIn: { freq: 1300, length: 0.05, gain: 0.4 },
   boltClose: { freq: 700, length: 0.07, gain: 0.45 },
   cycleBack: { freq: 520, length: 0.08, gain: 0.4 },
+  swing: { freq: 420, length: 0.14, gain: 0.22 },
+  throw: { freq: 300, length: 0.12, gain: 0.2 },
 };
 
 const fwd = new THREE.Vector3();

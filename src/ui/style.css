@@ -191,8 +191,12 @@ body {
   overflow-y: auto;
 }
 .setup-map {
-  display: block;
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  grid-template-rows: auto 1fr;
+  column-gap: 12px;
   width: 100%;
+  margin-bottom: 10px;
   padding: 10px;
   font-family: inherit;
   color: var(--text);
@@ -205,14 +209,18 @@ body {
 .setup-map.selected {
   border-color: var(--mustard);
 }
+.setup-map:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 .setup-map-image {
   display: block;
-  width: 100%;
-  aspect-ratio: 1;
+  grid-row: span 2;
+  width: 112px;
+  height: 112px;
   border-radius: 6px;
 }
 .setup-map-name {
-  margin-top: 10px;
+  margin-top: 2px;
   font-size: 18px;
   font-weight: 800;
 }
@@ -275,11 +283,6 @@ body {
   }
   .setup-body .panel {
     overflow: visible;
-  }
-  .setup-map-image {
-    width: 160px;
-    height: 160px;
-    margin: 0 auto;
   }
 }
 

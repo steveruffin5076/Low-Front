@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
-import { MOVEMENT } from '../data/player';
+import { MOVEMENT, VAULT } from '../data/player';
 import { CharacterMotor } from '../physics/CharacterMotor';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import { Stamina, accelerate, approach, jumpVelocity, maxSpeed, shouldSprint } from './PlayerMovement';
@@ -24,6 +24,7 @@ export interface PlayerIntent {
 
 export interface PlayerEvents {
   jumped: Record<string, never>;
+  vaulted: Record<string, never>;
   footstep: { crouched: boolean; sprinting: boolean };
   landed: { fallHeight: number; impactSpeed: number };
 }
@@ -32,6 +33,9 @@ const DEG = Math.PI / 180;
 const tmpDelta = new THREE.Vector3();
 const tmpRight = new THREE.Vector3();
 const tmpHead = new THREE.Vector3();
+const tmpFwd = new THREE.Vector3();
+const tmpOrigin = new THREE.Vector3();
+const DOWN = new THREE.Vector3(0, -1, 0);
 
 /** First-person player movement and camera (plan section 9). */
 export class PlayerController {
@@ -53,6 +57,8 @@ export class PlayerController {
   private stepDistance = 0;
   private airPeakY = 0;
   private wasGrounded = true;
+  /** A vault in progress: from, to, the top height and time. */
+  private vault: { from: THREE.Vector3; to: THREE.Vector3; topY: number; t: number } | null = null;
 
   constructor(physics: PhysicsWorld, spawn: THREE.Vector3, groups?: number) {
     this.motor = new CharacterMotor(physics, spawn, groups);
@@ -77,6 +83,7 @@ export class PlayerController {
   }
 
   respawn(at: THREE.Vector3, yaw = 0): void {
+    this.vault = null;
     this.motor.setHeight(MOVEMENT.standHeight);
     this.motor.teleport(at);
     this.prevFeet.copy(at);
@@ -89,8 +96,16 @@ export class PlayerController {
     this.sprinting = false;
   }
 
+  get vaulting(): boolean {
+    return this.vault !== null;
+  }
+
   fixedUpdate(dt: number, intent: PlayerIntent, weaponSpeedModifier: number): void {
     this.prevFeet.copy(this.motor.feet);
+    if (this.vault) {
+      this.stepVault(dt);
+      return;
+    }
     const grounded = this.motor.grounded;
 
     // Crouch toggle; sprinting stands the player up.
@@ -121,6 +136,7 @@ export class PlayerController {
     // Jump and gravity.
     if (intent.jumpPressed && grounded) {
       if (this.crouched) this.setCrouched(false);
+      else if (this.startVault()) return;
       else {
         this.velocity.y = jumpVelocity();
         this.events.emit('jumped', {});
@@ -146,6 +162,54 @@ export class PlayerController {
     this.trackSteps(moved);
     this.trackFall();
     this.updateLean(dt, intent);
+  }
+
+  /**
+   * Jump pressed: is there something to vault right in front? Low ray hits it, a ray above the
+   * highest vaultable top is clear, and a ray down just past the front edge finds the top.
+   */
+  private startVault(): boolean {
+    const v = VAULT;
+    const feet = this.motor.feet;
+    const fwd = tmpFwd.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    const low = this.motor.raycast(tmpOrigin.set(feet.x, feet.y + 0.3, feet.z), fwd, v.reach);
+    if (low === null) return false;
+    if (this.motor.raycast(tmpOrigin.set(feet.x, feet.y + v.maxHeight + 0.2, feet.z), fwd, low + 0.6) !== null) return false;
+    const probe = (ahead: number): number | null => {
+      tmpOrigin.set(feet.x, feet.y + v.maxHeight + 0.2, feet.z).addScaledVector(fwd, ahead);
+      const d = this.motor.raycast(tmpOrigin, DOWN, v.maxHeight + 2.5);
+      return d === null ? null : tmpOrigin.y - d;
+    };
+    const top = probe(low + 0.2);
+    if (top === null) return false;
+    const h = top - feet.y;
+    if (h < v.minHeight || h > v.maxHeight) return false;
+    // Thin (a wall, sandbags, a car's side): over it to the ground beyond. Deep: onto the top.
+    const beyond = probe(low + v.maxDepth + 0.4);
+    const over = beyond !== null && beyond < top - 0.3;
+    const to = over
+      ? feet.clone().addScaledVector(fwd, low + v.maxDepth + 0.4).setY(beyond)
+      : feet.clone().addScaledVector(fwd, low + 0.45).setY(top);
+    this.vault = { from: feet.clone(), to, topY: top, t: 0 };
+    this.velocity.set(0, 0, 0);
+    this.events.emit('vaulted', {});
+    return true;
+  }
+
+  /** Moves along the vault arc: up over the top, then forward and down. */
+  private stepVault(dt: number): void {
+    const v = this.vault!;
+    v.t = Math.min(1, v.t + dt / VAULT.duration);
+    const k = v.t * v.t * (3 - 2 * v.t);
+    tmpOrigin.lerpVectors(v.from, v.to, k);
+    // Rise to clear the top in the first half, then follow the straight line down.
+    const lift = v.topY + VAULT.clearance - Math.max(v.from.y, v.to.y);
+    tmpOrigin.y += Math.sin(Math.PI * Math.min(1, v.t * 1.2)) * Math.max(0, lift);
+    this.motor.teleport(tmpOrigin);
+    if (v.t >= 1) {
+      this.vault = null;
+      this.wasGrounded = true;
+    }
   }
 
   /** Places the camera at the eyes, interpolated between fixed steps, with lean roll and shift. */

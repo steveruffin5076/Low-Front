@@ -6,6 +6,7 @@ import { BotMemory, type SightTarget } from '../ai/Perception';
 import type { AudioManager } from '../audio/AudioManager';
 import { BALLISTICS } from '../data/ballistics';
 import { BODY_POINTS, BOTS, DIFFICULTIES, DIFFICULTY, type DifficultyPreset } from '../data/bots';
+import { KNIFE } from '../data/melee';
 import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { Combat } from '../game/Combat';
@@ -95,6 +96,7 @@ export class Bot implements Combatant, SightTarget {
   private triggerHeld = false;
   private pressNext = false;
   private reloadAsked = false;
+  private smokeAsked = false;
   private readonly recoil = new Recoil();
   private readonly spreads = new Map<string, Spread>();
 
@@ -120,6 +122,16 @@ export class Bot implements Combatant, SightTarget {
     for (const w of Object.values(this.weapons.weapons)) this.spreads.set(w.def.id, new Spread(w.def));
     this.weapons.events.on('fired', ({ weapon }) => this.onFired(weapon.def));
     this.weapons.events.on('reloadStart', ({ duration }) => this.soldier.anim.reload(duration));
+    this.weapons.events.on('meleeStart', () => (this.soldier.protectLeft = 0));
+    this.weapons.events.on('meleeStrike', () => {
+      this.aimAt(aimDir);
+      this.world.combat.melee(this.shooter, this.eye, aimDir);
+    });
+    this.weapons.events.on('throwRelease', () => {
+      this.aimAt(aimDir);
+      this.world.audio.play('throw');
+      this.world.combat.smoke.throw(this.eye, aimDir.setY(aimDir.y + 0.05).normalize(), this.team);
+    });
     this.weapons.events.on('holsterStart', () => this.soldier.switchWeapon());
     this.controller.events.on('footstep', ({ crouched, sprinting }) => {
       if (this.world.audio.listenerDistance(this.position) < 30) {
@@ -405,7 +417,16 @@ export class Bot implements Combatant, SightTarget {
         press = !this.triggerHeld;
       }
     }
+    // Point-blank: the knife instead of the gun.
+    const close = visible && target!.position.distanceTo(this.position) < KNIFE.botRange;
+    const melee = close && this.aim.ready && this.weapons.actionKind === 'ready';
+    if (melee) {
+      fire = false;
+      press = false;
+    }
     this.triggerHeld = fire;
+    const throwSmoke = o.throwSmoke && !this.smokeAsked;
+    this.smokeAsked = o.throwSmoke;
     const reload = o.reload && !this.reloadAsked;
     this.reloadAsked = o.reload;
     const autoReload = w.mag === 0 && w.reserve > 0 && !visible;
@@ -416,10 +437,20 @@ export class Bot implements Combatant, SightTarget {
       switchTo: o.switchTo,
       fireModePressed: false,
       inspectPressed: false,
+      meleePressed: melee,
+      throwPressed: throwSmoke,
       canFire: !this.controller.sprinting,
       sprinting: this.controller.sprinting,
       ads: o.pace === 'walk',
     };
+  }
+
+  /** Unit direction to the current target's chest (straight ahead without one). */
+  private aimAt(out: THREE.Vector3): THREE.Vector3 {
+    const id = this.aim.targetId;
+    const target = id ? this.world.target(id) : null;
+    if (target) return out.subVectors(target.chest, this.eye).normalize();
+    return out.set(-Math.sin(this.controller.yaw), 0, -Math.cos(this.controller.yaw));
   }
 
   private onFired(def: PlayerWeapons['active']['def']): void {
@@ -429,7 +460,7 @@ export class Bot implements Combatant, SightTarget {
     if (target) this.aim.aim(this.eye, target.chest, target.head ?? target.chest, aimDir);
     else aimDir.set(-Math.sin(this.controller.yaw), 0, -Math.cos(this.controller.yaw));
     // Recoil climbs the shots; the bot pulls part of it back down.
-    this.recoil.kick(def, 1 - this.aim.recoilControl);
+    this.recoil.kick(def, (1 - this.aim.recoilControl) * (this.controller.crouched ? (def.bracedRecoil ?? 1) : 1));
     shotDir.copy(aimDir).applyAxisAngle(dir.crossVectors(aimDir, UP).normalize(), this.recoil.pitch * DEG);
     const spread = this.spreads.get(def.id)!;
     spreadDirection(shotDir, spread.cone({ ads: this.orders.pace === 'walk' ? 1 : 0, speed: this.controller.horizontalSpeed, grounded: this.controller.grounded }), shotDir);

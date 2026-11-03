@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { MAPS } from '../src/data/map/maps';
+import type { MapId } from '../src/data/matchSetup';
 import { createBotMatch } from './sim/botMatch';
 
 declare const process: { env: Record<string, string | undefined> };
@@ -9,10 +11,12 @@ declare const process: { env: Record<string, string | undefined> };
  */
 /** `BOT_MATCH_SEEDS=7,11,23` plays one match per seed. */
 const SEEDS = (process.env.BOT_MATCH_SEEDS ?? '7').split(',').map(Number);
+/** `BOT_MATCH_MAP=harbor` plays on Kessel Harbor. */
+const MAP = MAPS[(process.env.BOT_MATCH_MAP ?? 'verdan') as MapId];
 
 describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
   it.each(SEEDS)('seed %i plays to a winner with no bot stuck over 5 s', async (seed) => {
-    const m = await createBotMatch(seed);
+    const m = await createBotMatch(seed, MAP);
     const t0 = performance.now();
     let kills = 0;
     let flips = 0;
@@ -25,6 +29,8 @@ describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
     });
     const owners = new Map(m.match.zones.map((z) => [z.flag.id, z.owner]));
     for (const b of m.bots.bots) b.weapons.events.on('reloadStart', () => reloads++);
+    let smokes = 0;
+    for (const b of m.bots.bots) b.weapons.events.on('throwRelease', () => smokes++);
     const limit = 60 * 60 * 26;
     let i = 0;
     for (; i < limit && !m.match.result; i++) {
@@ -43,6 +49,7 @@ describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
     console.log(`seed ${seed}: result ${JSON.stringify(m.match.result)} at ${(i / 60).toFixed(0)}s, kills ${kills}, flips ${flips}, reloads ${reloads}, longest stuck ${maxStuck.toFixed(1)}s, unsticks ${m.bots.bots.reduce((n, b) => n + b.unsticks, 0)}, resupplies ${m.bots.resupply.uses}, ${msPerStep.toFixed(2)} ms per step`);
     const carried: Record<string, number> = {};
     for (const b of m.bots.bots) carried[b.weapons.weapons.primary.def.name] = (carried[b.weapons.weapons.primary.def.name] ?? 0) + 1;
+    console.log(`smokes thrown ${smokes}`);
     console.log(`kills by weapon ${JSON.stringify(byWeapon)}, bots by primary ${JSON.stringify(carried)}`);
     expect(m.match.result).not.toBeNull();
     expect(m.match.result!.winner).not.toBeNull();

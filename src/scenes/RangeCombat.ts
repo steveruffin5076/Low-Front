@@ -70,6 +70,13 @@ export class RangeCombat {
     const sink = { fire: (...a: Parameters<Combat['ballistics']['fire']>) => combat.ballistics.fire(a[0], a[1], a[2], a[3], a[4], shooter) };
     this.shooting = new PlayerShooting(sink, weapons, player, () => camera.position.clone(), muzzle);
     weapons.events.on('fired', ({ weapon }) => audio.gunshot(weapon.def.id, undefined, weapon.def.suppressed));
+    // The knife and smoke go where the player looks.
+    const aim = (): THREE.Vector3 => new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(player.pitch, player.yaw, 0, 'YXZ'));
+    weapons.events.on('meleeStrike', () => combat.melee(shooter, camera.position.clone(), aim()));
+    weapons.events.on('throwRelease', () => {
+      audio.play('throw');
+      combat.smoke.throw(camera.position.clone(), aim(), shooter.team);
+    });
     this.unsubscribe.push(
       combat.events.on('hit', (h) => {
         if (h.shooter !== shooter || h.friendly) return;

@@ -7,7 +7,7 @@ import { disposeObject } from '../render/dispose';
 import { Assembly, box, type V3 } from '../weapons/models/ModelKit';
 import { solveTwoBone } from './TwoBoneIK';
 
-export type HandStyle = 'grip' | 'handguard' | 'support';
+export type HandStyle = 'grip' | 'handguard' | 'support' | 'vgrip';
 
 /**
  * Hand shapes, built in the hand's frame (weapon axes; for grip styles the frame is
@@ -43,6 +43,18 @@ const HANDS: Record<HandStyle, HandDef> = {
       { size: [0.017, 0.04, 0.022], pos: [-0.042, 0.004, -0.02], rot: [0.3, 0, 0] },
     ],
     wrist: [-0.025, -0.045, 0.07],
+  },
+  // Left hand on a vertical foregrip: palm on the left of the grip, fingers around the front, thumb over the top.
+  vgrip: {
+    parts: [
+      { size: [0.024, 0.08, 0.072], pos: [-0.026, -0.008, 0.012] },
+      { size: [0.05, 0.017, 0.02], pos: [-0.002, 0.012, -0.027] },
+      { size: [0.05, 0.017, 0.02], pos: [-0.002, -0.007, -0.027] },
+      { size: [0.05, 0.017, 0.02], pos: [-0.002, -0.026, -0.025] },
+      { size: [0.048, 0.016, 0.019], pos: [-0.003, -0.044, -0.022] },
+      { size: [0.016, 0.017, 0.05], pos: [0.012, 0.036, -0.004], rot: [0, -0.3, 0] },
+    ],
+    wrist: [-0.035, -0.02, 0.07],
   },
   // Left hand supporting a pistol: palm on the left of the grip, fingers over the right hand's fingers.
   support: {
@@ -134,7 +146,7 @@ export class FPArms {
     this.right.setStyle('grip');
   }
 
-  setLeftStyle(style: 'handguard' | 'support'): void {
+  setLeftStyle(style: HandStyle): void {
     this.left.setStyle(style);
   }
 

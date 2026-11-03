@@ -2,7 +2,7 @@ import { ATTACHMENTS, ATTACHMENT_SLOTS, COMPATIBLE, SLOT_NAMES, type AttachmentD
 import { MOVEMENT } from '../../data/player';
 import { WEAPONS, type WeaponId } from '../../data/weapons';
 import type { PreviewRenderer } from '../../render/PreviewRenderer';
-import { fitWeapon } from '../../weapons/Gunsmith';
+import { effectsFor, fitWeapon } from '../../weapons/Gunsmith';
 import { STAT_BAR_LABELS, magazineLabel, statBars, type StatBarName } from '../../weapons/WeaponStats';
 import { button, el } from '../dom';
 import { statRow } from './WeaponCard';
@@ -18,16 +18,19 @@ const EFFECT_LABELS: Record<Exclude<keyof AttachmentEffects, 'magazineAdd'>, { l
   moveSpeed: { label: 'Move speed', better: 'higher' },
   range: { label: 'Range', better: 'higher' },
   reloadTime: { label: 'Reload time', better: 'lower' },
+  pelletSpread: { label: 'Pellet spread', better: 'lower' },
+  braced: { label: 'Crouched recoil', better: 'lower' },
 };
 
 /** Effect chips for a part: "Aim time −10%" in green, "+5%" in red, and its specials. */
-export function effectChips(def: AttachmentDef): { text: string; good: boolean }[] {
+export function effectChips(def: AttachmentDef, weapon: WeaponId): { text: string; good: boolean }[] {
   const out: { text: string; good: boolean }[] = [];
+  const effects = effectsFor(def, weapon);
   if (def.optic) out.push({ text: `Zoom ${(MOVEMENT.baseFov / def.optic.adsFov).toFixed(1)}×`, good: true });
   if (def.suppressed) out.push({ text: 'Quiet shots', good: true });
-  if (def.effects.magazineAdd) out.push({ text: `+${def.effects.magazineAdd} rounds`, good: true });
+  if (effects.magazineAdd) out.push({ text: `+${effects.magazineAdd} rounds`, good: true });
   for (const [key, info] of Object.entries(EFFECT_LABELS) as [keyof typeof EFFECT_LABELS, (typeof EFFECT_LABELS)[keyof typeof EFFECT_LABELS]][]) {
-    const k = def.effects[key];
+    const k = effects[key];
     if (k === undefined || k === 1) continue;
     const pct = Math.round((k - 1) * 100);
     out.push({ text: `${info.label} ${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`, good: info.better === 'lower' ? pct < 0 : pct > 0 });
@@ -94,8 +97,10 @@ export class GunsmithPanel {
 
   private render(): void {
     const allowed = COMPATIBLE[this.id] ?? [];
+    // Only the slots this gun has parts for (a pistol has no underbarrel).
+    const slots = ATTACHMENT_SLOTS.filter((slot) => allowed.some((a) => ATTACHMENTS[a].slot === slot));
     this.slots.replaceChildren(
-      ...ATTACHMENT_SLOTS.map((slot) => {
+      ...slots.map((slot) => {
         const current = this.build[slot] ? ATTACHMENTS[this.build[slot]!] : null;
         const open = this.openSlot === slot;
         const header = el(
@@ -125,7 +130,7 @@ export class GunsmithPanel {
             [
               el('div', { class: 'gs-part-name', text: def?.name ?? 'None' }),
               def ? el('div', { class: 'gs-part-blurb', text: def.blurb }) : el('div', { class: 'gs-part-blurb', text: 'The standard part.' }),
-              def ? el('div', { class: 'gs-chips' }, effectChips(def).map((c) => el('span', { class: `gs-chip ${c.good ? 'good' : 'bad'}`, text: c.text }))) : null,
+              def ? el('div', { class: 'gs-chips' }, effectChips(def, this.id).map((c) => el('span', { class: `gs-chip ${c.good ? 'good' : 'bad'}`, text: c.text }))) : null,
             ],
           );
         return el('div', { class: 'slot' }, [header, el('div', { class: 'gs-parts' }, [option(null), ...parts.map(option)])]);

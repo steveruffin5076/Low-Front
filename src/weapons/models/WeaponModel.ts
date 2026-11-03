@@ -41,6 +41,8 @@ export interface WeaponModel {
   root: THREE.Group;
   nodes: Partial<Record<NodeName, THREE.Object3D>>;
   points: Record<AttachmentName, THREE.Object3D>;
+  /** Blender model key (e.g. "vx4"), to pick parts made for this gun. */
+  key?: string;
   /** Attachment mounts (models built in Blender). */
   mounts?: Partial<Record<MountSlot, THREE.Object3D>>;
   lod: WeaponLod;

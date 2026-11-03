@@ -44,7 +44,7 @@ export const TRI_BUDGET: Record<WeaponId, readonly [number, number]> = {
 export const OVERALL_LENGTH: Record<WeaponId, number> = { m4a1: 0.84, ak47: 0.88, sr9: 0.68, br12: 0.99, lr24: 1.1, m1911: 0.22 };
 
 /** Weapons whose model comes from Blender (`public/models/guns/<key>_fp|tp.glb`); the rest are built in code. */
-export const BLENDER_MODELS: Partial<Record<WeaponId, string>> = { m4a1: 'vx4' };
+export const BLENDER_MODELS: Partial<Record<WeaponId, string>> = { m4a1: 'vx4', ak47: 'kr7', sr9: 'sr9', br12: 'br12', lr24: 'lr24', m1911: 'p11' };
 
 /** A weapon model, with the attachments of `build` fitted (Blender models only have mounts). */
 export function buildWeaponModel(id: WeaponId, lod: WeaponLod, build?: WeaponBuild): WeaponModel {

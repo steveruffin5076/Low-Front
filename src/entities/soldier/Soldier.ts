@@ -1,3 +1,4 @@
+import { CONQUEST } from '../../data/conquest';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { IDLE_INPUT, SoldierAnimator, type SoldierInput } from '../../anim/SoldierAnimator';
@@ -25,6 +26,8 @@ export class Soldier implements Hittable {
   readonly model: SoldierModel;
   readonly anim = new SoldierAnimator();
   readonly health = new Health();
+  /** Seconds of spawn protection left (no damage); firing ends it. */
+  protectLeft = 0;
   readonly position = new THREE.Vector3();
   yaw = 0;
   input: SoldierInput = { ...IDLE_INPUT };
@@ -69,7 +72,12 @@ export class Soldier implements Hittable {
   }
 
   /** Puts the soldier at `pos` (feet), alive, idle and facing `yaw`. */
+  get protected(): boolean {
+    return this.protectLeft > 0;
+  }
+
   spawn(pos: THREE.Vector3, yaw: number): void {
+    this.protectLeft = CONQUEST.spawnProtection;
     this.position.copy(pos);
     this.yaw = yaw;
     this.input = { ...IDLE_INPUT };
@@ -85,6 +93,7 @@ export class Soldier implements Hittable {
   }
 
   fire(): void {
+    this.protectLeft = 0;
     this.anim.fire();
   }
 
@@ -116,6 +125,7 @@ export class Soldier implements Hittable {
   /** Fixed step: health regeneration and the physics shapes follow the last pose. */
   fixedUpdate(dt: number): void {
     this.health.update(dt);
+    this.protectLeft = Math.max(0, this.protectLeft - dt);
     // Hitboxes follow the pose; far soldiers pose less often, so most steps have nothing new.
     if (!this.dead && this.posed) this.syncPhysics();
   }

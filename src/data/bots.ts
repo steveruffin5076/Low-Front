@@ -125,14 +125,21 @@ export const BOTS = {
    * Gunsmith builds bots pick from (for weapons that take attachments): a few fixed sets keep
    * the number of different soldier models small.
    */
-  builds: [
-    {},
-    { optic: 'reddot' },
-    { optic: 'holo', underbarrel: 'vgrip' },
-    { optic: 'reddot', muzzle: 'suppressor' },
-    { optic: 'scope3x', muzzle: 'compensator', underbarrel: 'vgrip' },
-    { optic: 'holo', underbarrel: 'agrip', magazine: 'extmag' },
-  ] as readonly WeaponBuild[],
+  builds: {
+    m4a1: [
+      {},
+      { optic: 'reddot' },
+      { optic: 'holo', underbarrel: 'vgrip' },
+      { optic: 'reddot', muzzle: 'suppressor' },
+      { optic: 'scope3x', muzzle: 'compensator', underbarrel: 'vgrip' },
+      { optic: 'holo', underbarrel: 'agrip', magazine: 'extmag' },
+    ],
+    ak47: [{}, { optic: 'reddot', muzzle: 'compensator' }, { optic: 'holo', underbarrel: 'vgrip', magazine: 'extmag' }, { optic: 'scope3x', underbarrel: 'vgrip' }],
+    sr9: [{}, { optic: 'reddot', muzzle: 'suppressor' }, { optic: 'holo', underbarrel: 'agrip', magazine: 'extmag' }],
+    br12: [{}, { optic: 'reddot', muzzle: 'choke' }, { magazine: 'tubeext' }],
+    lr24: [{}, { underbarrel: 'bipod' }, { muzzle: 'suppressor', magazine: 'extmag' }],
+    m1911: [{}, { optic: 'minidot' }],
+  } as Partial<Record<WeaponId, readonly WeaponBuild[]>>,
   /** Where a bot's tracer starts: this far along the aim and this far below the eye (m). */
   muzzle: { forward: 0.6, down: 0.12 },
   /** A* searches started per frame across all bots, the heuristic weight (faster, slightly longer paths) and a cap on nodes expanded. */

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Input } from '../core/Input';
 import { CONQUEST } from '../data/conquest';
-import { VERDAN } from '../data/map';
+import type { MapData } from '../data/map/types';
 import type { TeamId } from '../data/map/types';
 import type { Loadout } from '../data/weapons';
 import type { SightTarget } from '../ai/Perception';
@@ -12,6 +12,7 @@ import { RESUPPLY } from '../data/resupply';
 import { AUDIO } from '../data/audio';
 import { kitNeedsResupply, placeCrates, resupplyKit, type Kit, type Resupplier } from '../game/Resupply';
 import { ResupplyCrate } from '../world/ResupplyCrate';
+import { ScopeGlints } from '../world/ScopeGlint';
 import { BotManager } from '../game/BotManager';
 import { debugMode } from '../core/debugFlags';
 import { BotDebug } from '../debug/BotDebug';
@@ -51,8 +52,8 @@ export interface ConquestCallbacks {
 export class ConquestSession {
   readonly match: ConquestMatch;
   readonly session: PlaySession;
-  readonly spawns = new SpawnSystem(VERDAN);
-  readonly hq = new HQZone(VERDAN.hqs);
+  readonly spawns: SpawnSystem;
+  readonly hq: HQZone;
   state: ConquestState = 'alive';
   /** How the player last died, for the Deploy Screen. */
   lastDeath: KillFeedEntry | null = null;
@@ -61,13 +62,16 @@ export class ConquestSession {
   callbacks: ConquestCallbacks = {};
   readonly hud: MatchHud;
   /** Top-down map image, shared with the Deploy Screen. */
-  readonly mapImage = new MapImage(VERDAN);
+  readonly mapImage: MapImage;
+  /** The map being played (from the Match setup). */
+  readonly map: MapData;
   readonly bots: BotManager;
   private readonly playerCombatant: Combatant;
   private botDebug: BotDebug | null = null;
   private readonly crates: ResupplyCrate[];
   private readonly playerKit: Resupplier;
   private markers: MapMarker[] = [];
+  private readonly glints = new ScopeGlints();
   private markerClock = 0;
   private countdownSecond = 0;
 
@@ -82,7 +86,11 @@ export class ConquestSession {
     /** Bot skill, team size and time limit chosen on the Match setup screen. */
     readonly setup: MatchSetup = DEFAULT_SETUP,
   ) {
-    this.match = new ConquestMatch(VERDAN, [], matchRules(setup));
+    this.map = world.map;
+    this.spawns = new SpawnSystem(this.map);
+    this.hq = new HQZone(this.map.hqs);
+    this.mapImage = new MapImage(this.map);
+    this.match = new ConquestMatch(this.map, [], matchRules(setup));
     this.hud = new MatchHud(this.match, this.mapImage);
     this.session = new PlaySession(physics, input, loadout, world, {
       autoRespawn: false,
@@ -102,7 +110,8 @@ export class ConquestSession {
       },
     };
     this.match.add(this.playerCombatant);
-    const crates = placeCrates(VERDAN, world.nav);
+    world.scene.add(this.glints.root);
+    const crates = placeCrates(this.map, world.nav);
     this.crates = crates.map((c) => new ResupplyCrate(c));
     for (const c of this.crates) world.scene.add(c.root);
     this.playerKit = {
@@ -123,7 +132,7 @@ export class ConquestSession {
       nav: world.nav,
       cover: world.cover,
       match: this.match,
-      map: VERDAN,
+      map: this.map,
       spawns: this.spawns,
       player: this.playerTarget(),
       counts: { [team]: setup.teamSize - 1, [enemyOf(team)]: setup.teamSize } as Record<TeamId, number>,
@@ -187,7 +196,8 @@ export class ConquestSession {
   }
 
   spawnOptions(): SpawnChoice[] {
-    return this.spawns.options(this.team, this.match.owners());
+    const enemies = this.bots.bots.filter((b) => b.alive && b.team !== this.team).map((b) => b.position);
+    return this.spawns.options(this.team, this.match.owners(), enemies);
   }
 
   /** Spawns the player at `choice` (HQ or an owned flag) with `loadout` (default: the current one). */
@@ -201,6 +211,7 @@ export class ConquestSession {
     this.session.respawn(new THREE.Vector3(p.x, 0, p.z), p.yaw, loadout);
     this.hq.reset();
     this.bots.resupply.reset(PLAYER_ID);
+    this.hud.showNotice('Spawn protection', CONQUEST.spawnProtection);
     this.state = 'alive';
   }
 
@@ -233,7 +244,7 @@ export class ConquestSession {
     const warm = left > 0;
     this.session.holdFire = warm;
     this.session.holdMove = warm;
-    this.session.confine = warm ? VERDAN.hqs.find((h) => h.team === this.team)!.rect : null;
+    this.session.confine = warm ? this.map.hqs.find((h) => h.team === this.team)!.rect : null;
     const second = Math.ceil(left);
     if (warm && second !== this.countdownSecond && second <= AUDIO.countdownCue.ticksFrom) this.session.audio.countdownCue(false);
     this.countdownSecond = second;
@@ -243,6 +254,7 @@ export class ConquestSession {
     this.session.update(dt, alpha);
     for (const [i, c] of this.crates.entries()) c.setOwner(this.match.zones[i].owner);
     if (!this.paused) this.bots.update(dt, this.session.camera.position);
+    this.glints.update(dt, this.bots.bots, PLAYER_ID, this.session.camera);
     if (debugMode() && this.input.wasPressed(CONTROLS.botDebug)) {
       if (!this.botDebug) {
         this.botDebug = new BotDebug(this.bots.bots, (id) => this.bots.target(id));
@@ -334,6 +346,7 @@ export class ConquestSession {
 
   dispose(): void {
     this.botDebug?.dispose();
+    this.glints.dispose();
     this.bots.dispose();
     this.session.dispose();
   }

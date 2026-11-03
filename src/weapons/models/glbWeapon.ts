@@ -13,6 +13,10 @@ const MATERIALS: Record<string, () => THREE.Material> = {
   tan: WM.tan,
   glass: WM.glass,
   dot: WM.dot,
+  wood: WM.akWood,
+  gripWood: WM.gripWood,
+  green: WM.stockGreen,
+  shell: WM.shellHull,
 };
 
 const NODE_NAMES: readonly NodeName[] = ['magazine', 'bolt', 'chargingHandle', 'slide', 'hammer', 'trigger', 'selector', 'dustCover', 'boltRelease', 'slideStop', 'pump'];
@@ -67,7 +71,7 @@ export function weaponFromGlb(key: string, lod: WeaponLod): WeaponModel {
   content.position.copy(points.rightHandGrip.position).negate();
   root.add(content);
   root.updateMatrixWorld(true);
-  return { root, nodes, points, mounts, lod };
+  return { root, nodes, points, mounts, lod, key };
 }
 
 /**

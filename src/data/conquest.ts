@@ -29,6 +29,10 @@ export const CONQUEST = {
   warmup: 20,
   goBanner: 1.5,
   respawnDelay: 10,
+  /** After deploying, hits do no damage for this long (s); firing ends it early. */
+  spawnProtection: 2,
+  /** A flag cannot be picked as a spawn while an enemy is this close to it (m). */
+  spawnBlockRadius: 15,
   /** The Deploy Screen opens this long after death (the death camera plays first). */
   deployScreenDelay: 1.6,
   /** Seconds between the match result and the End Screen. */

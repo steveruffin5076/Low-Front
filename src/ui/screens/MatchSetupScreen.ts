@@ -1,6 +1,6 @@
 import type { GameContext } from '../../core/GameContext';
 import type { State } from '../../core/StateMachine';
-import { VERDAN } from '../../data/map';
+import { MAPS } from '../../data/map/maps';
 import {
   SETUP_DIFFICULTIES,
   SETUP_MAPS,
@@ -87,7 +87,7 @@ export class MatchSetupScreen implements State {
       ]);
     const maps = (Object.keys(SETUP_MAPS) as MapId[]).map((id) => {
       const m = SETUP_MAPS[id];
-      const preview = new MapImage(VERDAN).canvas;
+      const preview = new MapImage(MAPS[id]).canvas;
       preview.className = 'setup-map-image';
       return el(
         'button',

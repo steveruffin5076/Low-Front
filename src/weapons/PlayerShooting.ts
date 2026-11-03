@@ -80,7 +80,8 @@ export class PlayerShooting {
     }
     spread.onShot();
 
-    const kick = this.recoil.kick(weapon.def, THREE.MathUtils.lerp(1, BALLISTICS.adsRecoilScale, this.ads));
+    const braced = this.player.crouched ? (weapon.def.bracedRecoil ?? 1) : 1;
+    const kick = this.recoil.kick(weapon.def, THREE.MathUtils.lerp(1, BALLISTICS.adsRecoilScale, this.ads) * braced);
     this.player.pitch += kick.pitch * DEG;
     this.player.yaw -= kick.yaw * DEG;
   }

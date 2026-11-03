@@ -2,7 +2,7 @@ import { CONQUEST } from './conquest';
 import type { Difficulty } from './bots';
 
 /** Choices on the Match setup screen (Play vs Bots), saved in the profile. */
-export type MapId = 'verdan';
+export type MapId = 'verdan' | 'harbor';
 export type TeamSize = 4 | 8 | 16;
 
 export interface MatchSetup {
@@ -16,6 +16,7 @@ export interface MatchSetup {
 
 export const SETUP_MAPS: Record<MapId, { name: string; blurb: string }> = {
   verdan: { name: 'Verdan District', blurb: 'City blocks around a central square, five flags, two HQs. Close streets and long avenues.' },
+  harbor: { name: 'Kessel Harbor', blurb: 'A dockyard: container lanes, warehouses and a crane yard in the middle. More open, longer sight lines.' },
 };
 
 export const SETUP_DIFFICULTIES: { id: Difficulty; name: string; blurb: string }[] = [

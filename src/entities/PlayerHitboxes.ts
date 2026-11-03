@@ -14,6 +14,7 @@ const UP = new THREE.Vector3(0, 1, 0);
  */
 export class PlayerHitboxes implements Hittable {
   private readonly hitboxes: Hitboxes;
+  yaw = 0;
 
   constructor(
     physics: PhysicsWorld,
@@ -21,8 +22,13 @@ export class PlayerHitboxes implements Hittable {
     readonly team: 'blue' | 'red' | undefined,
     readonly combatantId: string | undefined,
     private readonly onHit: (hit: ZoneHit) => void,
+    private readonly isProtected: () => boolean = () => false,
   ) {
     this.hitboxes = new Hitboxes(physics, this, PLAYER_HITBOXES, new THREE.Vector3(0, -100, 0));
+  }
+
+  get protected(): boolean {
+    return this.isProtected();
   }
 
   applyHit(hit: ZoneHit): void {
@@ -31,6 +37,7 @@ export class PlayerHitboxes implements Hittable {
 
   /** Moves the boxes to the player: `crouch` is the 0–1 crouch blend. */
   follow(feet: THREE.Vector3, yaw: number, crouch: number): void {
+    this.yaw = yaw;
     const scale = THREE.MathUtils.lerp(1, MOVEMENT.crouchHeight / MOVEMENT.standHeight, crouch);
     rot.setFromAxisAngle(UP, yaw);
     PLAYER_HITBOXES.forEach((h, i) => {

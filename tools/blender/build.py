@@ -5,7 +5,7 @@ Builds every weapon and attachment model and exports them as GLB to public/model
     npm run models -- vx4        # only models whose key contains "vx4"
     npm run models -- --preview  # also render previews to tools/blender/previews/
 
-Each module in guns/ and attachments/ has `models()`, returning a list of (key, Model).
+Each module in guns/, attachments/ and gear/ has `models()`, returning a list of (key, Model).
 The key is the file path under public/models/ without ".glb", e.g. "guns/vx4_fp".
 """
 import importlib
@@ -18,6 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import attachments  # noqa: E402
+import gear  # noqa: E402
 import guns  # noqa: E402
 
 OUT = os.path.join(HERE, "..", "..", "public", "models")
@@ -25,7 +26,7 @@ PREVIEWS = os.path.join(HERE, "previews")
 
 
 def collect():
-    for pkg in (guns, attachments):
+    for pkg in (guns, attachments, gear):
         for info in pkgutil.iter_modules(pkg.__path__):
             mod = importlib.import_module(f"{pkg.__name__}.{info.name}")
             yield from mod.models()

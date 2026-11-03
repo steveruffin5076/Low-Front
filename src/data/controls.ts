@@ -14,6 +14,8 @@ export const CONTROLS = {
   secondary: 'Digit2',
   fireMode: 'KeyB',
   inspect: 'KeyI',
+  melee: 'KeyV',
+  smoke: 'KeyG',
   /** Hold to show. */
   scoreboard: 'Tab',
   largeMap: 'KeyM',

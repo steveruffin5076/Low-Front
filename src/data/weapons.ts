@@ -37,6 +37,8 @@ export interface WeaponDef {
   build?: WeaponBuild;
   /** A suppressor is fitted: quieter, smaller flash, heard from less far. */
   suppressed?: boolean;
+  /** Recoil multiplier while crouched (a bipod); 1 or unset without one. */
+  bracedRecoil?: number;
   name: string;
   slot: WeaponSlot;
   class: WeaponClass;

@@ -34,3 +34,12 @@ export const HUD = {
   /** Subtle vignette (plan section 6): corner darkness 0–1, and where the darkening starts (fraction of the half-diagonal). */
   vignette: { strength: 0.32, start: 0.55 },
 } as const;
+
+/** Scope glint on enemies aiming a scope at the player: size on screen, distances, flicker. */
+export const GLINT = {
+  /** Size as a fraction of the distance (keeps it about the same on screen). */
+  screenSize: 0.04,
+  minDistance: 15,
+  maxDistance: 220,
+  flickerSpeed: 9,
+} as const;

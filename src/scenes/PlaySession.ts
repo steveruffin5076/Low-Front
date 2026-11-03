@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CONQUEST } from '../data/conquest';
 import type { Rect } from '../data/map/types';
 import { FPAnimator } from '../anim/FPAnimator';
 import { CameraFx } from '../anim/CameraFx';
@@ -32,10 +33,12 @@ interface Latched {
   reload: boolean;
   fireMode: boolean;
   inspect: boolean;
+  melee: boolean;
+  smoke: boolean;
   switchTo: WeaponSlot | null;
 }
 
-const NONE: Latched = { crouch: false, jump: false, fire: false, reload: false, fireMode: false, inspect: false, switchTo: null };
+const NONE: Latched = { crouch: false, jump: false, fire: false, reload: false, fireMode: false, inspect: false, melee: false, smoke: false, switchTo: null };
 
 export interface SessionEvents {
   /** The player died; `cause` is null when an enemy killed them (`killer` says who). */
@@ -62,6 +65,8 @@ export class PlaySession {
   private readonly scope = new ScopeOverlay();
   /** No firing (the pre-battle countdown). */
   holdFire = false;
+  /** Seconds of spawn protection left (no damage); firing ends it. */
+  protectLeft = 0;
   /** No walking, sprinting or jumping (the pre-battle countdown); looking around still works. */
   holdMove = false;
   /** Keeps the player inside this area (the HQ during the countdown), or null. */
@@ -104,11 +109,12 @@ export class PlaySession {
       this.combat.damagePlayer(hit.damage, hit.from ?? null, null, killer);
       hit.killed = !wasDead && this.combat.health.dead;
       hit.remainingHp = this.combat.health.hp;
-    });
+    }, () => this.protectLeft > 0);
     this.shooter = { id: id?.id ?? 'player', team: id?.team ?? null, owner: this.hitboxes };
     this.player = new PlayerController(physics, world.spawn.position.clone());
     this.player.yaw = world.spawn.yaw;
     this.player.events.on('jumped', () => this.animator.onJump());
+    this.player.events.on('vaulted', () => this.animator.onJump());
     this.player.events.on('landed', ({ impactSpeed }) => this.animator.onLand(impactSpeed));
     this.arm(loadout);
     this.weapons.start();
@@ -163,6 +169,7 @@ export class PlaySession {
       this.arm(loadout);
     }
     this.fx.reset();
+    this.protectLeft = CONQUEST.spawnProtection;
     this.player.respawn(at, yaw);
     this.hitboxes.setEnabled(true);
     this.hitboxes.follow(this.player.motor.feet, yaw, 0);
@@ -175,6 +182,7 @@ export class PlaySession {
 
   fixedUpdate(dt: number): void {
     if (this.paused) return;
+    this.protectLeft = Math.max(0, this.protectLeft - dt);
     // The world (and everyone's bullets) keeps going while the player is dead.
     if (this.fx.dead) {
       this.world.fixedUpdate?.(dt);
@@ -206,6 +214,8 @@ export class PlaySession {
       switchTo: this.latched.switchTo,
       fireModePressed: this.latched.fireMode,
       inspectPressed: this.latched.inspect,
+      meleePressed: this.latched.melee && !this.holdFire,
+      throwPressed: this.latched.smoke && !this.holdFire,
       canFire: !this.player.sprinting && this.animator.sprintAmount === 0 && !this.holdFire,
       sprinting: this.player.sprinting,
       ads,
@@ -266,6 +276,7 @@ export class PlaySession {
         mag: w.mag,
         reserve: w.reserve,
         fireMode: w.fireMode,
+        smokes: this.weapons.smokes,
         action: this.weapons.actionKind,
         stance: this.player.sprinting ? 'sprint' : this.player.crouched ? 'crouch' : 'stand',
         speed: this.player.horizontalSpeed,
@@ -307,6 +318,8 @@ export class PlaySession {
   private arm(loadout: Loadout): void {
     this.loadout = { ...loadout };
     this.weapons = new PlayerWeapons(loadout);
+    this.weapons.events.on('fired', () => (this.protectLeft = 0));
+    this.weapons.events.on('meleeStart', () => (this.protectLeft = 0));
     this.animator = new FPAnimator(this.layer, this.weapons, this.audio, this.options.identity?.team);
     this.animator.baseFov = this.baseFov;
     this.combat = new RangeCombat(
@@ -369,6 +382,8 @@ export class PlaySession {
     if (i.wasPressed(CONTROLS.reload)) l.reload = true;
     if (i.wasPressed(CONTROLS.fireMode)) l.fireMode = true;
     if (i.wasPressed(CONTROLS.inspect)) l.inspect = true;
+    if (i.wasPressed(CONTROLS.melee)) l.melee = true;
+    if (i.wasPressed(CONTROLS.smoke)) l.smoke = true;
     if (i.wasPressed(CONTROLS.primary)) l.switchTo = 'primary';
     if (i.wasPressed(CONTROLS.secondary)) l.switchTo = 'secondary';
     if (i.wheelDelta !== 0) l.switchTo = this.weapons.activeSlot === 'primary' ? 'secondary' : 'primary';

@@ -11,6 +11,7 @@ import { ClipBuilder, type Clip } from './Timeline';
  * - `mag.visible`: 0 hides the magazine.
  * - `leftHand.blend` / `leftHand.pos` (and `rightHand.*`): hand target in weapon space, blended with the grip.
  * - `arms.pos`: offset of the whole arm rig (shoulders), so the arms go down with the weapon.
+ * - `gear.pos` / `gear.rot` / `gear.show`: the free hand with the knife or a smoke grenade (camera space).
  * Events: `magOut`, `magIn`, `magSeated`, `slideClose`, `lock`.
  */
 export interface ClipContext {
@@ -141,6 +142,39 @@ export function drawClip(duration: number): Clip {
     .key('arms.pos', 0, M.holster.pos).key('arms.pos', duration, ZERO3, 'out')
     .key('weapon.rot', 0, M.holster.rot).key('weapon.rot', duration, ZERO3, 'out')
     .build();
+}
+
+/** Weapon and arms drop out of view for a moment (knife, throw), coming back at `back`. */
+function lowerWeapon(b: ClipBuilder, d: number, back: number): void {
+  const low = [0.02, -0.28, 0.08];
+  b.key('weapon.pos', 0, ZERO3).key('weapon.pos', 0.09, low, 'out').key('weapon.pos', back, low).key('weapon.pos', d, ZERO3, 'inOut');
+  b.key('arms.pos', 0, ZERO3).key('arms.pos', 0.09, low, 'out').key('arms.pos', back, low).key('arms.pos', d, ZERO3, 'inOut');
+  b.key('weapon.rot', 0, ZERO3).key('weapon.rot', 0.09, [-0.5, 0.1, 0], 'out').key('weapon.rot', back, [-0.5, 0.1, 0]).key('weapon.rot', d, ZERO3, 'inOut');
+}
+
+/** Quick knife: the gun drops, the right hand comes in from the low right and slashes across. Event `strike`. */
+export function meleeClip(duration: number, strikeAt: number): Clip {
+  const d = duration;
+  const b = new ClipBuilder('melee', d);
+  lowerWeapon(b, d, d * 0.72);
+  b.key('gear.show', 0, [0]).key('gear.show', 0.03, [1], 'hold').key('gear.show', d * 0.78, [1]).key('gear.show', d * 0.8, [0], 'hold');
+  b.key('gear.pos', 0, [0.3, -0.36, -0.38]).key('gear.pos', strikeAt * 0.6, [0.24, -0.2, -0.42], 'out');
+  b.key('gear.pos', strikeAt, [0.02, -0.15, -0.56], 'in').key('gear.pos', d * 0.5, [-0.16, -0.22, -0.5], 'out').key('gear.pos', d * 0.8, [0.2, -0.48, -0.36], 'inOut');
+  b.key('gear.rot', 0, [0.35, 0.25, 0]).key('gear.rot', strikeAt * 0.6, [0.2, 0.6, -0.3], 'out');
+  b.key('gear.rot', strikeAt, [0.05, 0.1, -0.25], 'in').key('gear.rot', d * 0.5, [0.0, -0.5, -0.3], 'out').key('gear.rot', d * 0.8, [0.3, 0.3, 0]);
+  return b.event(strikeAt, 'strike').build();
+}
+
+/** Smoke throw: the gun drops, the hand brings the canister up and throws it forward. Event `release`. */
+export function throwClip(duration: number, releaseAt: number): Clip {
+  const d = duration;
+  const b = new ClipBuilder('throw', d);
+  lowerWeapon(b, d, d * 0.75);
+  b.key('gear.show', 0, [0]).key('gear.show', 0.03, [1], 'hold').key('gear.show', d * 0.78, [1]).key('gear.show', d * 0.8, [0], 'hold');
+  b.key('gear.pos', 0, [0.22, -0.34, -0.42]).key('gear.pos', releaseAt * 0.65, [0.2, -0.06, -0.34], 'out');
+  b.key('gear.pos', releaseAt, [0.05, -0.08, -0.62], 'in').key('gear.pos', d * 0.8, [0.2, -0.5, -0.42], 'inOut');
+  b.key('gear.rot', 0, [0.3, 0, 0]).key('gear.rot', releaseAt * 0.65, [0.9, 0.1, 0.1], 'out').key('gear.rot', releaseAt, [-0.2, 0, 0], 'in').key('gear.rot', d * 0.8, [0.3, 0, 0]);
+  return b.event(releaseAt, 'release').build();
 }
 
 /** Weapon rolls slightly while the thumb flips the selector. */

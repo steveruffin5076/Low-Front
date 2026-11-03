@@ -67,10 +67,14 @@ export function buildMap(data: MapData): BuiltMap {
   return { data, group, volumes, links, stats: { staticTriangles, volumes: volumes.length, buildMs: performance.now() - t0 } };
 }
 
-let cached: BuiltMap | null = null;
+const cache = new Map<MapData, BuiltMap>();
 
-/** The map is built once per session and shared (menu fly-over and match). */
+/** Each map is built once per session and shared (menu fly-over and matches). */
 export function getBuiltMap(data: MapData): BuiltMap {
-  if (!cached || cached.data !== data) cached = buildMap(data);
-  return cached;
+  let built = cache.get(data);
+  if (!built) {
+    built = buildMap(data);
+    cache.set(data, built);
+  }
+  return built;
 }

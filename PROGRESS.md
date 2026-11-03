@@ -1,5 +1,42 @@
 # PROGRESS.md
 
+## Options A, B and C (done)
+
+### A — All guns rebuilt in Blender, all take attachments
+- KR-7, SR-9, BR-12, LR-24 and P-11 rebuilt in Blender with mounts (VX-4 was done in Phase 12). Same sizes, sights and hand positions; all animations still work.
+- New parts made for each gun where needed: mini red dot (P-11), pistol suppressor, shotgun choke, tube extension, bipod, and an extended magazine per gun.
+- Each gun offers only the parts that fit it; the gunsmith hides empty slots.
+- New effects: choke tightens shotgun spread; bipod cuts recoil while crouched.
+- Bots use preset builds per gun.
+
+### B — Smoke grenade, quick knife, vault, spawn protection
+- **Smoke (G):** 2 per life, refilled at resupply crates. Bounces, then a cloud of about 8 m for 12 s. Bots cannot see through it and throw their own (at most one each per 35 s).
+- **Knife (V):** quick stab, 55 damage, double from behind, 1.8 m reach. Bots use it at close range.
+- **Vault:** jump at a low wall or barrier to climb over it.
+- **Spawn protection:** 2 s of no damage after spawning (ends early if you fire). You cannot spawn on a flag with an enemy within 15 m.
+
+### C — Grip hand, scope glint, second map
+- The left hand holds the vertical grip when one is fitted.
+- An enemy aiming a scoped rifle at you shows a flickering glint (15–220 m), so snipers can be spotted. Walls hide it.
+- **Kessel Harbor:** a dockyard map with container lanes, warehouses and a crane yard in the middle, 5 flags, mirrored for both teams. Pick it in Match setup.
+
+### Checked
+- 313 tests pass; typecheck and build are clean.
+- Bot matches play to a winner with no bot stuck over 5 s: Verdan seeds 7 and 11, Harbor seeds 7 and 11 (about 2 ms per step).
+- Browser: every gun with its parts (hip and aiming), the gunsmith, knife, smoke, vault, Match setup with both maps, Kessel Harbor, the glint. No console errors.
+- Desktop app: Kessel Harbor with a KR-7 fitted with scope, suppressor and extended magazine.
+
+### Bugs found and fixed while testing
+- Gunsmith showed empty slots for guns with no parts there.
+- Knife and throw poses: forearm too big and too close, knife hard to see.
+- Bots threw too many smokes; slowed to one per 35 s.
+- A Harbor spawn point was too far from its flag.
+- Map list in Match setup was cut off with two maps; the cards are now compact.
+- The scope glint was too faint against a bright sky; made larger and unaffected by fog.
+
+### Known issues
+- Bots throw about 225 smokes in a 16 vs 16 match (about 7 per bot); tune if it feels too smoky.
+
 ## Fix after review: no hands on the weapon while switching (done)
 
 Your video: when switching weapons, the gun going down and the new gun coming up showed without hands.
