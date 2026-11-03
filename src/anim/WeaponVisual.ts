@@ -7,6 +7,7 @@ import { opticOf } from '../weapons/Gunsmith';
 import { buildWeaponModel } from '../weapons/models/weaponModels';
 import type { WeaponState } from '../weapons/WeaponState';
 import { cycleNode, type ClipContext } from './fpClips';
+import type { HandStyle } from './FPArms';
 
 /** Persistent part poses (rad/s) — how fast the dust cover and selector move. */
 const DUST_COVER_OPEN = -2.0;
@@ -33,6 +34,8 @@ export class WeaponVisual {
   readonly leftGrip = new THREE.Matrix4();
   readonly handRotation = { right: new THREE.Quaternion(), left: new THREE.Quaternion() };
   private readonly rest = new Map<NodeName, Rest>();
+  /** Left hand shape: a vertical foregrip gets its own grip. */
+  readonly leftStyle: HandStyle;
 
   dustCoverOpen = false;
   private dustCover = 0;
@@ -57,6 +60,8 @@ export class WeaponVisual {
     this.anchor = local(p.sightAnchor);
     const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), this.vm.gripTilt);
     this.handRotation.right.copy(tilt);
+    this.leftStyle = build.underbarrel === 'vgrip' ? 'vgrip' : this.vm.leftHand;
+    // A vertical grip hangs straight down from the rail: the hand holds it upright.
     this.handRotation.left.copy(this.vm.leftHand === 'support' ? tilt : new THREE.Quaternion());
     this.rightGrip.compose(local(p.rightHandGrip), this.handRotation.right, new THREE.Vector3(1, 1, 1));
     this.leftGrip.compose(local(p.leftHandGrip), this.handRotation.left, new THREE.Vector3(1, 1, 1));

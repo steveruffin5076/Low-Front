@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { MAPS } from '../src/data/map/maps';
+import type { MapId } from '../src/data/matchSetup';
 import { createBotMatch } from './sim/botMatch';
 
 declare const process: { env: Record<string, string | undefined> };
@@ -9,10 +11,12 @@ declare const process: { env: Record<string, string | undefined> };
  */
 /** `BOT_MATCH_SEEDS=7,11,23` plays one match per seed. */
 const SEEDS = (process.env.BOT_MATCH_SEEDS ?? '7').split(',').map(Number);
+/** `BOT_MATCH_MAP=harbor` plays on Kessel Harbor. */
+const MAP = MAPS[(process.env.BOT_MATCH_MAP ?? 'verdan') as MapId];
 
 describe.skipIf(!process.env.BOT_MATCH)('bot match', () => {
   it.each(SEEDS)('seed %i plays to a winner with no bot stuck over 5 s', async (seed) => {
-    const m = await createBotMatch(seed);
+    const m = await createBotMatch(seed, MAP);
     const t0 = performance.now();
     let kills = 0;
     let flips = 0;

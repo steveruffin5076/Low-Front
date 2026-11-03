@@ -337,7 +337,7 @@ export class FPAnimator {
     ev.on('drawStart', ({ weapon, duration }) => {
       for (const v of this.visuals.values()) v.model.root.visible = v.weapon === weapon;
       this.current = this.visuals.get(weapon)!;
-      this.arms.setLeftStyle(this.current.vm.leftHand);
+      this.arms.setLeftStyle(this.current.leftStyle);
       this.fading = [];
       this.fire = null;
       this.holdAction = false;
