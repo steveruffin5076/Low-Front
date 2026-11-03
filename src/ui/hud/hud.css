@@ -348,3 +348,10 @@
 .match-hud [hidden] {
   display: none !important;
 }
+
+.wp-smoke {
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #c9d1d9;
+}

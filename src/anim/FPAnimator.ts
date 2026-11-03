@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { AudioManager } from '../audio/AudioManager';
 import { GUNSMITH } from '../data/attachments';
+import { KNIFE, SMOKE } from '../data/melee';
 import { MOVEMENT } from '../data/player';
 import type { Team } from '../data/soldier';
 import { VIEWMODEL_MOTION as M } from '../data/viewmodel';
@@ -11,6 +12,7 @@ import type { PlayerWeapons } from '../weapons/PlayerWeapons';
 import type { WeaponState } from '../weapons/WeaponState';
 import { EASE } from './Easing';
 import { FPArms } from './FPArms';
+import { GearHand } from './GearHand';
 import * as clips from './fpClips';
 import { Spring } from './Spring';
 import { ClipPlayer, type Clip } from './Timeline';
@@ -45,6 +47,7 @@ const armsOffset = new THREE.Vector3();
  */
 export class FPAnimator {
   readonly arms: FPArms;
+  private readonly gear: GearHand;
   readonly effects = new FPEffects();
   private readonly weaponRoot = new THREE.Group();
   private readonly visuals = new Map<WeaponState, WeaponVisual>();
@@ -80,6 +83,7 @@ export class FPAnimator {
     team: Team = 'blue',
   ) {
     this.arms = new FPArms(team);
+    this.gear = new GearHand(team);
     for (const w of Object.values(weapons.weapons)) {
       const v = new WeaponVisual(w);
       v.model.root.visible = false;
@@ -87,7 +91,7 @@ export class FPAnimator {
       this.visuals.set(w, v);
     }
     this.current = this.visuals.get(weapons.active)!;
-    layer.scene.add(this.weaponRoot, this.arms.root, this.effects.root);
+    layer.scene.add(this.weaponRoot, this.arms.root, this.effects.root, this.gear.root);
     this.listen(weapons);
   }
 
@@ -162,6 +166,7 @@ export class FPAnimator {
     this.weaponRoot.updateMatrixWorld(true);
 
     this.updateHands(v);
+    this.gear.apply(this.channels);
     for (const shot of this.pendingShots) this.spawnShotEffects(shot.visual);
     this.pendingShots = [];
     this.effects.update(dt);
@@ -173,9 +178,11 @@ export class FPAnimator {
   dispose(): void {
     for (const v of this.visuals.values()) v.dispose();
     this.arms.dispose();
+    this.gear.dispose();
     this.effects.dispose();
     this.weaponRoot.removeFromParent();
     this.arms.root.removeFromParent();
+    this.gear.root.removeFromParent();
     this.effects.root.removeFromParent();
   }
 
@@ -317,6 +324,7 @@ export class FPAnimator {
     if (name === 'click') this.audio.play(this.action?.clip.name === 'fireMode' ? 'selector' : 'dryFire');
     if (name === 'magOut') this.audio.play('magOut');
     if (name === 'magIn') this.audio.play('magIn');
+    if (name === 'release') this.gear.release();
     if (name === 'boltOpen') this.audio.play('cycleBack');
     if (name === 'cycleBack') {
       this.audio.play('cycleBack');
@@ -375,6 +383,14 @@ export class FPAnimator {
       this.relockOnCancel = false;
     });
     ev.on('fireModeChanged', ({ duration }) => this.play('action', clips.fireModeClip(duration)));
+    ev.on('meleeStart', ({ duration }) => {
+      this.gear.hold('knife');
+      this.play('action', clips.meleeClip(duration, KNIFE.strikeAt));
+    });
+    ev.on('throwStart', ({ duration }) => {
+      this.gear.hold('smoke');
+      this.play('action', clips.throwClip(duration, SMOKE.releaseAt));
+    });
     ev.on('inspectStart', ({ duration }) => this.play('action', clips.inspectClip(duration)));
     ev.on('inspectEnd', () => {
       if (this.action?.clip.name === 'inspect') this.stop('action');

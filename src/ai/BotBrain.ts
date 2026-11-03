@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BOTS } from '../data/bots';
+import { SMOKE } from '../data/melee';
 import type { FlagId, TeamId } from '../data/map/types';
 import type { WeaponClass, WeaponSlot } from '../data/weapons';
 
@@ -36,6 +37,8 @@ export interface BotSenses {
   primaryEmpty: boolean;
   /** The primary has no rounds left in the magazine or in reserve. */
   primaryOut: boolean;
+  /** Smoke grenades left. */
+  smokes: number;
   /** The active weapon has reserve rounds to reload with. */
   canReload: boolean;
   reloading: boolean;
@@ -75,6 +78,8 @@ export interface BotOrders {
   fireAt: string | null;
   reload: boolean;
   switchTo: WeaponSlot | null;
+  /** Throw a smoke grenade toward the enemy (covering a retreat). */
+  throwSmoke: boolean;
 }
 
 /**
@@ -94,7 +99,9 @@ export class BotBrain {
     fireAt: null,
     reload: false,
     switchTo: null,
+    throwSmoke: false,
   };
+  private lastSmoke = -Infinity;
   private searchUntil = -Infinity;
   private holdSpot: THREE.Vector3 | null = null;
   private holdUntil = 0;
@@ -131,6 +138,7 @@ export class BotBrain {
   decide(s: BotSenses, q: BotQueries): BotOrders {
     const o = this.orders;
     o.reload = false;
+    o.throwSmoke = false;
     o.switchTo = null;
     o.fireAt = null;
     o.crouch = false;
@@ -215,6 +223,11 @@ export class BotBrain {
     const safe = away && away.pos.distanceTo(e.position) > s.position.distanceTo(e.position) - 1 ? away.pos : null;
     o.moveTo = safe;
     o.crouch = safe !== null && safe.distanceTo(s.position) < 1;
+    // Smoke between us and the enemy to cover the move.
+    if (s.smokes > 0 && s.time - this.lastSmoke >= SMOKE.botCooldown) {
+      o.throwSmoke = true;
+      this.lastSmoke = s.time;
+    }
     // Still shoots back when it has nowhere to go.
     if (!safe) o.fireAt = e.id;
     return o;

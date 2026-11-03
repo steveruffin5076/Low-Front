@@ -39,6 +39,10 @@ export interface Hittable {
   readonly team?: 'blue' | 'red';
   /** Match combatant id, for kill reports. */
   readonly combatantId?: string;
+  /** Just deployed: hits do no damage. */
+  readonly protected?: boolean;
+  /** Facing (yaw, rad; forward is −Z turned by it), for a knife from behind. */
+  readonly yaw?: number;
   applyHit(hit: ZoneHit): void;
 }
 

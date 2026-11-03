@@ -187,7 +187,8 @@ export class ConquestSession {
   }
 
   spawnOptions(): SpawnChoice[] {
-    return this.spawns.options(this.team, this.match.owners());
+    const enemies = this.bots.bots.filter((b) => b.alive && b.team !== this.team).map((b) => b.position);
+    return this.spawns.options(this.team, this.match.owners(), enemies);
   }
 
   /** Spawns the player at `choice` (HQ or an owned flag) with `loadout` (default: the current one). */
@@ -201,6 +202,7 @@ export class ConquestSession {
     this.session.respawn(new THREE.Vector3(p.x, 0, p.z), p.yaw, loadout);
     this.hq.reset();
     this.bots.resupply.reset(PLAYER_ID);
+    this.hud.showNotice('Spawn protection', CONQUEST.spawnProtection);
     this.state = 'alive';
   }
 

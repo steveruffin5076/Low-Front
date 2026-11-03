@@ -47,6 +47,7 @@ export class MatchHud implements PlayerHud {
   private readonly weaponName = el('div', { class: 'wp-name' });
   private readonly ammo = el('div', { class: 'wp-ammo' });
   private readonly fireMode = el('div', { class: 'wp-mode' });
+  private readonly smokes = el('div', { class: 'wp-smoke' });
   private readonly weaponPanel: HTMLElement;
   private readonly lockHint = el('div', { class: 'lock-hint', text: 'Click to play' });
   /** Short notices such as "Resupplied", and how long the current one has left. */
@@ -64,7 +65,7 @@ export class MatchHud implements PlayerHud {
     this.topBar = new TopBar(match);
     this.minimap = new Minimap(image);
     this.largeMap = new LargeMap(image);
-    this.weaponPanel = el('div', { class: 'weapon-panel' }, [this.weaponName, this.ammo, this.fireMode]);
+    this.weaponPanel = el('div', { class: 'weapon-panel' }, [this.weaponName, this.ammo, this.fireMode, this.smokes]);
     this.largeMap.element.hidden = true;
     this.scoreboard.element.hidden = true;
     // Under everything else in the HUD: only the 3D view gets the vignette.
@@ -115,6 +116,7 @@ export class MatchHud implements PlayerHud {
     this.weaponName.textContent = r.weapon;
     this.ammo.textContent = `${r.mag} / ${r.reserve}`;
     this.fireMode.textContent = r.fireMode.toUpperCase();
+    this.smokes.textContent = r.smokes === undefined ? '' : `SMOKE ×${r.smokes} [G] · KNIFE [V]`;
     this.weaponPanel.hidden = dead;
     this.minimap.element.hidden = dead;
     this.feedback.healthBar.hidden = dead;

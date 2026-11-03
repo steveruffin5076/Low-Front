@@ -1,3 +1,4 @@
+import { SMOKE } from '../data/melee';
 import * as THREE from 'three';
 import { RESUPPLY } from '../data/resupply';
 import type { FlagId, MapData, TeamId } from '../data/map/types';
@@ -29,13 +30,14 @@ export interface Kit {
 
 /** Any weapon short of a full magazine and starting reserve, or any health missing. */
 export function kitNeedsResupply(k: Kit): boolean {
-  if (k.health.hp < k.health.max) return true;
+  if (k.health.hp < k.health.max || k.weapons.smokes < SMOKE.perLife) return true;
   return Object.values(k.weapons.weapons).some((w) => w.reserve < w.def.startingReserve || w.mag < w.def.magazine + w.def.chamber);
 }
 
-/** Full magazines, starting reserves and full health. */
+/** Full magazines, starting reserves, smoke grenades and full health. */
 export function resupplyKit(k: Kit): void {
   for (const w of Object.values(k.weapons.weapons)) w.refill();
+  k.weapons.smokes = SMOKE.perLife;
   k.health.reset();
 }
 

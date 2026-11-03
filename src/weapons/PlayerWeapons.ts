@@ -1,5 +1,6 @@
 import { EventBus } from '../core/EventBus';
 import { WEAPONS, type FireMode, type Loadout, type WeaponSlot } from '../data/weapons';
+import { KNIFE, SMOKE } from '../data/melee';
 import { WEAPON_TIMING } from '../data/weaponTiming';
 import { fitWeapon } from './Gunsmith';
 import { WeaponState, type ReloadKind } from './WeaponState';
@@ -18,6 +19,12 @@ export interface WeaponEvents {
   fireModeChanged: { weapon: WeaponState; mode: FireMode; duration: number };
   inspectStart: { weapon: WeaponState; duration: number };
   inspectEnd: { weapon: WeaponState };
+  meleeStart: { weapon: WeaponState; duration: number };
+  /** The knife reaches out: the moment to check what it hits. */
+  meleeStrike: { weapon: WeaponState };
+  throwStart: { weapon: WeaponState; duration: number };
+  /** The smoke grenade leaves the hand. */
+  throwRelease: { weapon: WeaponState };
 }
 
 export interface WeaponInput {
@@ -28,6 +35,8 @@ export interface WeaponInput {
   switchTo: WeaponSlot | null;
   fireModePressed: boolean;
   inspectPressed: boolean;
+  meleePressed?: boolean;
+  throwPressed?: boolean;
   /** False while sprinting or still blending out of sprint. */
   canFire: boolean;
   sprinting: boolean;
@@ -41,6 +50,8 @@ type Action =
   | { kind: 'holster'; time: number; duration: number; next: WeaponSlot }
   | { kind: 'draw'; time: number; duration: number }
   | { kind: 'inspect'; time: number; duration: number }
+  | { kind: 'melee'; time: number; duration: number; strikeAt: number; struck: boolean }
+  | { kind: 'throw'; time: number; duration: number; releaseAt: number; released: boolean }
   | { kind: 'fireMode'; time: number; duration: number };
 
 export function seatTime(weapon: WeaponState): number {
@@ -52,6 +63,8 @@ export class PlayerWeapons {
   readonly events = new EventBus<WeaponEvents>();
   readonly weapons: Record<WeaponSlot, WeaponState>;
   private slot: WeaponSlot = 'primary';
+  /** Smoke grenades left (refilled on respawn and at crates). */
+  smokes: number = SMOKE.perLife;
   private action: Action = { kind: 'ready' };
 
   constructor(loadout: Loadout) {
@@ -74,6 +87,7 @@ export class PlayerWeapons {
   /** Starts with the primary drawn. Also used on respawn, with full ammo. */
   start(): void {
     for (const w of Object.values(this.weapons)) w.refill();
+    this.smokes = SMOKE.perLife;
     this.slot = 'primary';
     this.begin({ kind: 'draw', time: 0, duration: WEAPON_TIMING.draw[this.slot] });
     this.events.emit('drawStart', { weapon: this.active, duration: WEAPON_TIMING.draw[this.slot] });
@@ -101,13 +115,31 @@ export class PlayerWeapons {
       this.action = { kind: 'ready' };
       this.events.emit('reloadEnd', { weapon });
     }
-    if (a.kind === 'inspect' && (input.firePressed || input.ads || input.reloadPressed || input.sprinting)) {
+    if (a.kind === 'inspect' && (input.firePressed || input.ads || input.reloadPressed || input.sprinting || input.meleePressed || input.throwPressed)) {
       this.cancelCurrent();
+    }
+    // The knife and a smoke throw cut a reload short (a seated magazine still counts).
+    const quick = input.meleePressed || (input.throwPressed && this.smokes > 0);
+    if (quick && (a.kind === 'reload' || a.kind === 'shells')) {
+      if (a.kind === 'reload' && a.seated) this.finishReload(a);
+      else this.cancelCurrent();
     }
 
     this.advance(dt);
     if (this.action.kind !== 'ready') return;
 
+    if (input.meleePressed) {
+      const k = KNIFE;
+      this.begin({ kind: 'melee', time: 0, duration: k.duration, strikeAt: k.strikeAt, struck: false });
+      this.events.emit('meleeStart', { weapon, duration: k.duration });
+      return;
+    }
+    if (input.throwPressed && this.smokes > 0 && !input.sprinting) {
+      this.smokes--;
+      this.begin({ kind: 'throw', time: 0, duration: SMOKE.throwTime, releaseAt: SMOKE.releaseAt, released: false });
+      this.events.emit('throwStart', { weapon, duration: SMOKE.throwTime });
+      return;
+    }
     if (input.reloadPressed && weapon.canReload && !input.sprinting && weapon.def.shellReload) {
       const sr = weapon.def.shellReload;
       const duration = sr.start + weapon.shellsToLoad * sr.perShell + sr.end;
@@ -154,6 +186,14 @@ export class PlayerWeapons {
     if (a.kind === 'shells') {
       this.advanceShells(a);
       return;
+    }
+    if (a.kind === 'melee' && !a.struck && a.time >= a.strikeAt) {
+      a.struck = true;
+      this.events.emit('meleeStrike', { weapon: this.active });
+    }
+    if (a.kind === 'throw' && !a.released && a.time >= a.releaseAt) {
+      a.released = true;
+      this.events.emit('throwRelease', { weapon: this.active });
     }
     if (a.time < a.duration) return;
 

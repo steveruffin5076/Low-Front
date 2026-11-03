@@ -85,7 +85,8 @@ export class BotManager {
     this.flagPositions = o.match.zones.map((z) => new THREE.Vector3(z.flag.x, z.flag.y, z.flag.z));
     this.paths = new PathService(o.nav);
     this.coverIndex = new CoverIndex(o.cover);
-    this.perception = new Perception((from, to) => !raycastSegment(o.physics, from, to, COLLISION.view));
+    // Walls and smoke both block sight.
+    this.perception = new Perception((from, to) => !o.combat.smoke.blocks(from, to) && !raycastSegment(o.physics, from, to, COLLISION.view));
     this.queries = {
       cover: (from, radius, threat) => this.cover(from, radius, threat),
       zoneSpot: (flag) => this.zoneSpot(flag),
@@ -183,7 +184,8 @@ export class BotManager {
 
   /** Respawn at the HQ or the owned flag nearest the bot's objective. */
   private respawn(bot: Bot): void {
-    const options = this.o.spawns.options(bot.team, this.o.match.owners());
+    const enemies = this.targets.filter((t) => t.alive && t.team !== bot.team).map((t) => t.position);
+    const options = this.o.spawns.options(bot.team, this.o.match.owners(), enemies);
     const goal = this.o.match.zones.find((z) => z.flag.id === bot.orders.objective)?.flag;
     let choice: SpawnChoice = { kind: 'hq' };
     if (goal) {
@@ -255,6 +257,7 @@ export class BotManager {
       primaryOut: primary.mag === 0 && primary.reserve === 0,
       canReload: active.reserve > 0,
       reloading: w.actionKind === 'reload' || w.actionKind === 'shells',
+      smokes: w.smokes,
       flags,
       teammatesGoing: mine,
       enemy: seen ? { id: seen.id, position: seen.position, distance: seen.position.distanceTo(bot.position) } : null,

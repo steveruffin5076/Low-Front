@@ -17,6 +17,7 @@ function senses(over: Partial<BotSenses> = {}): BotSenses {
     position: V(0, 160),
     hp: 100,
     magFraction: 1,
+    smokes: 2,
     weaponClass: 'rifle',
     primaryClass: 'rifle',
     activeSlot: 'primary',

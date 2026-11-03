@@ -67,6 +67,14 @@
     "file": "attachments/vgrip.glb",
     "triangles": 224
   },
+  "gear/knife": {
+    "file": "gear/knife.glb",
+    "triangles": 212
+  },
+  "gear/smoke": {
+    "file": "gear/smoke.glb",
+    "triangles": 152
+  },
   "guns/br12_fp": {
     "file": "guns/br12_fp.glb",
     "triangles": 1028

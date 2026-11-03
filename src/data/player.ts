@@ -7,6 +7,22 @@ export const PROFILE = {
 } as const;
 
 /** Player movement (plan section 9). Speeds in m/s, times in seconds. */
+/**
+ * Vault (enhancement-1 §4.2.1): jump facing an obstacle whose top is between `minHeight` and
+ * `maxHeight` above the feet climbs over it (or onto it when it is deep) in `duration` seconds.
+ */
+export const VAULT = {
+  minHeight: 0.35,
+  maxHeight: 1.2,
+  /** The obstacle must be this close in front (m). */
+  reach: 0.9,
+  /** Thicker than this: climb on top instead of over. */
+  maxDepth: 0.8,
+  duration: 0.5,
+  /** Extra lift over the top during the climb (m). */
+  clearance: 0.25,
+} as const;
+
 export const MOVEMENT = {
   walkSpeed: 4.5,
   sprintSpeed: 6.5,

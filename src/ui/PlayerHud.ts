@@ -4,6 +4,8 @@ export interface PlayerReadout {
   mag: number;
   reserve: number;
   fireMode: string;
+  /** Smoke grenades left. */
+  smokes?: number;
   action: string;
   stance: string;
   speed: number;
