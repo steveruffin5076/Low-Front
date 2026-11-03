@@ -3,6 +3,14 @@
     "file": "attachments/agrip.glb",
     "triangles": 32
   },
+  "attachments/bipod": {
+    "file": "attachments/bipod.glb",
+    "triangles": 120
+  },
+  "attachments/choke": {
+    "file": "attachments/choke.glb",
+    "triangles": 152
+  },
   "attachments/compensator": {
     "file": "attachments/compensator.glb",
     "triangles": 172
@@ -11,9 +19,29 @@
     "file": "attachments/extmag.glb",
     "triangles": 104
   },
+  "attachments/extmag_kr7": {
+    "file": "attachments/extmag_kr7.glb",
+    "triangles": 60
+  },
+  "attachments/extmag_lr24": {
+    "file": "attachments/extmag_lr24.glb",
+    "triangles": 44
+  },
+  "attachments/extmag_p11": {
+    "file": "attachments/extmag_p11.glb",
+    "triangles": 24
+  },
+  "attachments/extmag_sr9": {
+    "file": "attachments/extmag_sr9.glb",
+    "triangles": 20
+  },
   "attachments/holo": {
     "file": "attachments/holo.glb",
     "triangles": 336
+  },
+  "attachments/minidot": {
+    "file": "attachments/minidot.glb",
+    "triangles": 116
   },
   "attachments/reddot": {
     "file": "attachments/reddot.glb",
@@ -25,6 +53,14 @@
   },
   "attachments/suppressor": {
     "file": "attachments/suppressor.glb",
+    "triangles": 196
+  },
+  "attachments/suppressor_p11": {
+    "file": "attachments/suppressor_p11.glb",
+    "triangles": 196
+  },
+  "attachments/tubeext": {
+    "file": "attachments/tubeext.glb",
     "triangles": 196
   },
   "attachments/vgrip": {

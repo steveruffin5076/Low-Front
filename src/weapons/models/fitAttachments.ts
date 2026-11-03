@@ -26,16 +26,19 @@ export function fitAttachments(model: WeaponModel, build: WeaponBuild): void {
   for (const [slot, id] of Object.entries(build) as [keyof WeaponBuild, string][]) {
     const def = ATTACHMENTS[id as keyof typeof ATTACHMENTS];
     const mount = mounts[slot];
-    if (!def || !mount || !hasModel(`attachments/${id}`)) continue;
-    const att = instantiate(`attachments/${id}`);
+    // A part made for this gun (e.g. its own longer magazine) wins over the generic one.
+    const specific = model.key ? `attachments/${id}_${model.key}` : '';
+    const modelKey = hasModel(specific) ? specific : `attachments/${id}`;
+    if (!def || !mount || !hasModel(modelKey)) continue;
+    const att = instantiate(modelKey);
     applyGameMaterials(att);
     att.name = `att-${id}`;
 
-    if (slot === 'magazine') {
+    const part = att.getObjectByName('magazine');
+    if (slot === 'magazine' && part) {
       // Replaces the magazine node's meshes, so the reload clips move the new one.
       const node = model.nodes.magazine;
-      const part = att.getObjectByName('magazine');
-      if (!node || !part) continue;
+      if (!node) continue;
       for (const c of [...node.children]) c.removeFromParent();
       part.position.set(0, 0, 0);
       node.add(part);
@@ -48,8 +51,9 @@ export function fitAttachments(model: WeaponModel, build: WeaponBuild): void {
       if (rear) rear.rotation.x = -Math.PI / 2;
       const line = pointIn(att, 'pt_sightLine', content);
       if (line) {
-        const relief = def.optic?.scope ? GUNSMITH.eyeRelief.scope : GUNSMITH.eyeRelief.reflex;
-        model.points.sightAnchor.position.set(line.x, line.y, line.z + relief);
+        // A reflex sight keeps the cheek weld (eye distance) and only raises the eye; a scope sets it.
+        const eye = model.points.sightAnchor.position;
+        eye.set(line.x, line.y, def.optic?.scope ? line.z + GUNSMITH.eyeRelief.scope : eye.z);
       }
     } else if (slot === 'muzzle') {
       const device = content.getObjectByName('muzzleDevice');

@@ -16,17 +16,23 @@ export function buildAttachments(build: WeaponBuild): AttachmentDef[] {
   return Object.values(build).map((id) => ATTACHMENTS[id!]);
 }
 
+/** A part's effects on one weapon (its general effects plus any for that weapon). */
+export function effectsFor(def: AttachmentDef, id: WeaponId): AttachmentEffects {
+  return { ...def.effects, ...def.perWeapon?.[id] };
+}
+
 const clamp = (v: number, [lo, hi]: readonly [number, number]): number => Math.min(hi, Math.max(lo, v));
 
 /** Product of one effect over the build (1 when no part changes it). */
-function product(parts: AttachmentDef[], key: Exclude<keyof AttachmentEffects, 'magazineAdd'>): number {
-  return parts.reduce((k, p) => k * (p.effects[key] ?? 1), 1);
+function product(parts: AttachmentEffects[], key: Exclude<keyof AttachmentEffects, 'magazineAdd'>): number {
+  return parts.reduce((k, p) => k * (p[key] ?? 1), 1);
 }
 
 /** The weapon's stats with `build` applied (caps from `GUNSMITH.caps`). The id stays the same. */
 export function fitWeapon(def: WeaponDef, build: WeaponBuild | undefined): WeaponDef {
   const b = validBuild(def.id, build);
-  const parts = buildAttachments(b);
+  const defs = buildAttachments(b);
+  const parts = defs.map((p) => effectsFor(p, def.id));
   const c = GUNSMITH.caps;
   const ads = clamp(product(parts, 'adsTime'), c.adsTime);
   const vRec = clamp(product(parts, 'verticalRecoil'), c.recoil);
@@ -36,11 +42,15 @@ export function fitWeapon(def: WeaponDef, build: WeaponBuild | undefined): Weapo
   const move = clamp(product(parts, 'moveSpeed'), c.moveSpeed);
   const range = clamp(product(parts, 'range'), c.range);
   const reload = clamp(product(parts, 'reloadTime'), c.reloadTime);
-  const extra = parts.reduce((n, p) => n + (p.effects.magazineAdd ?? 0), 0);
+  const pellet = clamp(product(parts, 'pelletSpread'), c.pelletSpread);
+  const braced = clamp(product(parts, 'braced'), c.braced);
+  const extra = parts.reduce((n, p) => n + (p.magazineAdd ?? 0), 0);
   return {
     ...def,
     build: b,
-    suppressed: parts.some((p) => p.suppressed),
+    suppressed: defs.some((p) => p.suppressed),
+    bracedRecoil: braced,
+    pelletSpreadDeg: def.pelletSpreadDeg * pellet,
     magazine: def.magazine + extra,
     startingReserve: def.startingReserve + extra * 3,
     adsTime: def.adsTime * ads,

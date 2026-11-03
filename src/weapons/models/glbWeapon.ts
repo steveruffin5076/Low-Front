@@ -71,7 +71,7 @@ export function weaponFromGlb(key: string, lod: WeaponLod): WeaponModel {
   content.position.copy(points.rightHandGrip.position).negate();
   root.add(content);
   root.updateMatrixWorld(true);
-  return { root, nodes, points, mounts, lod };
+  return { root, nodes, points, mounts, lod, key };
 }
 
 /**

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { ATTACHMENTS, ATTACHMENT_IDS, GUNSMITH } from '../src/data/attachments';
+import { ATTACHMENTS, ATTACHMENT_IDS, COMPATIBLE, GUNSMITH } from '../src/data/attachments';
 import { WEAPONS } from '../src/data/weapons';
 import { defaultProfile, ProfileStore } from '../src/save/ProfileStore';
 import { MemoryStore } from '../src/save/Storage';
@@ -103,5 +103,55 @@ describe('respawn with a new build', () => {
     expect(sameLoadout(bare, { ...bare })).toBe(true);
     expect(sameLoadout(bare, { ...bare, builds: { m4a1: { optic: 'reddot' } } })).toBe(false);
     expect(sameLoadout({ ...bare, builds: { m4a1: { optic: 'reddot', muzzle: 'suppressor' } } }, { ...bare, builds: { m4a1: { muzzle: 'suppressor', optic: 'reddot' } } })).toBe(true);
+  });
+});
+
+describe('gunsmith on every gun', () => {
+  const ids = Object.keys(COMPATIBLE) as (keyof typeof COMPATIBLE)[];
+
+  it('every compatible part fits on its gun in first and third person', () => {
+    for (const id of ids) {
+      for (const att of COMPATIBLE[id]!) {
+        for (const lod of ['fp', 'tp'] as const) {
+          const m = buildWeaponModel(id, lod, { [ATTACHMENTS[att].slot]: att });
+          const fitted = m.root.getObjectByName(`att-${att}`) ?? (ATTACHMENTS[att].slot === 'magazine' ? m.nodes.magazine!.getObjectByName('magazine') : undefined);
+          expect(fitted, `${id} ${att} ${lod}`).toBeDefined();
+        }
+      }
+    }
+  });
+
+  it('bigger magazines add the right rounds per gun', () => {
+    expect(fitWeapon(WEAPONS.ak47, { magazine: 'extmag' }).magazine).toBe(40);
+    expect(fitWeapon(WEAPONS.sr9, { magazine: 'extmag' }).magazine).toBe(40);
+    expect(fitWeapon(WEAPONS.lr24, { magazine: 'extmag' }).magazine).toBe(10);
+    expect(fitWeapon(WEAPONS.m1911, { magazine: 'extmag' }).magazine).toBe(10);
+    expect(fitWeapon(WEAPONS.br12, { magazine: 'tubeext' }).magazine).toBe(8);
+  });
+
+  it('a choke tightens the pellets; a bipod halves recoil when crouched', () => {
+    expect(fitWeapon(WEAPONS.br12, { muzzle: 'choke' }).pelletSpreadDeg).toBeCloseTo(WEAPONS.br12.pelletSpreadDeg * 0.7);
+    expect(fitWeapon(WEAPONS.lr24, { underbarrel: 'bipod' }).bracedRecoil).toBe(0.5);
+    expect(fitWeapon(WEAPONS.lr24, {}).bracedRecoil).toBe(1);
+  });
+
+  it('the pistol dot rides on the slide and lines up with the eye', () => {
+    const m = buildWeaponModel('m1911', 'fp', { optic: 'minidot' });
+    const dot = m.root.getObjectByName('att-minidot')!;
+    let onSlide = false;
+    for (let p: THREE.Object3D | null = dot; p; p = p.parent) if (p === m.nodes.slide) onSlide = true;
+    expect(onSlide).toBe(true);
+    const eye = world(m.points.sightAnchor);
+    const hit = new THREE.Raycaster(eye, new THREE.Vector3(0, 0, -1)).intersectObject(m.root, true)[0];
+    expect((hit.object as THREE.Mesh).material).toBeInstanceOf(THREE.MeshBasicMaterial);
+  });
+
+  it('a reflex sight keeps the eye distance; only the height changes', () => {
+    for (const id of ['m4a1', 'ak47', 'sr9', 'br12'] as const) {
+      const plain = world(buildWeaponModel(id, 'fp').points.sightAnchor);
+      const dot = world(buildWeaponModel(id, 'fp', { optic: 'reddot' }).points.sightAnchor);
+      expect(dot.z, id).toBeCloseTo(plain.z, 5);
+      expect(dot.y, id).toBeGreaterThan(plain.y - 0.001);
+    }
   });
 });

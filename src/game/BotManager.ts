@@ -103,7 +103,8 @@ export class BotManager {
     for (const team of ['blue', 'red'] as const) {
       for (let i = 0; i < counts[team]; i++, n++) {
         const primary = pickPrimary(this.rand());
-        const builds = COMPATIBLE[primary] ? { [primary]: validBuild(primary, BOTS.builds[Math.floor(this.rand() * BOTS.builds.length)]) } : undefined;
+        const presets = COMPATIBLE[primary] ? BOTS.builds[primary] : undefined;
+        const builds = presets?.length ? { [primary]: validBuild(primary, presets[Math.floor(this.rand() * presets.length)]) } : undefined;
         const name = BOTS.names[n % BOTS.names.length];
         const bot = new Bot(`bot-${n}`, name, team, { primary, secondary: DEFAULT_LOADOUT.secondary, builds }, this.botWorld(), new THREE.Vector3(0, -50, 0), (n % BOTS.decisionRate) / BOTS.decisionRate / BOTS.decisionRate, DIFFICULTIES[o.difficulty ?? DIFFICULTY]);
         o.scene.add(bot.soldier.model.root);

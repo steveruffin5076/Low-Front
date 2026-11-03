@@ -429,7 +429,7 @@ export class Bot implements Combatant, SightTarget {
     if (target) this.aim.aim(this.eye, target.chest, target.head ?? target.chest, aimDir);
     else aimDir.set(-Math.sin(this.controller.yaw), 0, -Math.cos(this.controller.yaw));
     // Recoil climbs the shots; the bot pulls part of it back down.
-    this.recoil.kick(def, 1 - this.aim.recoilControl);
+    this.recoil.kick(def, (1 - this.aim.recoilControl) * (this.controller.crouched ? (def.bracedRecoil ?? 1) : 1));
     shotDir.copy(aimDir).applyAxisAngle(dir.crossVectors(aimDir, UP).normalize(), this.recoil.pitch * DEG);
     const spread = this.spreads.get(def.id)!;
     spreadDirection(shotDir, spread.cone({ ads: this.orders.pace === 'walk' ? 1 : 0, speed: this.controller.horizontalSpeed, grounded: this.controller.grounded }), shotDir);
