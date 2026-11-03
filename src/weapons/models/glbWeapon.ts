@@ -13,6 +13,10 @@ const MATERIALS: Record<string, () => THREE.Material> = {
   tan: WM.tan,
   glass: WM.glass,
   dot: WM.dot,
+  wood: WM.akWood,
+  gripWood: WM.gripWood,
+  green: WM.stockGreen,
+  shell: WM.shellHull,
 };
 
 const NODE_NAMES: readonly NodeName[] = ['magazine', 'bolt', 'chargingHandle', 'slide', 'hammer', 'trigger', 'selector', 'dustCover', 'boltRelease', 'slideStop', 'pump'];

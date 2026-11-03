@@ -31,6 +31,10 @@ PREVIEW_COLORS = {
     "tan": (0.55, 0.45, 0.3),
     "glass": (0.1, 0.25, 0.3),
     "dot": (1.0, 0.1, 0.05),
+    "wood": (0.35, 0.18, 0.08),
+    "gripWood": (0.3, 0.15, 0.07),
+    "green": (0.22, 0.27, 0.18),
+    "shell": (0.6, 0.15, 0.12),
 }
 
 
@@ -189,8 +193,9 @@ class Model:
     def body(self):
         return self.part("body")
 
-    def point(self, name, pos):
-        self.points[name] = Vector(pos)
+    def point(self, name, pos, parent=None):
+        """An empty at `pos` (game space). With `parent` (a part name) it moves with that part."""
+        self.points[name] = (Vector(pos), parent)
         return self
 
     def triangles(self):
@@ -198,6 +203,7 @@ class Model:
 
     def build(self, collection):
         """Creates the Blender objects (Z-up) in `collection`."""
+        objects = {}
         for p in self.parts.values():
             if not p.bm.faces:
                 continue
@@ -215,10 +221,15 @@ class Model:
             obj = bpy.data.objects.new(p.name, mesh)
             obj.location = TO_BLENDER @ p.pivot
             collection.objects.link(obj)
-        for name, pos in self.points.items():
+            objects[p.name] = obj
+        for name, (pos, parent) in self.points.items():
             e = bpy.data.objects.new(name, None)
             e.empty_display_size = 0.01
-            e.location = TO_BLENDER @ pos
+            if parent:
+                e.parent = objects[parent]
+                e.location = TO_BLENDER @ (pos - self.parts[parent].pivot)
+            else:
+                e.location = TO_BLENDER @ pos
             collection.objects.link(e)
 
     def export(self, path, preview=None):
@@ -278,3 +289,17 @@ def render_previews(prefix):
         cam.rotation_euler = (center - cam.location).to_track_quat("-Z", "Y").to_euler()
         sc.render.filepath = f"{prefix}-{tag}.png"
         bpy.ops.render.render(write_still=True)
+
+
+def circle(cx, cy, radius, segments):
+    """Points of a circle around (cx, cy), counter-clockwise."""
+    return [(cx + math.cos(a) * radius, cy + math.sin(a) * radius) for a in _angles(segments)]
+
+
+def arc(center, radius, a0, a1, segments):
+    """Points along an arc in the (z, y) plane. Angle 0 points along +Z, angles grow toward -Y."""
+    out = []
+    for i in range(segments + 1):
+        a = a0 + (a1 - a0) * i / segments
+        out.append((center[0] + math.cos(a) * radius, center[1] - math.sin(a) * radius))
+    return out
