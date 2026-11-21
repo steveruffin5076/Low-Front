@@ -26,7 +26,7 @@
 }
 .pm-row {
   display: grid;
-  grid-template-columns: 1fr 140px 52px;
+  grid-template-columns: 1fr 140px 112px;
   align-items: center;
   gap: 10px;
   font-size: 14px;
@@ -37,6 +37,7 @@
 }
 .pm-value {
   text-align: right;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
 }
@@ -236,4 +237,14 @@
 .es-menu {
   margin-top: 24px;
   min-width: 200px;
+}
+
+/* Narrow screens: smaller slider and value columns; the FOV value may wrap. */
+@media (max-width: 520px) {
+  .pm-row {
+    grid-template-columns: 1fr 100px 76px;
+  }
+  .pm-value {
+    white-space: normal;
+  }
 }

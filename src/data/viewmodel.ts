@@ -155,7 +155,10 @@ export const VIEWMODEL_MOTION = {
   holster: { pos: [0.0, -0.32, 0.06] as V3, rot: [-0.9, 0.2, 0] as V3 },
   muzzleFlashTime: 0.035,
   shell: { speed: [1.6, 1.4, 0.4] as V3, spread: 0.35, gravity: 9.81, life: 0.7, spin: 18, poolSize: 24 },
-  /** Hit reaction and death camera (debug keys until damage exists). */
-  hit: { shake: 0.012, shakeRoll: 0.02, time: 0.3, flashTime: 0.45 },
+  /**
+   * Hit reaction: each hit adds `trauma` (0–1), which fades by `decay` per second; the shake is
+   * trauma² × `shake` (m) and × `shakeRoll` (rad), moving at `frequency`. Plus the red flash.
+   */
+  hit: { trauma: 0.45, decay: 1.6, shake: 0.03, shakeRoll: 0.035, frequency: 18, flashTime: 0.45 },
   death: { dropTime: 0.8, eyeHeight: 0.3, roll: 1.2, holdTime: 1.6 },
 } as const;

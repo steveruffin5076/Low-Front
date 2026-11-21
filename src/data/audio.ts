@@ -71,4 +71,7 @@ export const AUDIO = {
   land: { freq: 70, length: 0.16, gain: 0.5 },
   hitTick: { freq: 1900, length: 0.04, gain: 0.3 },
   killTick: { freq: 1250, length: 0.09, gain: 0.35 },
+  /** Extra notes: a bright ding on a headshot, a low falling note confirming a kill. */
+  headTick: { freq: 2800, length: 0.06, gain: 0.22, delay: 0.03 },
+  killConfirm: { freq: 520, endFreq: 380, length: 0.16, gain: 0.3, delay: 0.07 },
 } as const;

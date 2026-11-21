@@ -101,9 +101,18 @@ export class AudioManager {
     this.burst({ freq: 500, q: 1, length: l.length * 0.6, gain: l.gain * 0.6, type: 'lowpass' });
   }
 
-  hitMarker(kill: boolean): void {
+  /** A tick per hit; a headshot adds a bright "ding", a kill a low confirm note after the tick. */
+  hitMarker(kill: boolean, headshot = false): void {
     const t = kill ? AUDIO.killTick : AUDIO.hitTick;
     this.tone({ freq: t.freq, endFreq: t.freq, length: t.length, gain: t.gain });
+    if (headshot) {
+      const h = AUDIO.headTick;
+      this.tone({ freq: h.freq, endFreq: h.freq, length: h.length, gain: h.gain, delay: h.delay });
+    }
+    if (kill) {
+      const c = AUDIO.killConfirm;
+      this.tone({ freq: c.freq, endFreq: c.endFreq, length: c.length, gain: c.gain, delay: c.delay });
+    }
   }
 
   /** Flag captured by our team, lost by our team, or neutralized. */

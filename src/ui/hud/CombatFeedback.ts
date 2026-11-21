@@ -7,6 +7,8 @@ import '../range.css';
 const HIT_MARKER_TIME = 0.25;
 const INDICATOR_TIME = 1.6;
 const MAX_INDICATORS = 4;
+/** Hit marker starting scale: a plain hit, and a kill or headshot. */
+const MARKER_POP = { small: 1.15, big: 1.6 };
 /** Crosshair arms never come closer than this (px). */
 const MIN_GAP = 4;
 
@@ -28,6 +30,7 @@ export class CombatFeedback {
   private readonly indicators: { el: HTMLElement; time: number }[] = [];
   private flashTime = 0;
   private markerTime = 0;
+  private markerPop = 1;
 
   constructor() {
     this.crosshair = el('div', { class: 'crosshair' }, ['t', 'r', 'b', 'l'].map((s) => el('span', { class: `ch-${s}` })));
@@ -51,10 +54,12 @@ export class CombatFeedback {
     this.flashTime = M.hit.flashTime;
   }
 
-  /** White for a hit, red for a kill. */
-  showHitMarker(kill: boolean): void {
+  /** White for a hit, gold for a headshot, red for a kill; kills and headshots pop larger. */
+  showHitMarker(kill: boolean, headshot = false): void {
     this.markerTime = HIT_MARKER_TIME;
+    this.markerPop = kill || headshot ? MARKER_POP.big : MARKER_POP.small;
     this.hitMarker.classList.toggle('kill', kill);
+    this.hitMarker.classList.toggle('head', headshot && !kill);
   }
 
   /** `angle` in radians: 0 = from the front, positive = from the right. */
@@ -74,7 +79,10 @@ export class CombatFeedback {
     this.flashTime = Math.max(0, this.flashTime - dt);
     this.flash.style.opacity = String(this.flashTime / M.hit.flashTime);
     this.markerTime = Math.max(0, this.markerTime - dt);
-    this.hitMarker.style.opacity = String(this.markerTime / HIT_MARKER_TIME);
+    const k = this.markerTime / HIT_MARKER_TIME;
+    this.hitMarker.style.opacity = String(k);
+    // Pops in large and settles to normal size (ease-out).
+    this.hitMarker.style.transform = `scale(${(1 + (this.markerPop - 1) * k * k).toFixed(3)})`;
     for (const ind of this.indicators) {
       ind.time = Math.max(0, ind.time - dt);
       ind.el.style.opacity = String(Math.min(1, ind.time / (INDICATOR_TIME * 0.5)));

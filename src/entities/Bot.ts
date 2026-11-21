@@ -457,7 +457,11 @@ export class Bot implements Combatant, SightTarget {
     this.soldier.fire();
     const id = this.aim.targetId;
     const target = id ? this.world.target(id) : null;
-    if (target) this.aim.aim(this.eye, target.chest, target.head ?? target.chest, aimDir);
+    if (target) {
+      // Only the head showed over cover: aim there instead of into the cover.
+      const headOnly = this.memory.known.get(target.id)?.headOnly ?? false;
+      this.aim.aim(this.eye, headOnly ? target.head ?? target.chest : target.chest, target.head ?? target.chest, aimDir);
+    }
     else aimDir.set(-Math.sin(this.controller.yaw), 0, -Math.cos(this.controller.yaw));
     // Recoil climbs the shots; the bot pulls part of it back down.
     this.recoil.kick(def, (1 - this.aim.recoilControl) * (this.controller.crouched ? (def.bracedRecoil ?? 1) : 1));

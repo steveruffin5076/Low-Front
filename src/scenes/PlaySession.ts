@@ -9,6 +9,7 @@ import type { Input } from '../core/Input';
 import { CONTROLS, MOUSE } from '../data/controls';
 import { MOVEMENT } from '../data/player';
 import type { Loadout, WeaponSlot } from '../data/weapons';
+import { zoomLookScale } from '../entities/lookScale';
 import { PlayerController, type PlayerIntent } from '../entities/PlayerController';
 import type { DeathCause } from '../game/ConquestMatch';
 import { OutOfBounds } from '../game/OutOfBounds';
@@ -144,6 +145,11 @@ export class PlaySession {
   /** Seconds left of the out-of-bounds countdown, or null. */
   get boundsRemaining(): number | null {
     return this.bounds.remaining;
+  }
+
+  /** Screen shake strength when hit, 0–1. */
+  setShake(strength: number): void {
+    this.fx.strength = strength;
   }
 
   setBaseFov(fov: number): void {
@@ -332,7 +338,7 @@ export class PlaySession {
       (out) => this.animator.muzzleWorld(this.camera, this.layer.camera.fov, out),
       {
         onHitTarget: (hit) => {
-          this.hud.showHitMarker(hit.kill);
+          this.hud.showHitMarker(hit.kill, hit.zone === 'head');
           this.events.emit('targetHit', hit);
         },
         onPlayerDamaged: (angle) => {
@@ -372,8 +378,8 @@ export class PlaySession {
 
   private readInput(): void {
     const i = this.input;
-    // Through a scope the view turns slower, in step with the zoom.
-    const sens = this.animator.scoped ? (this.sensitivity * this.camera.fov) / this.baseFov : this.sensitivity;
+    // Aiming down any sight turns the view slower, in step with the zoom.
+    const sens = this.sensitivity * zoomLookScale(this.camera.fov, this.baseFov);
     if (i.locked) this.combat.shooting.onLook(this.player.look(i.mouseDelta.x, i.mouseDelta.y, sens));
     const l = this.latched;
     if (i.wasPressed(CONTROLS.crouch)) l.crouch = true;

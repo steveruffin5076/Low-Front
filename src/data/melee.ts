@@ -34,6 +34,9 @@ export const SMOKE = {
   /** Throw animation: total length and when the grenade leaves the hand. */
   throwTime: 0.75,
   releaseAt: 0.38,
-  /** Bots throw one when retreating from a visible enemy, at most this often. */
-  botCooldown: 35,
+  /**
+   * Bots: when retreating to cover from a visible enemy between `minRange` and `maxRange`, they
+   * consider a smoke at most every `cooldown` s and throw one with this `chance`.
+   */
+  bot: { cooldown: 45, minRange: 12, maxRange: 70, chance: 0.5 },
 } as const;

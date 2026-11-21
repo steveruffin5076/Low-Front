@@ -3,10 +3,16 @@ import { SETTINGS } from '../../data/settings';
 import type { Settings } from '../../save/SettingsStore';
 import { showConfirm } from '../ConfirmDialog';
 import { button, el } from '../dom';
+import { horizontalFov } from '../../entities/lookScale';
 import './match.css';
 
+/** The window's width / height (16:9 if unknown). */
+function screenAspect(): number {
+  return typeof window !== 'undefined' && window.innerHeight > 0 ? window.innerWidth / window.innerHeight : 16 / 9;
+}
+
 /**
- * Pause Menu (Esc, plan section 11.4): Resume, mouse sensitivity, field of view, master volume, graphics preset,
+ * Pause Menu (Esc, plan section 11.4): Resume, mouse sensitivity, field of view (vertical, with the horizontal angle shown), screen shake, master volume, graphics preset,
  * Quit to Main Menu (with confirm). Changes apply live and are saved by `onChange`.
  */
 export class PauseMenu {
@@ -19,7 +25,7 @@ export class PauseMenu {
     onQuit: () => void,
   ) {
     const current = { ...settings };
-    const slider = (label: string, key: 'sensitivity' | 'fov' | 'volume', format: (v: number) => string): HTMLElement => {
+    const slider = (label: string, key: 'sensitivity' | 'fov' | 'volume' | 'shake', format: (v: number) => string): HTMLElement => {
       const range = SETTINGS[key];
       const value = el('span', { class: 'pm-value', text: format(current[key]) });
       const input = el('input', {
@@ -36,7 +42,8 @@ export class PauseMenu {
       el('h2', { class: 'pm-title', text: 'Paused' }),
       button('Resume', onResume, 'btn btn-primary pm-resume'),
       slider('Mouse sensitivity', 'sensitivity', (v) => `${v.toFixed(2)}×`),
-      slider('Field of view', 'fov', (v) => `${Math.round(v)}°`),
+      slider('Field of view', 'fov', (v) => `${Math.round(v)}° (${Math.round(horizontalFov(v, screenAspect()))}° wide)`),
+      slider('Screen shake', 'shake', (v) => `${Math.round(v * 100)}%`),
       slider('Master volume', 'volume', (v) => `${Math.round(v * 100)}%`),
       this.graphicsRow(current, onChange),
       button('Quit to Main Menu', () => showConfirm(this.element, 'Quit the match?', onQuit), 'btn pm-quit'),

@@ -76,6 +76,7 @@ export class ScopeGlints {
         g.fillRect(30, 2, 4, 60);
         g.fillRect(2, 30, 60, 4);
         map = new THREE.CanvasTexture(c);
+        map.colorSpace = THREE.SRGBColorSpace;
       }
     }
     this.material = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, fog: false, toneMapped: false });

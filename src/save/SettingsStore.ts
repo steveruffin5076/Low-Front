@@ -6,12 +6,14 @@ export interface Settings {
   sensitivity: number;
   fov: number;
   volume: number;
+  /** Camera shake when hit, 0–1. Older saves have none and get the default. */
+  shake: number;
   /** Graphics quality preset. Saves from before Phase 10 have none and get the default. */
   graphics: GraphicsPreset;
 }
 
 export function defaultSettings(): Settings {
-  return { sensitivity: SETTINGS.sensitivity.default, fov: SETTINGS.fov.default, volume: SETTINGS.volume.default, graphics: DEFAULT_GRAPHICS };
+  return { sensitivity: SETTINGS.sensitivity.default, fov: SETTINGS.fov.default, volume: SETTINGS.volume.default, shake: SETTINGS.shake.default, graphics: DEFAULT_GRAPHICS };
 }
 
 /** Clamps every value into its allowed range; missing or broken values fall back to defaults. */
@@ -19,7 +21,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   const out = defaultSettings();
   if (typeof raw !== 'object' || raw === null) return out;
   const r = raw as Record<string, unknown>;
-  for (const key of ['sensitivity', 'fov', 'volume'] as const) {
+  for (const key of ['sensitivity', 'fov', 'volume', 'shake'] as const) {
     const v = r[key];
     const range = SETTINGS[key];
     if (typeof v === 'number' && Number.isFinite(v)) out[key] = Math.min(range.max, Math.max(range.min, v));

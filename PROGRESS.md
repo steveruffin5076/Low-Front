@@ -1,5 +1,25 @@
 # PROGRESS.md
 
+## Fixes from the game-dev skills check (done)
+
+The 6 skills (fps-shooter, game-ai, performance-optimization, threejs-gltf-loading, threejs-materials-lighting, game-feel) found 15 items. What changed:
+- **Aim speed when aiming down sights:** all sights now slow the mouse in step with the zoom (before: only scopes, and with a rough formula). A target near the crosshair moves at the same speed on screen at the hip and aimed. Checked in game: ratio 0.636, as calculated.
+- **Field of view label:** shows the wide angle too, e.g. "75° (108° wide)".
+- **Hit camera shake:** smooth (no more random jitter each frame); light for one hit, stronger for several quick hits, fades in under a second. New **Screen shake** slider (0–100%) in the Pause Menu.
+- **Kill and headshot feedback:** the hit marker pops larger; gold for a headshot, red for a kill; a "ding" for a headshot and a low confirm note for a kill.
+- **Bots see heads over low cover:** if the chest is hidden they also check the head, and then aim at it.
+- **Fewer smokes from bots:** only when running to cover from an enemy 12–70 m away, half the time, at most every 45 s. A match now has about 65–75 smokes (was about 225).
+- **Small fixes:** no new objects per shot in the spread code; smoke, glint and debug textures use correct colours.
+- **New checks in the tests:**
+  - time-to-kill table for every gun (rifles, SMG and pistol must stay at 0.15–0.5 s up close);
+  - a frame budget test: a 32-soldier match step must average under 8 ms (now about 1.8 ms);
+  - all 31 model files pass the official glTF validator.
+- **Looked at and left as is:**
+  - KR-7 kills faster than the VX-4 up close, but kicks much harder and handles slower; a test keeps it that way.
+  - Tone mapping: tried it, but nothing in the image was clipping and it only made the scene and the rifle darker, so it stays off.
+  - Model compression: not needed; all models together are about 690 KB.
+- **Checked:** 361 tests pass; build clean; bot matches on Verdan (seeds 7, 11) and Harbor (seed 7) end with a winner, no bot stuck over 5 s; browser: aim speed, shake, markers and the Pause Menu, no console errors.
+
 ## Options A, B and C (done)
 
 ### A — All guns rebuilt in Blender, all take attachments
