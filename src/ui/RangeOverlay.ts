@@ -40,8 +40,8 @@ export class RangeOverlay implements PlayerHud {
     this.feedback.hitFlash();
   }
 
-  showHitMarker(kill: boolean): void {
-    this.feedback.showHitMarker(kill);
+  showHitMarker(kill: boolean, headshot = false): void {
+    this.feedback.showHitMarker(kill, headshot);
   }
 
   showDamageFrom(angle: number): void {

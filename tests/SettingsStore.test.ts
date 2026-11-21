@@ -9,14 +9,14 @@ describe('settings store', () => {
     const mem = new MemoryStore();
     const store = new SettingsStore(mem);
     expect(store.load()).toEqual(defaultSettings());
-    store.save({ sensitivity: 1.5, fov: 90, volume: 0.3, graphics: 'low' });
-    expect(new SettingsStore(mem).load()).toEqual({ sensitivity: 1.5, fov: 90, volume: 0.3, graphics: 'low' });
+    store.save({ sensitivity: 1.5, fov: 90, volume: 0.3, shake: 0.4, graphics: 'low' });
+    expect(new SettingsStore(mem).load()).toEqual({ sensitivity: 1.5, fov: 90, volume: 0.3, shake: 0.4, graphics: 'low' });
   });
 
   it('clamps out-of-range values and ignores broken data', () => {
     const mem = new MemoryStore();
     mem.setItem(SETTINGS.storageKey, JSON.stringify({ sensitivity: 99, fov: 20, volume: 'loud' }));
-    expect(new SettingsStore(mem).load()).toEqual({ sensitivity: SETTINGS.sensitivity.max, fov: SETTINGS.fov.min, volume: SETTINGS.volume.default, graphics: DEFAULT_GRAPHICS });
+    expect(new SettingsStore(mem).load()).toEqual({ sensitivity: SETTINGS.sensitivity.max, fov: SETTINGS.fov.min, volume: SETTINGS.volume.default, shake: SETTINGS.shake.default, graphics: DEFAULT_GRAPHICS });
     mem.setItem(SETTINGS.storageKey, '{not json');
     expect(new SettingsStore(mem).load()).toEqual(defaultSettings());
   });
@@ -24,8 +24,16 @@ describe('settings store', () => {
   it('keeps a pre-Phase-10 save and gives it the default graphics preset; rejects unknown presets', () => {
     const mem = new MemoryStore();
     mem.setItem(SETTINGS.storageKey, JSON.stringify({ sensitivity: 1.2, fov: 85, volume: 0.5 }));
-    expect(new SettingsStore(mem).load()).toEqual({ sensitivity: 1.2, fov: 85, volume: 0.5, graphics: DEFAULT_GRAPHICS });
+    expect(new SettingsStore(mem).load()).toEqual({ sensitivity: 1.2, fov: 85, volume: 0.5, shake: SETTINGS.shake.default, graphics: DEFAULT_GRAPHICS });
     mem.setItem(SETTINGS.storageKey, JSON.stringify({ graphics: 'ultra' }));
     expect(new SettingsStore(mem).load().graphics).toBe(DEFAULT_GRAPHICS);
+  });
+
+  it('clamps the screen shake setting to 0–1', () => {
+    const mem = new MemoryStore();
+    mem.setItem(SETTINGS.storageKey, JSON.stringify({ shake: 5 }));
+    expect(new SettingsStore(mem).load().shake).toBe(1);
+    mem.setItem(SETTINGS.storageKey, JSON.stringify({ shake: -1 }));
+    expect(new SettingsStore(mem).load().shake).toBe(0);
   });
 });

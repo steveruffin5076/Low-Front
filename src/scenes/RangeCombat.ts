@@ -85,7 +85,7 @@ export class RangeCombat {
           `${h.weapon} → ${h.target.label} · ${h.zone.toUpperCase()} · ${h.damage.toFixed(1)} dmg at ${h.distance.toFixed(1)} m` +
           `${hp}${h.kill ? ' (kill)' : ''}`;
         this.events.onHitTarget({ target: h.target, zone: h.zone, damage: h.damage, distance: h.distance, weapon: h.weapon, kill: h.kill });
-        this.audio.hitMarker(h.kill);
+        this.audio.hitMarker(h.kill, h.zone === 'head');
       }),
       player.events.on('landed', ({ fallHeight }) => {
         audio.land();

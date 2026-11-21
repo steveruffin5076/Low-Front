@@ -172,11 +172,12 @@ export class ConquestSession {
     this.match.events.on('started', () => this.session.audio.countdownCue(true));
   }
 
-  /** Applies the player's settings (sensitivity multiplier, FOV, volume, graphics preset). */
+  /** Applies the player's settings (sensitivity multiplier, FOV, volume, shake, graphics preset). */
   applySettings(s: Settings, renderer: Renderer): void {
     this.session.sensitivity = MOVEMENT.mouseSensitivity * s.sensitivity;
     this.session.setBaseFov(s.fov);
     this.session.audio.setVolume(s.volume);
+    this.session.setShake(s.shake);
     const g = GRAPHICS[s.graphics];
     renderer.setRenderScale(g.renderScale);
     this.world.setShadows(g.shadows, g.shadowMapSize);

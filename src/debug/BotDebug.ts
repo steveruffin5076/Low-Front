@@ -17,6 +17,7 @@ class Label {
     this.canvas.width = 256;
     this.canvas.height = 48;
     this.texture = new THREE.CanvasTexture(this.canvas);
+    this.texture.colorSpace = THREE.SRGBColorSpace;
     this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.texture, depthTest: false, transparent: true }));
     this.sprite.scale.set(2.4, 0.45, 1);
     this.sprite.renderOrder = 10;

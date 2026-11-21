@@ -29,6 +29,8 @@ export interface KnownEnemy {
   /** Start of the current unbroken sighting (for reaction time). */
   seenSince: number;
   lastHeard: number;
+  /** Last sighting saw only the head (chest behind cover): aim at the head. */
+  headOnly: boolean;
 }
 
 /** One bot's memory of enemies: what it sees now and where it last saw or heard them. */
@@ -41,21 +43,22 @@ export class BotMemory {
     return time - e.lastSeen <= VISIBLE_HOLD;
   }
 
-  saw(t: SightTarget, time: number): void {
+  saw(t: SightTarget, time: number, headOnly = false): void {
     let e = this.known.get(t.id);
     if (!e) {
-      e = { id: t.id, position: t.position.clone(), lastSeen: -Infinity, seenSince: time, lastHeard: -Infinity };
+      e = { id: t.id, position: t.position.clone(), lastSeen: -Infinity, seenSince: time, lastHeard: -Infinity, headOnly };
       this.known.set(t.id, e);
     }
     if (!this.isVisible(e, time)) e.seenSince = time;
     e.lastSeen = time;
+    e.headOnly = headOnly;
     e.position.copy(t.position);
   }
 
   heard(id: string, at: THREE.Vector3, time: number): void {
     let e = this.known.get(id);
     if (!e) {
-      e = { id, position: at.clone(), lastSeen: -Infinity, seenSince: Infinity, lastHeard: time };
+      e = { id, position: at.clone(), lastSeen: -Infinity, seenSince: Infinity, lastHeard: time, headOnly: false };
       this.known.set(id, e);
       return;
     }
@@ -114,7 +117,7 @@ export interface Observer {
 
 /**
  * Bot sight and hearing (plan section 12): 110° field of view, 90 m range, line of sight
- * against the world. Sight checks share a raycast budget per frame and continue round-robin
+ * against the world (chest, then head over low cover). Sight checks share a raycast budget per frame and continue round-robin
  * where the last frame stopped. Gunshots within 60 m tell enemies where the shooter is.
  */
 export class Perception {
@@ -155,6 +158,11 @@ export class Perception {
         if (!this.canPossiblySee(o, t)) continue;
         this.raycasts++;
         if (this.lineOfSight(o.eye, t.chest)) o.memory.saw(t, time);
+        else if (t.head) {
+          // Chest blocked (low cover): the head may still show over it.
+          this.raycasts++;
+          if (this.lineOfSight(o.eye, t.head)) o.memory.saw(t, time, true);
+        }
       }
       o.memory.forget(time, (id) => targets.some((t) => t.id === id && t.alive));
     }

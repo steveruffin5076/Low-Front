@@ -34,6 +34,11 @@ export class Spread {
   }
 }
 
+const X_AXIS = new THREE.Vector3(1, 0, 0);
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const RIGHT = new THREE.Vector3();
+const REAL_UP = new THREE.Vector3();
+
 /**
  * Random direction inside a cone of `coneDeg` around `forward` (uniform over the disc).
  * `rand` is injectable for tests.
@@ -46,8 +51,10 @@ export function spreadDirection(
 ): THREE.Vector3 {
   const r = Math.tan(THREE.MathUtils.degToRad(coneDeg)) * Math.sqrt(rand());
   const a = rand() * Math.PI * 2;
-  const up = Math.abs(forward.y) > 0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
-  const right = new THREE.Vector3().crossVectors(forward, up).normalize();
-  const realUp = new THREE.Vector3().crossVectors(right, forward).normalize();
+  // Scratch vectors (no allocation per shot): computed from `forward` before `out` is written,
+  // so `out` may be `forward` itself.
+  const up = Math.abs(forward.y) > 0.99 ? X_AXIS : Y_AXIS;
+  const right = RIGHT.crossVectors(forward, up).normalize();
+  const realUp = REAL_UP.crossVectors(right, forward).normalize();
   return out.copy(forward).addScaledVector(right, Math.cos(a) * r).addScaledVector(realUp, Math.sin(a) * r).normalize();
 }

@@ -179,6 +179,7 @@ export class SmokeField {
         g.fillStyle = grad;
         g.fillRect(0, 0, 64, 64);
         map = new THREE.CanvasTexture(c);
+        map.colorSpace = THREE.SRGBColorSpace;
       }
     }
     this.material = new THREE.SpriteMaterial({ map, color: 0xb9bec4, transparent: true, depthWrite: false, opacity: 0.9 });

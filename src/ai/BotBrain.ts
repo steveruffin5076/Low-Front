@@ -223,10 +223,12 @@ export class BotBrain {
     const safe = away && away.pos.distanceTo(e.position) > s.position.distanceTo(e.position) - 1 ? away.pos : null;
     o.moveTo = safe;
     o.crouch = safe !== null && safe.distanceTo(s.position) < 1;
-    // Smoke between us and the enemy to cover the move.
-    if (s.smokes > 0 && s.time - this.lastSmoke >= SMOKE.botCooldown) {
-      o.throwSmoke = true;
+    // Smoke between us and the enemy to cover the move: only when running to cover from an enemy
+    // at range (up close it does not help), and only sometimes, so a match is not all smoke.
+    const b = SMOKE.bot;
+    if (safe && s.smokes > 0 && e.distance >= b.minRange && e.distance <= b.maxRange && s.time - this.lastSmoke >= b.cooldown) {
       this.lastSmoke = s.time;
+      o.throwSmoke = this.rand() < b.chance;
     }
     // Still shoots back when it has nowhere to go.
     if (!safe) o.fireAt = e.id;

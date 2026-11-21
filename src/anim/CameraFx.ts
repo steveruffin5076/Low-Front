@@ -5,9 +5,17 @@ import { EASE } from './Easing';
 /**
  * Hit reaction (camera shake) and death (camera drops and tilts to the side).
  * Applied on top of the player camera each frame.
+ *
+ * Shake uses "trauma": each hit adds some, it fades linearly, and the shake is trauma² so light
+ * hits barely move the view while several quick hits punch. The motion is summed sine waves
+ * (smooth, not a random buzz each frame), scaled by the player's Screen shake setting.
  */
 export class CameraFx {
-  private shake = 0;
+  /** 0–1. */
+  trauma = 0;
+  /** Player setting, 0 (off) to 1 (full). */
+  strength = 1;
+  private t = 0;
   private deathTime = -1;
 
   get dead(): boolean {
@@ -19,8 +27,8 @@ export class CameraFx {
     return this.deathTime >= M.death.dropTime + M.death.holdTime;
   }
 
-  hit(): void {
-    this.shake = M.hit.time;
+  hit(amount: number = M.hit.trauma): void {
+    this.trauma = Math.min(1, this.trauma + amount);
   }
 
   die(): void {
@@ -28,18 +36,19 @@ export class CameraFx {
   }
 
   reset(): void {
-    this.shake = 0;
+    this.trauma = 0;
     this.deathTime = -1;
   }
 
   /** `eyeHeight` is the camera's current height above the feet. */
   apply(camera: THREE.Camera, dt: number, eyeHeight: number): void {
-    if (this.shake > 0) {
-      this.shake = Math.max(0, this.shake - dt);
-      const k = this.shake / M.hit.time;
-      camera.position.x += (Math.random() - 0.5) * 2 * M.hit.shake * k;
-      camera.position.y += (Math.random() - 0.5) * 2 * M.hit.shake * k;
-      camera.rotation.z += (Math.random() - 0.5) * 2 * M.hit.shakeRoll * k;
+    if (this.trauma > 0) {
+      this.trauma = Math.max(0, this.trauma - M.hit.decay * dt);
+      this.t += dt * M.hit.frequency;
+      const k = this.trauma * this.trauma * this.strength;
+      camera.position.x += M.hit.shake * k * wave(this.t, 1.7, 0.3);
+      camera.position.y += M.hit.shake * k * wave(this.t, 2.3, 1.9);
+      camera.rotation.z += M.hit.shakeRoll * k * wave(this.t, 1.1, 4.1);
     }
     if (this.dead) {
       this.deathTime += dt;
@@ -49,4 +58,9 @@ export class CameraFx {
       camera.rotation.x = THREE.MathUtils.lerp(camera.rotation.x, 0, t);
     }
   }
+}
+
+/** Smooth noise in about −1..1: two sine waves at unrelated rates. */
+function wave(t: number, rate: number, phase: number): number {
+  return 0.6 * Math.sin(t * rate + phase) + 0.4 * Math.sin(t * rate * 1.37 + phase * 1.7);
 }

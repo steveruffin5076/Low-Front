@@ -97,6 +97,9 @@
 .hit-marker.kill span {
   background: #ff3b30;
 }
+.hit-marker.head span {
+  background: #ffcc33;
+}
 .hm-a {
   transform: translate(-14px, -10px) rotate(45deg);
 }

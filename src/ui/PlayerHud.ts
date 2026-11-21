@@ -23,7 +23,7 @@ export interface PlayerReadout {
 export interface PlayerHud {
   readonly element: HTMLElement;
   hitFlash(): void;
-  showHitMarker(kill: boolean): void;
+  showHitMarker(kill: boolean, headshot?: boolean): void;
   showDamageFrom(angle: number): void;
   /** Out-of-bounds countdown in seconds, or null to hide it. */
   setBoundsWarning(seconds: number | null): void;
